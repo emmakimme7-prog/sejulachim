@@ -1,0 +1,271 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --brand-navy: 17 32 51;
+  --brand-orange: 229 124 35;
+  --surface-muted: 243 247 251;
+}
+
+html {
+  font-size: 23px;
+}
+
+html.font-small {
+  font-size: 21px;
+}
+
+html.font-medium {
+  font-size: 23px;
+}
+
+html.font-large {
+  font-size: 25px;
+}
+
+@media (min-width: 640px) {
+  html.font-small {
+    font-size: 19px;
+  }
+  html.font-large {
+    font-size: 27px;
+  }
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+
+/* ── GNB inner container — 어떤 상황에서도 절대 변하지 않음 ── */
+.gnb-inner {
+  width: 100% !important;
+  max-width: 1536px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 18px !important;
+  padding-right: 18px !important;
+  box-sizing: border-box !important;
+}
+
+@media (min-width: 1024px) {
+  .gnb-inner {
+    padding-left: 34px !important;
+    padding-right: 34px !important;
+  }
+}
+
+/* Next.js font loader injects an empty fixed div that breaks layout height */
+body > div:empty:not([id]):not([class]),
+[class*="noto_sans_kr"] > div:empty,
+[class*="noto_sans"] > div:empty {
+  display: none !important;
+}
+
+body {
+  background: #ffffff;
+  color: #112033;
+  line-height: 1.6;
+  overflow-x: hidden;
+  transition: font-size 120ms ease;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(229, 124, 35, 0.2);
+}
+
+@layer base {
+  * {
+    @apply border-navy-100;
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply mx-auto w-full;
+    padding-left: 18px;
+    padding-right: 18px;
+    max-width: 1024px;
+  }
+  @media (min-width: 1024px) {
+    .app-shell {
+      padding-left: 34px;
+      padding-right: 34px;
+    }
+  }
+
+
+  .section-block {
+    @apply py-10 md:py-20;
+  }
+
+  .hero-bg {
+    background:
+      radial-gradient(circle at top left, rgba(241, 154, 75, 0.12), transparent 28%),
+      linear-gradient(180deg, #fffdf9 0%, #f7f4ef 100%);
+  }
+
+  .muted-surface {
+    background: linear-gradient(180deg, rgba(var(--surface-muted), 0.9), rgba(255, 255, 255, 0.98));
+  }
+}
+
+/* ── Footer ── */
+.slm-footer {
+  position: relative;
+  margin-top: 40px;
+  border-top: 1px solid #dfe8f2;
+  background:
+    radial-gradient(circle at top left, rgba(229, 124, 35, 0.07), transparent 34%),
+    linear-gradient(180deg, #fffdf9 0%, #f7f4ef 100%);
+}
+
+.slm-footer__inner {
+  width: min(1280px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 40px 0 48px;
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(360px, 0.9fr);
+  gap: 40px;
+  align-items: start;
+}
+
+.slm-footer__meta {
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+  align-content: start;
+}
+
+.slm-footer__meta p {
+  margin: 0;
+  color: #35506b;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.slm-footer__right {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+  align-content: start;
+}
+
+.slm-footer__brand {
+  justify-items: end;
+}
+
+.slm-footer__logo {
+  width: min(100%, 160px);
+  height: auto;
+  object-fit: contain;
+}
+
+.slm-footer__policy-links,
+.slm-footer__related-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  justify-content: flex-end;
+}
+
+.slm-footer__policy-sep {
+  color: #a0b4c8;
+  font-size: 12px;
+  padding: 0 4px;
+}
+
+.slm-footer__policy-link {
+  color: #35506b;
+  font-size: 14px;
+  transition: color 0.15s ease;
+}
+
+.slm-footer__policy-link:hover {
+  color: #e57c23;
+}
+
+.slm-footer__related-link {
+  color: #35506b;
+  font-size: 12px;
+  transition: color 0.15s ease;
+}
+
+.slm-footer__related-link:hover {
+  color: #e57c23;
+}
+
+.slm-footer__copy {
+  margin: 0;
+  color: #35506b;
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .slm-footer {
+    margin-top: 24px;
+  }
+
+  .slm-footer__inner {
+    width: min(100%, calc(100% - 2rem));
+    padding: 32px 0 100px;
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .slm-footer__right,
+  .slm-footer__brand {
+    justify-items: start;
+    text-align: left;
+    width: 100%;
+  }
+
+  .slm-footer__policy-links,
+  .slm-footer__related-links {
+    justify-content: flex-start;
+  }
+}
+
+/* ── Article body ── */
+.article-body-text { line-height: 1.7; }
+
+/* ── Share panel ── */
+.share-panel {
+  min-width: 280px;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(17, 32, 51, 0.18);
+  border-radius: 100px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(17, 32, 51, 0.32);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(17, 32, 51, 0.18) transparent;
+}
