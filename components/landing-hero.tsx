@@ -38,7 +38,9 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
           </h1>
 
           <p className="slm-hero__sub">
-            건강, 돈, 실생활, 뉴스, 관계 — 5가지 분야의 핵심 소식을
+            건강, 돈, 실생활, 뉴스, 관계 —
+            <br />
+            5가지 분야의 핵심 소식을
             <br />
             매일 아침 딱 세 줄로 정리해 드립니다.
           </p>
@@ -56,13 +58,13 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
                   href={`/archive/${item.slug}`}
                   className="slm-hero__preview-line"
                 >
-                  <div className="slm-hero__preview-num">{idx + 1}</div>
-                  <div>
+                  <div className="slm-hero__preview-top">
+                    <div className="slm-hero__preview-num">{idx + 1}</div>
                     <span className="slm-hero__preview-tag">
                       {CATEGORY_EMOJI[item.category] ?? ""} {item.category}
                     </span>
-                    <span className="slm-hero__preview-text">{item.title}</span>
                   </div>
+                  <p className="slm-hero__preview-text">{item.title}</p>
                 </Link>
               ))}
             </div>
@@ -92,11 +94,11 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="slm-hero__scroll">
-          더 알아보기
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
+          <div className="slm-hero__scroll">
+            더 알아보기
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
+          </div>
         </div>
       </section>
 

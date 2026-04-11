@@ -9,9 +9,9 @@ const COUPANG_API_DOMAIN = "https://api-gateway.coupang.com";
 const COUPANG_DEEPLINK_PATH = "/v2/providers/affiliate_open_api/apis/openapi/v1/deeplink";
 const COUPANG_PRODUCT_SEARCH_PATH = "/v2/providers/affiliate_open_api/apis/openapi/v1/products/search";
 
-// 캐시 TTL: 12시간 신선, 7일 stale-if-error
-const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
-const CACHE_STALE_MAX_MS = 7 * 24 * 60 * 60 * 1000;
+// 캐시 TTL: 7일 신선, 14일 stale-if-error (API 호출 최소화)
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const CACHE_STALE_MAX_MS = 14 * 24 * 60 * 60 * 1000;
 
 type DeepLinkResponse = {
   rCode?: string;
@@ -276,7 +276,19 @@ async function callCoupangSearchAPI(
   return [...rows]
     .map((item) => ({ item, score: scoreSearchResult(item, keyword) }))
     .filter((entry) => entry.score >= minScore)
-    .sort((left, right) => right.score - left.score || (left.item.rank ?? 9999) - (right.item.rank ?? 9999))
+    .sort((left, right) => {
+      // 1만~10만원 범위 상품 우선 (소프트 필터)
+      const priceA = left.item.productPrice;
+      const priceB = right.item.productPrice;
+      const inRangeA = typeof priceA === "number" && priceA >= 10000 && priceA <= 100000 ? 1 : 0;
+      const inRangeB = typeof priceB === "number" && priceB >= 10000 && priceB <= 100000 ? 1 : 0;
+      if (inRangeB !== inRangeA) return inRangeB - inRangeA;
+      // 로켓배송 우선
+      const rocketA = (left.item as Record<string, unknown>).isRocket ? 1 : 0;
+      const rocketB = (right.item as Record<string, unknown>).isRocket ? 1 : 0;
+      if (rocketB !== rocketA) return rocketB - rocketA;
+      return right.score - left.score || (left.item.rank ?? 9999) - (right.item.rank ?? 9999);
+    })
     .map((entry) => entry.item);
 }
 
@@ -331,39 +343,40 @@ export async function resolveRepresentativeProduct(product: ProductCatalogItem):
 }
 
 // 카테고리/서브카테고리 → 쿠팡 인기 상품 직접 조회
-const CATEGORY_KEYWORD_MAP: Record<string, string> = {
+const CATEGORY_KEYWORD_MAP: Record<string, string[]> = {
   // 메인 카테고리 폴백
-  실생활: "생활용품",
-  건강: "건강보조제",
-  돈: "가계부",
-  뉴스: "라디오",
-  관계: "보드게임",
+  실생활: ["무선청소기", "에어프라이어", "정리수납함", "생활용품"],
+  건강: ["종합영양제", "마사지건", "체중계", "요가매트"],
+  돈: ["재테크도서", "가계부", "다이어리"],
+  뉴스: ["베스트셀러도서", "무선이어폰", "텀블러"],
+  관계: ["보드게임"],
   // 서브 카테고리
-  혈압: "혈압계",
-  관절: "관절 보호대",
-  음식: "건강식품",
-  상식: "건강 도서",
-  병원: "혈당측정기",
-  연금: "서류 정리함",
-  세금: "문서 스캐너",
-  보험: "문서 보관함",
-  주의: "보이스피싱 차단기",
-  혜택: "문서 세단기",
-  꿀팁: "생활용품",
-  가전: "소형 가전",
-  청소: "청소용품",
-  요리: "주방용품",
-  교통: "차량용품",
-  "주요 뉴스": "라디오",
-  경제: "전자계산기",
-  정책: "아코디언 파일",
-  사회: "안전 경보기",
-  해외: "여행 어댑터",
-  가족: "가족 보드게임",
-  부부: "커플 선물",
-  회사: "사무용품",
-  취미: "취미용품",
-  친구: "피크닉 용품",
+  혈압: ["혈압계"],
+  관절: ["관절 보호대"],
+  음식: ["건강식품"],
+  상식: ["건강 도서"],
+  병원: ["혈당측정기"],
+  연금: ["서류 정리함"],
+  세금: ["문서 스캐너"],
+  보험: ["문서 보관함"],
+  주의: ["보이스피싱 차단기"],
+  혜택: ["문서 세단기"],
+  꿀팁: ["구연산", "베이킹소다", "정리수납함", "다용도세제"],
+  가전: ["공기청정기", "무선청소기", "에어프라이어", "가습기"],
+  청소: ["로봇청소기", "물걸레청소기", "청소세제", "스팀청소기"],
+  요리: ["밀키트 베스트", "프라이팬세트", "에어프라이어", "전기그릴"],
+  교통: ["차량용충전기", "보조배터리", "우산", "교통카드케이스"],
+  IT: ["무선이어폰", "충전케이블", "스마트폰케이스", "보호필름"],
+  "주요 뉴스": ["라디오"],
+  경제: ["전자계산기"],
+  정책: ["아코디언 파일"],
+  사회: ["베스트셀러도서", "무선이어폰", "텀블러"],
+  해외: ["여행 어댑터"],
+  가족: ["가족 보드게임"],
+  부부: ["커플 선물"],
+  회사: ["사무용품"],
+  취미: ["취미용품"],
+  친구: ["피크닉 용품"],
 };
 
 export async function fetchPopularProductsForContent(
@@ -372,10 +385,13 @@ export async function fetchPopularProductsForContent(
   limit = 3
 ): Promise<ResolvedAffiliateProduct[]> {
   const sub = subInterest?.trim() ?? "";
+  const subKeywords = sub && CATEGORY_KEYWORD_MAP[sub] ? CATEGORY_KEYWORD_MAP[sub] : [];
+  const catKeywords = CATEGORY_KEYWORD_MAP[category] ?? [category];
+  // 서브카테고리명 자체(예: "꿀팁")는 너무 일반적이라 무관한 상품이 매칭되므로,
+  // CATEGORY_KEYWORD_MAP에 매핑된 구체적 키워드만 사용
   const keywords = [
-    sub && CATEGORY_KEYWORD_MAP[sub] ? CATEGORY_KEYWORD_MAP[sub] : null,
-    sub || null,
-    CATEGORY_KEYWORD_MAP[category] ?? category,
+    ...subKeywords,
+    ...catKeywords,
   ].filter((k): k is string => Boolean(k?.trim()));
 
   const results: ResolvedAffiliateProduct[] = [];
@@ -399,42 +415,34 @@ export async function fetchPopularProductsForContent(
     }
   }
 
-  // 1차: score > 0 (키워드 관련성 있는 상품) — 넉넉히 요청
+  // 키워드 순차 검색 — API 호출 최소화 (1개씩, 충분하면 즉시 중단)
   for (const keyword of keywords) {
     if (results.length >= limit) break;
     try {
-      const items = await requestTopSearchProducts(keyword, limit * 5, 1);
+      const items = await requestTopSearchProducts(keyword, limit * 3, 0);
       addItems(items, keyword);
     } catch {
-      // ignore and try next keyword
+      // 실패 시 다음 키워드 시도
     }
   }
 
-  // 2차: 부족하면 score >= 0 (골드박스만 제외)으로 보충
-  if (results.length < limit) {
-    for (const keyword of keywords) {
-      if (results.length >= limit) break;
-      try {
-        const items = await requestTopSearchProducts(keyword, limit * 5, 0);
-        addItems(items, keyword);
-      } catch {
-        // ignore
-      }
-    }
-  }
+  const finalResults = results.slice(0, limit);
 
-  // 3차: 여전히 부족하면 메인 카테고리 키워드로 재시도
-  if (results.length < limit) {
-    const fallbackKeyword = CATEGORY_KEYWORD_MAP[category] ?? category;
+  // 파트너스 딥링크 변환 (수수료 추적용)
+  if (finalResults.length > 0) {
     try {
-      const items = await requestTopSearchProducts(fallbackKeyword, limit * 5, 0);
-      addItems(items, fallbackKeyword);
+      const urls = finalResults.map((p) => p.linkUrl);
+      const deepLinks = await requestAffiliateDeepLinks(urls);
+      const linkMap = new Map(deepLinks.map((d) => [d.originalUrl, d.shortenUrl]));
+      for (const product of finalResults) {
+        product.linkUrl = linkMap.get(product.linkUrl) ?? product.linkUrl;
+      }
     } catch {
-      // ignore
+      // 딥링크 변환 실패 시 원본 URL 유지
     }
   }
 
-  return results.slice(0, limit);
+  return finalResults;
 }
 
 export async function resolveRepresentativeProducts(products: ProductCatalogItem[]): Promise<ResolvedAffiliateProduct[]> {

@@ -1,7 +1,10 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import { getOptionalServerEnv } from "@/lib/env";
 import { createOpenAIClient, selectOpenAIModel } from "@/lib/openai/model-router";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { sanitizePlainText } from "@/lib/utils";
 
 export type ContentThumbnail = {
@@ -66,31 +69,31 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
 };
 
 const SUB_INTEREST_KEYWORDS: Record<string, string[]> = {
-  혈압: ["blood pressure monitor cuff", "heart health checkup"],
-  관절: ["knee joint pain senior exercise", "knee stretching elderly"],
-  음식: ["healthy meal plate vegetables", "nutritious food dish table"],
-  상식: ["doctor patient consultation office", "medical advice stethoscope"],
-  병원: ["hospital corridor doctor nurse", "medical clinic waiting room"],
-  연금: ["retirement savings piggy bank", "pension fund elderly couple"],
-  세금: ["tax form calculator documents", "income tax filing paperwork"],
-  보험: ["insurance policy document signing", "health insurance card form"],
-  주의: ["phone scam fraud warning alert", "cybersecurity warning lock"],
-  혜택: ["government benefit application form", "welfare support voucher card"],
-  꿀팁: ["household life hack smart tip", "home organization simple trick"],
-  가전: ["modern kitchen appliance home", "washing machine refrigerator home"],
-  청소: ["house cleaning spray mop bucket", "home deep cleaning supplies"],
-  요리: ["Korean home cooking ingredients", "fresh vegetables cooking pan"],
-  교통: ["subway train bus public transit", "commuter bus stop station"],
-  "주요 뉴스": ["press conference podium microphone", "parliament assembly meeting"],
-  경제: ["stock market graph chart finance", "economy business graph upward"],
-  정책: ["government building official meeting", "policy announcement briefing"],
-  사회: ["community people city street", "social issue protest crowd"],
-  해외: ["world map globe diplomacy flags", "international summit conference"],
-  가족: ["happy family dinner table home", "family conversation living room"],
-  부부: ["couple talking sofa living room", "married couple conversation home"],
-  회사: ["office desk computer workplace", "business meeting conference room"],
-  취미: ["hobby craft creative activity hand", "baking cooking leisure home"],
-  친구: ["friends chatting coffee cafe", "group friends laughing together"]
+  혈압: ["blood pressure exercise yoga stretching fitness", "cardio workout heart rate monitor exercise"],
+  관절: ["spring outdoor stretching knee warm up", "knee joint stretching exercise morning"],
+  음식: ["spring greens wild herbs Korean namul basket", "fresh spring vegetables herbs market"],
+  상식: ["eating order vegetables first healthy meal", "doctor patient consultation medical advice"],
+  병원: ["hospital outpatient clinic reception counter", "medical bill healthcare cost insurance"],
+  연금: ["national pension retirement savings plan chart", "pension contribution payroll deduction salary"],
+  세금: ["government budget emergency spending parliament", "income tax filing calculator documents"],
+  보험: ["travel insurance airplane luggage airport", "insurance policy document coverage plan"],
+  주의: ["data breach personal information leak cybersecurity", "phone scam fraud warning security alert"],
+  혜택: ["fuel gasoline diesel price subsidy support", "government benefit voucher coupon discount"],
+  꿀팁: ["towel laundry citric acid washing machine clean", "home organization cleaning supplies hack"],
+  가전: ["smart home AI appliance kitchen modern living", "washing machine refrigerator smart home"],
+  청소: ["robot vacuum cleaner AI obstacle avoidance home", "house cleaning spray mop deep clean"],
+  요리: ["Korean restaurant kitchen chef cooking Seoul", "fresh vegetables cooking pan Korean dish"],
+  교통: ["subway train commuter transit pass discount", "public transport bus commuter daily ride"],
+  "주요 뉴스": ["central bank interest rate decision economy", "press conference podium microphone parliament"],
+  경제: ["US Iran diplomacy negotiation meeting flags", "stock market graph chart finance economy"],
+  정책: ["government culture tourism budget spending support", "policy announcement briefing meeting official"],
+  사회: ["protest demonstration social issue community", "social justice activism rally human rights"],
+  해외: ["diplomacy summit meeting international politics", "global politics negotiation world leaders"],
+  가족: ["elderly couple care nursing senior dignity", "happy family dinner table home conversation"],
+  부부: ["couple counseling therapy communication relationship", "married couple conversation sofa living room"],
+  회사: ["office worker stress workplace professional", "business meeting conference room desk"],
+  취미: ["local community hobby meetup neighbors gathering", "hobby craft creative activity leisure"],
+  친구: ["lonely man alone solitude friendship crisis", "friends chatting coffee cafe gathering"]
 };
 
 function stripHtml(value: string | undefined) {
@@ -143,11 +146,13 @@ async function translateToImageQuery(input: {
         {
           role: "system",
           content: [
-            "You create concise English search queries for free editorial or stock photos.",
-            "Return only one line of plain text.",
-            "Use 2 to 6 English words.",
-            "Avoid brand names, punctuation, and quotes.",
-            "Prioritize a visually searchable scene that matches the article's specific topic over generic category images."
+            "You create concise English search queries for free stock photos on Pixabay.",
+            "Return exactly TWO lines of plain text, each a separate search query.",
+            "Use 4 to 6 English words per line.",
+            "Avoid brand names, punctuation, quotes, and Korean words.",
+            "Focus on the SPECIFIC subject of the article, not the broad category.",
+            "Example: For an article about towel care with citric acid, use 'white towel fluffy clean folded stack' NOT 'motorcycle rider city street'.",
+            "Think about what physical objects, scenes, or actions the article describes, then translate those into photo search terms."
           ].join(" ")
         },
         {
@@ -162,14 +167,17 @@ async function translateToImageQuery(input: {
       ]
     });
 
-    const query = completion.choices[0]?.message?.content?.trim();
-    return query ? sanitizePlainText(query, 80) : buildFallbackQuery(input);
+    const raw = completion.choices[0]?.message?.content?.trim();
+    if (!raw) return [buildFallbackQuery(input)];
+    // AI가 2줄 반환 → 각각 별도 쿼리로 사용
+    const lines = raw.split(/\n+/).map((l) => sanitizePlainText(l.trim(), 80)).filter(Boolean);
+    return lines.length > 0 ? lines : [buildFallbackQuery(input)];
   } catch {
-    return buildFallbackQuery(input);
+    return [buildFallbackQuery(input)];
   }
 }
 
-async function searchWikimediaCommons(query: string) {
+async function searchWikimediaCommons(query: string, excludePageUrls?: Set<string>) {
   const url = new URL("https://commons.wikimedia.org/w/api.php");
   url.searchParams.set("action", "query");
   url.searchParams.set("format", "json");
@@ -201,6 +209,9 @@ async function searchWikimediaCommons(query: string) {
     if (!info?.thumburl || !info.descriptionurl) {
       continue;
     }
+    if (excludePageUrls?.has(info.descriptionurl)) {
+      continue;
+    }
 
     const mime = info.mime?.toLowerCase() ?? "";
     if (!mime.startsWith("image/") || mime.includes("svg") || mime.includes("tiff")) {
@@ -224,7 +235,7 @@ async function searchWikimediaCommons(query: string) {
   return null;
 }
 
-async function searchPixabay(query: string, apiKey: string) {
+async function searchPixabay(query: string, apiKey: string, excludePageUrls?: Set<string>) {
   const url = new URL("https://pixabay.com/api/");
   url.searchParams.set("key", apiKey);
   url.searchParams.set("q", query);
@@ -249,7 +260,9 @@ async function searchPixabay(query: string, apiKey: string) {
     if (!item.largeImageURL && !item.webformatURL) {
       return false;
     }
-
+    if (excludePageUrls?.has(item.pageURL ?? "")) {
+      return false;
+    }
     const haystack = `${item.tags ?? ""} ${item.pageURL ?? ""}`.toLowerCase();
     return !BLOCKED_PIXABAY_TERMS.some((term) => haystack.includes(term));
   });
@@ -265,52 +278,86 @@ async function searchPixabay(query: string, apiKey: string) {
   };
 }
 
+const STORAGE_BUCKET = "thumbnails";
+
+/**
+ * Pixabay 이미지를 다운로드하여 Supabase Storage에 영구 저장.
+ * 실패 시 원본 URL 반환 (폴백).
+ */
+async function rehostToStorage(imageUrl: string, title: string): Promise<string> {
+  try {
+    const supabase = createAdminSupabaseClient();
+    const hash = createHash("md5").update(title).digest("hex").slice(0, 16);
+    const ext = imageUrl.includes(".png") ? "png" : "jpg";
+    const storagePath = `${hash}.${ext}`;
+
+    // 이미지 다운로드
+    const response = await fetch(imageUrl);
+    if (!response.ok) return imageUrl;
+
+    const contentType = response.headers.get("content-type") || `image/${ext === "png" ? "png" : "jpeg"}`;
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    // 버킷 없으면 생성 시도 (이미 있으면 무시)
+    await supabase.storage.createBucket(STORAGE_BUCKET, { public: true }).catch(() => undefined);
+
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(storagePath, buffer, { contentType, upsert: true });
+
+    if (error) {
+      return imageUrl;
+    }
+
+    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
+    return data.publicUrl || imageUrl;
+  } catch {
+    return imageUrl;
+  }
+}
+
 export async function findRelatedContentThumbnail(input: {
   title: string;
   category: string;
   subInterest?: string | null;
   summary?: string | null;
+  excludePageUrls?: Set<string>;
 }) {
   const env = getOptionalServerEnv();
-  const aiQuery = await translateToImageQuery(input);
+  const aiQueries = await translateToImageQuery(input);
   const fallbackQuery = buildFallbackQuery(input);
-  const queries = Array.from(new Set([aiQuery, fallbackQuery].filter(Boolean)));
+  const queries = Array.from(new Set([...aiQueries, fallbackQuery].filter(Boolean)));
 
-  if (env.PIXABAY_API_KEY) {
-    for (const query of queries) {
-      let result = null;
-      try {
-        result = await searchPixabay(query, env.PIXABAY_API_KEY);
-      } catch {
-        result = null;
-      }
-      if (!result?.url) {
-        continue;
-      }
+  const pixabayKey = env.PIXABAY_API_KEY?.trim();
+  const exclude = input.excludePageUrls;
 
+  // Pixabay 우선 (고품질), Wikimedia 폴백
+  for (const query of queries) {
+    if (pixabayKey) {
+      const pixabayResult = await searchPixabay(query, pixabayKey, exclude);
+      if (pixabayResult) {
+        // Pixabay URL은 24시간 후 만료 → Supabase Storage에 영구 저장
+        const permanentUrl = await rehostToStorage(pixabayResult.url, input.title + query);
+        return {
+          url: permanentUrl,
+          pageUrl: pixabayResult.pageUrl,
+          author: pixabayResult.author,
+          license: null,
+          alt: sanitizePlainText(pixabayResult.alt || input.title || "기사 관련 썸네일", 160)
+        } satisfies ContentThumbnail;
+      }
+    }
+
+    const wikiResult = await searchWikimediaCommons(query, exclude);
+    if (wikiResult) {
       return {
-        url: result.url,
-        pageUrl: result.pageUrl,
-        author: result.author,
-        license: null,
-        alt: sanitizePlainText(result.alt || input.title || "기사 관련 썸네일", 160)
+        url: wikiResult.url,
+        pageUrl: wikiResult.pageUrl,
+        author: wikiResult.author,
+        license: wikiResult.license,
+        alt: sanitizePlainText(wikiResult.description || input.title || wikiResult.title || "기사 관련 썸네일", 160)
       } satisfies ContentThumbnail;
     }
-  }
-
-  for (const query of queries) {
-    const result = await searchWikimediaCommons(query);
-    if (!result) {
-      continue;
-    }
-
-    return {
-      url: result.url,
-      pageUrl: result.pageUrl,
-      author: result.author,
-      license: result.license,
-      alt: sanitizePlainText(result.description || input.title || result.title || "기사 관련 썸네일", 160)
-    } satisfies ContentThumbnail;
   }
 
   return null;

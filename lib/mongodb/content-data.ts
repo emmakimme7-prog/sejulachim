@@ -1284,6 +1284,8 @@ export async function backfillMissingContentThumbnails(limit = 20) {
     .toArray();
 
   let updated = 0;
+  const usedPageUrls = new Set<string>();
+
   for (const item of items) {
     if (!item._id) {
       continue;
@@ -1292,12 +1294,14 @@ export async function backfillMissingContentThumbnails(limit = 20) {
     const thumbnail = await findRelatedContentThumbnail({
       title: item.title,
       category: item.category,
-      subInterest: item.sub_interest ?? null
+      subInterest: item.sub_interest ?? null,
+      excludePageUrls: usedPageUrls
     });
 
     if (!thumbnail) {
       continue;
     }
+    if (thumbnail.pageUrl) usedPageUrls.add(thumbnail.pageUrl);
 
     await collections.contentItems.updateOne(
       { _id: item._id },

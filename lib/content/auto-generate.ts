@@ -416,13 +416,16 @@ export async function generateDailyContentForDate(date = getKstDateParts().date)
     }
   }
 
+  const usedPageUrls = new Set<string>();
+
   for (const row of rows) {
     try {
       const thumbnail = await findRelatedContentThumbnail({
         title: String(row.title ?? ""),
         category: String(row.category ?? ""),
         subInterest: String(row.sub_interest ?? ""),
-        summary: String(row.short_summary ?? "")
+        summary: String(row.short_summary ?? ""),
+        excludePageUrls: usedPageUrls
       });
 
       if (thumbnail) {
@@ -431,6 +434,7 @@ export async function generateDailyContentForDate(date = getKstDateParts().date)
         row.thumbnail_page_url = thumbnail.pageUrl;
         row.thumbnail_author = thumbnail.author ?? null;
         row.thumbnail_license = thumbnail.license ?? null;
+        if (thumbnail.pageUrl) usedPageUrls.add(thumbnail.pageUrl);
       } else {
         row.thumbnail_url = null;
         row.thumbnail_alt = null;

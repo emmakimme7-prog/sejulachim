@@ -353,12 +353,15 @@ button {
 }
 @keyframes slmPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 .slm-hero__preview-line {
-  display: flex; align-items: flex-start; gap: 12px;
+  display: flex; flex-direction: column; gap: 4px;
   padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.04);
   text-decoration: none; color: inherit; transition: opacity 0.15s;
 }
 .slm-hero__preview-line:last-child { border-bottom: none; }
 .slm-hero__preview-line:hover { opacity: 0.7; }
+.slm-hero__preview-top {
+  display: flex; align-items: center; gap: 8px;
+}
 .slm-hero__preview-num {
   flex-shrink: 0; width: 24px; height: 24px;
   display: flex; align-items: center; justify-content: center;
@@ -368,9 +371,9 @@ button {
 .slm-hero__preview-tag {
   display: inline-block; padding: 2px 8px;
   background: #F0F0F0; border-radius: 4px;
-  font-size: 11px; color: #888; margin-right: 6px;
+  font-size: 11px; color: #888;
 }
-.slm-hero__preview-text { font-size: 0.875rem; line-height: 1.5; color: #333; }
+.slm-hero__preview-text { font-size: 0.875rem; line-height: 1.5; color: #333; margin: 0; padding-left: 32px; }
 
 /* CTA */
 .slm-hero__cta { margin-top: 36px; }
@@ -394,14 +397,14 @@ button {
 
 /* Scroll hint */
 .slm-hero__scroll {
-  position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 8px;
   font-size: 12px; color: #bbb;
+  margin-top: 32px; padding-bottom: 24px;
   animation: slmScrollBounce 2s ease-in-out infinite;
 }
 @keyframes slmScrollBounce {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(8px); }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
 }
 
 /* How it works */
@@ -423,17 +426,17 @@ button {
 .slm-cats { padding: 60px 24px 80px; background: #FFF8F0; text-align: center; }
 .slm-cats h2 { font-size: 1.75rem; font-weight: 800; margin-bottom: 40px; color: #1a1a2e; letter-spacing: -1px; }
 .slm-cats__grid {
-  display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
-  max-width: 700px; margin: 0 auto 48px;
+  display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+  max-width: 480px; margin: 0 auto 48px;
 }
 .slm-cats__chip {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 14px 24px; background: #fff; border-radius: 12px;
-  font-size: 15px; font-weight: 600; color: #333;
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 28px; background: #fff; border-radius: 14px;
+  font-size: 16px; font-weight: 700; color: #333;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: all 0.3s; cursor: default;
 }
 .slm-cats__chip:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
-.slm-cats__emoji { font-size: 20px; }
+.slm-cats__emoji { font-size: 22px; }
 
 /* Bottom CTA */
 .slm-bottom-cta { padding: 64px 24px; background: #1a1a2e; text-align: center; }

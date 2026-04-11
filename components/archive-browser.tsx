@@ -5,6 +5,8 @@ import Link from "next/link";
 
 import { CompleteShareButton } from "@/components/complete-share-button";
 import { ContentThumbnail } from "@/components/content-thumbnail";
+import { FeedProductCard } from "@/components/feed-product-card";
+import { type ResolvedAffiliateProduct } from "@/lib/products/catalog";
 import { FavoriteToggleButton } from "@/components/favorite-toggle-button";
 import { ListenButton, playSpeech, setAutoPlayNextFn, setSpeechPlaylist } from "@/components/speech-controls";
 import { SelectInput } from "@/components/ui/field";
@@ -61,7 +63,8 @@ export function ArchiveBrowser({
   todayMode = false,
   mainInterests = [...MAIN_INTERESTS],
   interestLabels = Object.fromEntries(MAIN_INTERESTS.map((interest) => [interest, interest])) as Record<string, string>,
-  subInterestOptions = SUB_INTERESTS
+  subInterestOptions = SUB_INTERESTS,
+  feedProducts = []
 }: {
   items: ArchiveItem[];
   shareProfile?: { nickname: string; avatarKey?: AvatarKey };
@@ -74,6 +77,7 @@ export function ArchiveBrowser({
   mainInterests?: string[];
   interestLabels?: Record<string, string>;
   subInterestOptions?: Record<string, string[]>;
+  feedProducts?: ResolvedAffiliateProduct[];
 }) {
   const [selectedTopic, setSelectedTopic] = useState<string>(initialTopic || ALL_TOPICS);
   const [draftTopic, setDraftTopic] = useState<string>(initialTopic || ALL_TOPICS);
@@ -86,6 +90,7 @@ export function ArchiveBrowser({
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [showSearchPanel, setShowSearchPanel] = useState(false);
+  const [isFeatureView, setIsFeatureView] = useState(featuredMode);
   const [resolvedShareProfile, setResolvedShareProfile] = useState(shareProfile);
   const [resolvedFavoriteIds, setResolvedFavoriteIds] = useState(favoriteIds);
 
@@ -129,6 +134,7 @@ export function ArchiveBrowser({
   }, [initialTopic, mainInterests]);
 
   useEffect(() => {
+    setIsFeatureView(featuredMode);
     setShowSearchPanel(false);
     setSelectedSlugs([]);
   }, [featuredMode, todayMode]);
@@ -150,10 +156,13 @@ export function ArchiveBrowser({
       setSelectedSlugs([]);
       setShowSearchPanel(false);
 
-      if (!category && !q && !view) {
-        setSortOrder("popular");
-      } else {
+      // 카테고리/검색 선택 시 featuredMode 해제 → 검색 필터 표시
+      if (category || q || view) {
+        setIsFeatureView(false);
         setSortOrder("latest");
+      } else {
+        setIsFeatureView(true);
+        setSortOrder("popular");
       }
 
       window.scrollTo({ top: 0 });
@@ -239,12 +248,12 @@ export function ArchiveBrowser({
       return sortOrder === "oldest" ? leftDate - rightDate : rightDate - leftDate;
     });
 
-    if (featuredMode) {
+    if (isFeatureView) {
       return sorted.slice(0, 30);
     }
 
     return sorted;
-  }, [customDate, dateFilter, featuredMode, items, searchQuery, selectedSubtopic, selectedTopic, sortOrder]);
+  }, [customDate, dateFilter, isFeatureView, items, searchQuery, selectedSubtopic, selectedTopic, sortOrder]);
 
   const latestDate = useMemo(() => {
     if (!todayMode) return null;
@@ -356,9 +365,9 @@ export function ArchiveBrowser({
   }, [playFromIdx]);
 
   return (
-      <div className={`pb-20 sm:pb-12 ${featuredMode ? "space-y-3 pt-2 md:pt-4" : "space-y-3"}`}>
-      {!featuredMode && todayMode ? <div className="h-[49px]" /> : null}
-      {!featuredMode && !todayMode ? (
+      <div className={`pb-20 sm:pb-12 ${isFeatureView ? "space-y-3 pt-2 md:pt-4" : "space-y-3"}`}>
+      {!isFeatureView && todayMode ? <div className="h-[49px]" /> : null}
+      {!isFeatureView && !todayMode ? (
         <div data-search-filter className="-mx-4 sm:-mx-6 border-b border-gray-200 bg-white !mt-0">
           <div className="flex items-center gap-[6px] px-[16px] pt-[16px] pb-[10px] sm:px-[24px]">
             {/* 좌: 스크롤 가능한 필터 칩 */}
@@ -445,6 +454,8 @@ export function ArchiveBrowser({
         </div>
       ) : null}
 
+      <p className="text-xs text-gray-400 mt-4 text-center">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+
       {visibleSubtopics.length > 0 ? (
         <div data-search-filter className="flex flex-wrap gap-1.5 pt-1">
           {[ALL_SUBTOPICS, ...visibleSubtopics].map((subtopic) => (
@@ -504,113 +515,121 @@ export function ArchiveBrowser({
             </p>
           </div>
         ) : null}
-        {visibleItems.map((item, idx) => (
-          <article
-            key={item.id}
-            data-archive-item
-            className="border-b border-navy-100 pb-[18px] pt-[18px] md:rounded-xl md:border md:border-navy-100 md:bg-white md:p-5 md:shadow-none md:hover:shadow-md"
-          >
-            {/* 상단: 카테고리 + 날짜 */}
-            <div className="mb-3 flex items-center gap-2 flex-wrap">
-              <input
-                type="checkbox"
-                checked={selectedSlugs.includes(item.slug)}
-                onChange={() => toggleSlug(item.slug)}
-                onClick={(e) => e.stopPropagation()}
-                className="h-4 w-4 shrink-0 rounded border-navy-200 text-orange-500 focus:ring-orange-200"
-              />
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[item.main_interest] ?? "bg-orange-50 border border-orange-200 text-orange-700"}`}>
-                {interestLabels[item.main_interest] ?? item.main_interest}
-                {item.sub_interest ? ` · ${item.sub_interest}` : ""}
-              </span>
-              <span className="ml-auto text-xs text-navy-400">
-                {item.published_at ? formatDate(item.published_at) : "발행 전"}
-              </span>
-            </div>
+        {visibleItems.map((item, idx) => {
+          // 상품 카드 삽입: 5번째(idx=4), 10번째(idx=9) 기사 뒤
+          const productSlotIndex = idx === 4 ? 0 : idx === 9 ? 1 : -1;
+          const feedProduct = productSlotIndex >= 0 ? feedProducts[productSlotIndex] ?? null : null;
 
-            {/* 본문 */}
-            <Link href={`/archive/${item.slug}`} className="group block">
-              <div className="md:flex md:items-stretch md:gap-4">
-                <div className="min-w-0 flex-1">
-                  {/* 모바일 글씨 중간/크게: 썸네일 상단 배치 */}
-                  {item.thumbnail_url ? (
-                    <ContentThumbnail
-                      src={item.thumbnail_url}
-                      alt={item.thumbnail_alt?.trim() || item.title}
-                      className="mb-3 aspect-[16/9] w-full overflow-hidden rounded-md font-size-top-thumb md:hidden"
-                      imgClassName="w-full h-full object-cover"
-                      fallbackLabel="준비 중"
-                    />
-                  ) : null}
-                  <div className="flex items-stretch gap-3">
-                    <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-all text-navy-900 transition group-hover:text-orange-600">
-                      {item.title}
-                    </h2>
-                    {/* 모바일 글씨 작게: 썸네일 제목 옆 배치 */}
+          return (
+            <div key={item.id}>
+              <article
+                data-archive-item
+                className="border-b border-navy-100 pb-[18px] pt-[18px] md:rounded-xl md:border md:border-navy-100 md:bg-white md:p-5 md:shadow-none md:hover:shadow-md"
+              >
+                {/* 상단: 카테고리 + 날짜 */}
+                <div className="mb-3 flex items-center gap-2 flex-wrap">
+                  <input
+                    type="checkbox"
+                    checked={selectedSlugs.includes(item.slug)}
+                    onChange={() => toggleSlug(item.slug)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-4 w-4 shrink-0 rounded border-navy-200 text-orange-500 focus:ring-orange-200"
+                  />
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[item.main_interest] ?? "bg-orange-50 border border-orange-200 text-orange-700"}`}>
+                    {interestLabels[item.main_interest] ?? item.main_interest}
+                    {item.sub_interest ? ` · ${item.sub_interest}` : ""}
+                  </span>
+                  <span className="ml-auto text-xs text-navy-400">
+                    {item.published_at ? formatDate(item.published_at) : "발행 전"}
+                  </span>
+                </div>
+
+                {/* 본문 */}
+                <Link href={`/archive/${item.slug}`} className="group block">
+                  <div className="md:flex md:items-stretch md:gap-4">
+                    <div className="min-w-0 flex-1">
+                      {/* 모바일 글씨 중간/크게: 썸네일 상단 배치 */}
+                      {item.thumbnail_url ? (
+                        <ContentThumbnail
+                          src={item.thumbnail_url}
+                          alt={item.thumbnail_alt?.trim() || item.title}
+                          className="mb-3 aspect-[16/9] w-full overflow-hidden rounded-md font-size-top-thumb md:hidden"
+                          imgClassName="w-full h-full object-cover"
+                          fallbackLabel="준비 중"
+                        />
+                      ) : null}
+                      <div className="flex items-stretch gap-3">
+                        <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-all text-navy-900 transition group-hover:text-orange-600">
+                          {item.title}
+                        </h2>
+                        {/* 모바일 글씨 작게: 썸네일 제목 옆 배치 */}
+                        {item.thumbnail_url ? (
+                          <ContentThumbnail
+                            src={item.thumbnail_url}
+                            alt={item.thumbnail_alt?.trim() || item.title}
+                            className="w-20 min-h-[5rem] shrink-0 overflow-hidden rounded-md font-size-side-thumb md:hidden"
+                            imgClassName="w-full h-full object-cover"
+                            fallbackLabel="준비 중"
+                          />
+                        ) : null}
+                      </div>
+                      <p className="mt-2 text-sm leading-6 break-all text-navy-600">
+                        {item.short_summary}
+                      </p>
+                      {item.action_line ? (
+                        <p className="mt-1.5 text-sm font-semibold text-orange-600">
+                          {item.action_line}
+                          <ChevronRight className="ml-[2px] inline h-[14px] w-[14px] align-middle" aria-hidden="true" />
+                        </p>
+                      ) : null}
+                    </div>
                     {item.thumbnail_url ? (
                       <ContentThumbnail
                         src={item.thumbnail_url}
                         alt={item.thumbnail_alt?.trim() || item.title}
-                        className="w-20 min-h-[5rem] shrink-0 overflow-hidden rounded-md font-size-side-thumb md:hidden"
+                        className="hidden md:block w-28 min-h-[6rem] shrink-0 overflow-hidden rounded-md"
                         imgClassName="w-full h-full object-cover"
                         fallbackLabel="준비 중"
                       />
                     ) : null}
                   </div>
-                  <p className="mt-2 text-sm leading-6 break-all text-navy-600">
-                    {item.short_summary}
-                  </p>
-                  {item.action_line ? (
-                    <p className="mt-1.5 text-sm font-semibold text-orange-600">
-                      {item.action_line}
-                      <ChevronRight className="ml-[2px] inline h-[14px] w-[14px] align-middle" aria-hidden="true" />
-                    </p>
+                </Link>
+
+                {/* 하단: 액션 버튼 */}
+                <div className="mt-3 flex items-center justify-end gap-3 border-t border-gray-100 pt-3">
+                  <ListenButton
+                    text={[item.title, item.short_summary, item.action_line].filter(Boolean).join(". ")}
+                    speechTitle={item.title}
+                    className="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[0.82rem] !font-normal !text-gray-500 hover:!text-gray-800 !shadow-none"
+                    label="듣기"
+                    onPlay={() => handleCardPlay(idx)}
+                  />
+                  <CompleteShareButton
+                    shareSlugs={[item.slug]}
+                    interestSummary={item.title}
+                    buttonLabel="공유"
+                    triggerClassName="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[0.82rem] !font-normal !text-gray-500 hover:!text-gray-800 !shadow-none"
+                    modalTitle="이 소식을 공유해보세요."
+                  />
+                  <div className="flex-1" />
+                  {(item.view_count ?? 0) > 0 ? (
+                    <span className="text-xs text-gray-400">{(item.view_count ?? 0).toLocaleString()} 조회</span>
+                  ) : null}
+                  {resolvedShareProfile ? (
+                    <FavoriteToggleButton
+                      slug={item.slug}
+                      contentItemId={item.id}
+                      initialFavorite={resolvedFavoriteIds.includes(item.slug)}
+                      label="저장"
+                      className="inline-flex items-center gap-1 text-[0.82rem] text-gray-500 transition hover:text-gray-800"
+                    />
                   ) : null}
                 </div>
-                {item.thumbnail_url ? (
-                  <ContentThumbnail
-                    src={item.thumbnail_url}
-                    alt={item.thumbnail_alt?.trim() || item.title}
-                    className="hidden md:block w-28 min-h-[6rem] shrink-0 overflow-hidden rounded-md"
-                    imgClassName="w-full h-full object-cover"
-                    fallbackLabel="준비 중"
-                  />
-                ) : null}
-              </div>
-            </Link>
-
-            {/* 하단: 액션 버튼 */}
-            <div className="mt-3 flex items-center justify-end gap-3 border-t border-gray-100 pt-3">
-              <ListenButton
-                text={[item.title, item.short_summary, item.action_line].filter(Boolean).join(". ")}
-                speechTitle={item.title}
-                className="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[0.82rem] !font-normal !text-gray-500 hover:!text-gray-800 !shadow-none"
-                label="듣기"
-                onPlay={() => handleCardPlay(idx)}
-              />
-              <CompleteShareButton
-                shareSlugs={[item.slug]}
-                interestSummary={item.title}
-                buttonLabel="공유"
-                triggerClassName="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[0.82rem] !font-normal !text-gray-500 hover:!text-gray-800 !shadow-none"
-                modalTitle="이 소식을 공유해보세요."
-              />
-              <div className="flex-1" />
-              {(item.view_count ?? 0) > 0 ? (
-                <span className="text-xs text-gray-400">{(item.view_count ?? 0).toLocaleString()} 조회</span>
-              ) : null}
-              {resolvedShareProfile ? (
-                <FavoriteToggleButton
-                  slug={item.slug}
-                  contentItemId={item.id}
-                  initialFavorite={resolvedFavoriteIds.includes(item.slug)}
-                  label="저장"
-                  className="inline-flex items-center gap-1 text-[0.82rem] text-gray-500 transition hover:text-gray-800"
-                />
-              ) : null}
+              </article>
+              {feedProduct ? <FeedProductCard product={feedProduct} /> : null}
             </div>
-          </article>
-        ))}
+          );
+        })}
       </div>
 
       {visibleCount < displayItems.length && (

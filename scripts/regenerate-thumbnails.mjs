@@ -76,6 +76,36 @@ const SUB_INTEREST_KEYWORDS = {
   친구: ["friends talking", "friend meetup"]
 };
 
+const STORAGE_BUCKET = "thumbnails";
+
+async function rehostToStorage(imageUrl, slug) {
+  try {
+    const { createHash } = await import("node:crypto");
+    const hash = createHash("md5").update(slug).digest("hex").slice(0, 16);
+    const ext = imageUrl.includes(".png") ? "png" : "jpg";
+    const storagePath = `${hash}.${ext}`;
+
+    const response = await fetch(imageUrl);
+    if (!response.ok) return imageUrl;
+
+    const contentType = response.headers.get("content-type") || `image/${ext === "png" ? "png" : "jpeg"}`;
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    await supabase.storage.createBucket(STORAGE_BUCKET, { public: true }).catch(() => undefined);
+
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(storagePath, buffer, { contentType, upsert: true });
+
+    if (error) return imageUrl;
+
+    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
+    return data.publicUrl || imageUrl;
+  } catch {
+    return imageUrl;
+  }
+}
+
 const BLOCKED_PIXABAY_TERMS = [
   "smoking", "cigarette", "cigarettes", "tobacco", "nicotine",
   "ashtray", "vape", "vaping", "cigar", "beer", "alcohol",
@@ -142,11 +172,22 @@ async function searchPixabay(query) {
   if (!response.ok) return null;
 
   const data = await response.json();
-  const hit = data.hits?.find((entry) => {
-    if (!entry.largeImageURL && !entry.webformatURL) return false;
-    const haystack = `${entry.tags ?? ""} ${entry.pageURL ?? ""}`.toLowerCase();
-    return !BLOCKED_PIXABAY_TERMS.some((term) => haystack.includes(term));
-  });
+  // 검색어 토큰과 이미지 태그 관련성 점수 계산
+  const queryTokens = query.toLowerCase().split(/\s+/).filter(t => t.length >= 2);
+  const scored = (data.hits ?? [])
+    .filter((entry) => {
+      if (!entry.largeImageURL && !entry.webformatURL) return false;
+      const haystack = `${entry.tags ?? ""} ${entry.pageURL ?? ""}`.toLowerCase();
+      return !BLOCKED_PIXABAY_TERMS.some((term) => haystack.includes(term));
+    })
+    .map((entry) => {
+      const tags = (entry.tags ?? "").toLowerCase();
+      const matchCount = queryTokens.filter(t => tags.includes(t)).length;
+      return { entry, score: matchCount };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const hit = scored[0]?.entry;
   if (!hit) return null;
 
   return {
@@ -235,8 +276,11 @@ async function main() {
     }
 
     const { result, query: usedQuery } = found;
+    const isPixabay = result.url.includes("pixabay");
+    const permanentUrl = isPixabay ? await rehostToStorage(result.url, item.slug) : result.url;
+
     const payload = {
-      thumbnail_url: result.url,
+      thumbnail_url: permanentUrl,
       thumbnail_alt: result.alt || item.title,
       thumbnail_page_url: result.pageUrl,
       thumbnail_author: result.author,

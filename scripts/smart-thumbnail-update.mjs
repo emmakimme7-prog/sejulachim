@@ -148,7 +148,64 @@ const SLUG_QUERIES = {
   "brief-2026-04-02-news-top-news-1":      ["moon mission astronaut space rocket launch", "Artemis NASA moon space mission crew"],
   "brief-2026-04-02-health-blood-pressure-1": ["boxing exercise workout blood pressure cardiovascular", "boxing training health fitness cardiovascular"],
   "brief-2026-04-02-relation-family-1":    ["low birth rate community neighborhood family bond", "declining birthrate neighborhood social ties"],
+
+  // 2026-04-11
+  "brief-2026-04-11-health-blood-pressure-1": ["blood pressure exercise yoga stretching fitness", "cardio workout heart rate monitor exercise"],
+  "brief-2026-04-11-health-joint-1":          ["spring outdoor stretching knee warm up", "knee joint stretching exercise morning"],
+  "brief-2026-04-11-health-food-1":           ["spring greens wild herbs Korean namul basket", "fresh spring vegetables herbs market"],
+  "brief-2026-04-11-health-common-sense-1":   ["eating order vegetables first healthy meal", "mindful eating slow chewing healthy food"],
+  "brief-2026-04-11-health-hospital-1":       ["hospital outpatient clinic reception counter", "medical bill healthcare cost insurance copay"],
+  "brief-2026-04-11-money-pension-1":         ["national pension retirement savings plan chart", "pension contribution payroll deduction salary"],
+  "brief-2026-04-11-money-tax-1":             ["government budget emergency spending parliament", "fiscal policy supplementary budget economy"],
+  "brief-2026-04-11-money-insurance-1":       ["travel insurance airplane luggage delay airport", "flight delay compensation travel protection"],
+  "brief-2026-04-11-money-warning-1":         ["data breach personal information leak cybersecurity", "credit card data theft security alert"],
+  "brief-2026-04-11-money-benefit-1":         ["fuel gasoline diesel price subsidy support", "gas station oil price subsidy government"],
+  "brief-2026-04-11-daily-tips-1":            ["towel laundry citric acid washing machine clean", "white towel fluffy clean folded stack"],
+  "brief-2026-04-11-daily-appliance-1":       ["smart home AI appliance kitchen modern living", "smart refrigerator washing machine AI home"],
+  "brief-2026-04-11-daily-cleaning-1":        ["robot vacuum cleaner AI obstacle avoidance home", "robotic vacuum modern home living room clean"],
+  "brief-2026-04-11-daily-cooking-1":         ["Korean restaurant kitchen chef cooking Seoul", "Korean food cooking restaurant bistro chef"],
+  "brief-2026-04-11-daily-traffic-1":         ["subway train commuter transit pass discount", "public transport bus commuter daily ride"],
+  "brief-2026-04-11-news-top-news-1":         ["central bank interest rate decision economy", "monetary policy central bank meeting announcement"],
+  "brief-2026-04-11-news-economy-1":          ["US Iran diplomacy negotiation meeting flags", "diplomatic negotiation handshake politics global"],
+  "brief-2026-04-11-news-policy-1":           ["government culture tourism budget spending support", "ministry culture arts museum policy funding"],
+  "brief-2026-04-11-news-society-1":          ["protest demonstration women rights social issue", "social justice activism rally human rights"],
+  "brief-2026-04-11-news-global-1":           ["diplomacy summit meeting international politics", "global politics negotiation world leaders"],
+  "brief-2026-04-11-relation-family-1":       ["elderly couple care nursing senior dignity", "senior care elderly couple love support"],
+  "brief-2026-04-11-relation-couple-1":       ["couple counseling therapy communication relationship", "marriage counseling couple conversation couch"],
+  "brief-2026-04-11-relation-office-1":       ["office worker stress workplace bullying unfair", "corporate workplace employee stress frustration"],
+  "brief-2026-04-11-relation-hobby-1":        ["local community hobby meetup neighbors gathering", "neighborhood social gathering hobby craft group"],
+  "brief-2026-04-11-relation-friend-1":       ["lonely man alone solitude friendship crisis", "male friendship loneliness isolation social"],
 };
+
+const STORAGE_BUCKET = "thumbnails";
+
+async function rehostToStorage(imageUrl, slug) {
+  try {
+    const { createHash } = await import("node:crypto");
+    const hash = createHash("md5").update(slug).digest("hex").slice(0, 16);
+    const ext = imageUrl.includes(".png") ? "png" : "jpg";
+    const storagePath = `${hash}.${ext}`;
+
+    const response = await fetch(imageUrl);
+    if (!response.ok) return imageUrl;
+
+    const contentType = response.headers.get("content-type") || `image/${ext === "png" ? "png" : "jpeg"}`;
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    await supabase.storage.createBucket(STORAGE_BUCKET, { public: true }).catch(() => undefined);
+
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(storagePath, buffer, { contentType, upsert: true });
+
+    if (error) return imageUrl;
+
+    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
+    return data.publicUrl || imageUrl;
+  } catch {
+    return imageUrl;
+  }
+}
 
 const BLOCKED_TERMS = [
   "smoking", "cigarette", "cigarettes", "tobacco", "nicotine",
@@ -227,6 +284,7 @@ async function searchWikimediaCommons(query) {
 async function findThumbnail(slug) {
   const queries = SLUG_QUERIES[slug] ?? [];
   for (const q of queries) {
+    // Pixabay 우선 (고품질), Wikimedia 폴백
     const result = (await searchPixabay(q)) || (await searchWikimediaCommons(q));
     if (result) return { result, query: q };
   }
@@ -265,8 +323,12 @@ async function main() {
     }
 
     const { result, query } = found;
+    // Pixabay URL은 만료되므로 Supabase Storage에 영구 저장
+    const isPixabay = result.url.includes("pixabay");
+    const permanentUrl = isPixabay ? await rehostToStorage(result.url, item.slug) : result.url;
+
     const { error: updateError } = await supabase.from("content_items").update({
-      thumbnail_url: result.url,
+      thumbnail_url: permanentUrl,
       thumbnail_alt: result.alt || item.title,
       thumbnail_page_url: result.pageUrl,
       thumbnail_author: result.author,
