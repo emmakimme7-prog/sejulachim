@@ -399,27 +399,38 @@ export async function fetchPopularProductsForContent(
     }
   }
 
-  // 1차: score > 0 (키워드 관련성 있는 상품)
+  // 1차: score > 0 (키워드 관련성 있는 상품) — 넉넉히 요청
   for (const keyword of keywords) {
     if (results.length >= limit) break;
     try {
-      const items = await requestTopSearchProducts(keyword, limit * 3, 1);
+      const items = await requestTopSearchProducts(keyword, limit * 5, 1);
       addItems(items, keyword);
     } catch {
       // ignore and try next keyword
     }
   }
 
-  // 2차: 3개 미만이면 score >= 0 (골드박스 제외, 관련성 무관)으로 보충
+  // 2차: 부족하면 score >= 0 (골드박스만 제외)으로 보충
   if (results.length < limit) {
     for (const keyword of keywords) {
       if (results.length >= limit) break;
       try {
-        const items = await requestTopSearchProducts(keyword, limit * 3, 0);
+        const items = await requestTopSearchProducts(keyword, limit * 5, 0);
         addItems(items, keyword);
       } catch {
         // ignore
       }
+    }
+  }
+
+  // 3차: 여전히 부족하면 메인 카테고리 키워드로 재시도
+  if (results.length < limit) {
+    const fallbackKeyword = CATEGORY_KEYWORD_MAP[category] ?? category;
+    try {
+      const items = await requestTopSearchProducts(fallbackKeyword, limit * 5, 0);
+      addItems(items, fallbackKeyword);
+    } catch {
+      // ignore
     }
   }
 

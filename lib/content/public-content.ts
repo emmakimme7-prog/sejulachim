@@ -6,7 +6,7 @@ import { getDisplayMainInterest, getStoredCategoryForMainInterest } from "@/lib/
 import { hasSupabaseServerEnv } from "@/lib/env";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
-const PUBLIC_CONTENT_REVALIDATE_SECONDS = 60;
+const PUBLIC_CONTENT_REVALIDATE_SECONDS = 30;
 
 function decodeSlugValue(value: string) {
   try {
@@ -104,4 +104,72 @@ export async function getPublicContentItemBySlug(slug: string) {
 
 export async function listRelatedPublicContentItems(category: string, slug: string, limit: number) {
   return listRelatedPublicContentItemsCached(category, slug, limit);
+}
+
+/** 오늘의 세줄 미리보기: 5개 카테고리별 당일 콘텐츠 중 가장 자극적인 제목 1개씩. 오늘 콘텐츠가 없으면 최신 콘텐츠로 대체. */
+const listTodayPreviewCached = unstable_cache(
+  async () => {
+    if (!hasSupabaseServerEnv()) return [];
+
+    const supabase = createAdminSupabaseClient();
+    // KST 기준 오늘 0시
+    const now = new Date();
+    const kstOffset = 9 * 60 * 60 * 1000;
+    const kstNow = new Date(now.getTime() + kstOffset);
+    const todayStart = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()) - kstOffset);
+
+    // 먼저 오늘 콘텐츠 조회
+    const { data } = await supabase
+      .from("content_items")
+      .select("title, slug, category, sub_interest, short_summary")
+      .eq("approval_status", "approved")
+      .or("summary_status.eq.done,ai_status.eq.completed")
+      .gte("published_at", todayStart.toISOString())
+      .order("published_at", { ascending: false })
+      .limit(100);
+
+    let items = (data ?? []).map((item) => normalizePublicItemCategory(item));
+
+    // 오늘 콘텐츠가 부족하면 최신 콘텐츠로 대체
+    if (items.length < 5) {
+      const { data: fallbackData } = await supabase
+        .from("content_items")
+        .select("title, slug, category, sub_interest, short_summary")
+        .eq("approval_status", "approved")
+        .or("summary_status.eq.done,ai_status.eq.completed")
+        .not("published_at", "is", null)
+        .order("published_at", { ascending: false })
+        .limit(100);
+
+      const fallbackItems = (fallbackData ?? []).map((item) => normalizePublicItemCategory(item));
+      const existingSlugs = new Set(items.map((i) => i.slug));
+      for (const fi of fallbackItems) {
+        if (!existingSlugs.has(fi.slug)) {
+          items.push(fi);
+          existingSlugs.add(fi.slug);
+        }
+      }
+    }
+
+    const categories = ["건강", "돈", "실생활", "뉴스", "관계"];
+    const result: { category: string; title: string; slug: string }[] = [];
+
+    for (const cat of categories) {
+      const catItems = items.filter((item) => item.category === cat);
+      // 제목이 긴 순 (구체적인 콘텐츠 우선)
+      catItems.sort((a, b) => b.title.length - a.title.length);
+      const pick = catItems[0];
+      if (pick) {
+        result.push({ category: cat, title: pick.title, slug: pick.slug });
+      }
+    }
+
+    return result;
+  },
+  ["today-preview"],
+  { revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS }
+);
+
+export async function listTodayPreview() {
+  return listTodayPreviewCached();
 }

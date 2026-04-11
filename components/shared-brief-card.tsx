@@ -50,10 +50,10 @@ export function SharedBriefCard({ item }: { item: SharedBriefItem }) {
 
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="text-[1.45rem] font-bold leading-snug break-keep text-navy-900">
+          <h2 className="text-[1.45rem] font-bold leading-snug break-all text-navy-900">
             {item.title}
           </h2>
-          <p className="mt-2 text-sm leading-6 break-keep text-navy-600">
+          <p className="mt-2 text-sm leading-6 break-all text-navy-600">
             {item.short_summary}
           </p>
           {item.action_line ? (

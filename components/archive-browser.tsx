@@ -133,6 +133,40 @@ export function ArchiveBrowser({
     setSelectedSlugs([]);
   }, [featuredMode, todayMode]);
 
+  // GNB shallow navigation 감지 — 서버 리로드 없이 즉시 카테고리 전환
+  useEffect(() => {
+    function handleShallowNav() {
+      const params = new URLSearchParams(window.location.search);
+      const category = params.get("category")?.trim() ?? "";
+      const view = params.get("view")?.trim() ?? "";
+      const q = params.get("q")?.trim() ?? "";
+
+      const nextTopic = category && mainInterests.includes(category) ? category : ALL_TOPICS;
+      setSelectedTopic(nextTopic);
+      setDraftTopic(nextTopic);
+      setSelectedSubtopic(ALL_SUBTOPICS);
+      setDraftSearchQuery(q);
+      setSearchQuery(q);
+      setSelectedSlugs([]);
+      setShowSearchPanel(false);
+
+      if (!category && !q && !view) {
+        setSortOrder("popular");
+      } else {
+        setSortOrder("latest");
+      }
+
+      window.scrollTo({ top: 0 });
+    }
+
+    window.addEventListener("shallow-nav", handleShallowNav);
+    window.addEventListener("popstate", handleShallowNav);
+    return () => {
+      window.removeEventListener("shallow-nav", handleShallowNav);
+      window.removeEventListener("popstate", handleShallowNav);
+    };
+  }, [mainInterests]);
+
   const visibleSubtopics = useMemo(() => {
     if (selectedTopic === ALL_TOPICS) {
       return [];
@@ -183,8 +217,20 @@ export function ArchiveBrowser({
       return matchesTopic && matchesSubtopic && matchesSearch && matchesDate;
     });
 
+    const now = Date.now();
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+
     const sorted = [...filtered].sort((left, right) => {
       if (sortOrder === "popular") {
+        const leftTime = left.published_at ? new Date(left.published_at).getTime() : 0;
+        const rightTime = right.published_at ? new Date(right.published_at).getTime() : 0;
+        const leftIsRecent = now - leftTime < ONE_DAY;
+        const rightIsRecent = now - rightTime < ONE_DAY;
+
+        // 최근 24시간 콘텐츠를 상단에 배치, 그 안에서는 최신순
+        if (leftIsRecent !== rightIsRecent) return leftIsRecent ? -1 : 1;
+        if (leftIsRecent && rightIsRecent) return rightTime - leftTime;
+
         return (right.view_count ?? right.share_count ?? 0) - (left.view_count ?? left.share_count ?? 0);
       }
 
@@ -212,6 +258,35 @@ export function ArchiveBrowser({
     if (!todayMode || !latestDate) return filteredItems;
     return filteredItems.filter((item) => item.published_at?.slice(0, 10) === latestDate);
   }, [todayMode, latestDate, filteredItems]);
+
+  // 무한 스크롤: 10개씩 표시
+  const PAGE_SIZE = 10;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // 필터/카테고리 변경 시 visibleCount 초기화
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [selectedTopic, selectedSubtopic, searchQuery, dateFilter, sortOrder, todayMode]);
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, displayItems.length));
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [displayItems.length]);
+
+  const visibleItems = useMemo(() => displayItems.slice(0, visibleCount), [displayItems, visibleCount]);
 
   const selectedItems = displayItems.filter((item) => selectedSlugs.includes(item.slug));
   const selectedTitles = selectedItems.map((item) => item.title).join(", ");
@@ -251,6 +326,14 @@ export function ArchiveBrowser({
     const items = displayItemsRef.current;
     const item = items[idx];
     if (!item) return;
+
+    // 해당 카드로 스크롤 이동
+    const articleElements = document.querySelectorAll("[data-archive-item]");
+    const targetEl = articleElements[idx];
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
     const nextItem = items[idx + 1];
     const text = [item.title, item.short_summary, item.action_line].filter(Boolean).join(". ");
     setSpeechPlaylist(
@@ -273,7 +356,7 @@ export function ArchiveBrowser({
   }, [playFromIdx]);
 
   return (
-      <div className={`pb-20 sm:pb-12 ${featuredMode ? "space-y-6 pt-10 md:pt-14" : "space-y-4"}`}>
+      <div className={`pb-20 sm:pb-12 ${featuredMode ? "space-y-3 pt-2 md:pt-4" : "space-y-3"}`}>
       {!featuredMode && todayMode ? <div className="h-[49px]" /> : null}
       {!featuredMode && !todayMode ? (
         <div data-search-filter className="-mx-4 sm:-mx-6 border-b border-gray-200 bg-white !mt-0">
@@ -299,7 +382,7 @@ export function ArchiveBrowser({
                   key={option.key}
                   type="button"
                   onClick={() => setDateFilter(option.key)}
-                  className={`inline-flex h-[32px] shrink-0 items-center rounded-full border px-[14px] text-[14px] font-medium transition ${
+                  className={`inline-flex h-[32px] shrink-0 items-center whitespace-nowrap rounded-full border px-[14px] text-[14px] font-medium transition ${
                     dateFilter === option.key
                       ? "border-navy-900 bg-navy-900 text-white"
                       : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
@@ -346,26 +429,24 @@ export function ArchiveBrowser({
                   ✕
                 </button>
               ) : null}
-              {resolvedShareProfile ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const allSelected = displayItems.every((item) => selectedSlugs.includes(item.slug));
-                    setSelectedSlugs(allSelected ? [] : displayItems.map((item) => item.slug));
-                  }}
-                  className="hidden sm:inline-flex h-[32px] shrink-0 items-center gap-1 rounded-full border border-gray-200 bg-white px-[14px] text-[14px] font-medium text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
-                >
-                  <CheckSquare className="h-3.5 w-3.5" />
-                  전체선택
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => {
+                  const allSelected = displayItems.every((item) => selectedSlugs.includes(item.slug));
+                  setSelectedSlugs(allSelected ? [] : displayItems.map((item) => item.slug));
+                }}
+                className="hidden sm:inline-flex h-[32px] shrink-0 items-center gap-1 rounded-full border border-gray-200 bg-white px-[14px] text-[14px] font-medium text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
+              >
+                <CheckSquare className="h-3.5 w-3.5" />
+                전체선택
+              </button>
             </div>
           </div>
         </div>
       ) : null}
 
       {visibleSubtopics.length > 0 ? (
-        <div data-search-filter className="flex flex-wrap gap-2 pt-1">
+        <div data-search-filter className="flex flex-wrap gap-1.5 pt-1">
           {[ALL_SUBTOPICS, ...visibleSubtopics].map((subtopic) => (
             <button
               key={subtopic}
@@ -376,7 +457,7 @@ export function ArchiveBrowser({
                   resetSearchFilters();
                 }
               }}
-              className={`rounded-full px-[14px] py-[7px] text-[14px] font-semibold transition ${
+              className={`whitespace-nowrap rounded-full px-[14px] py-[7px] text-[14px] font-semibold transition ${
                 selectedSubtopic === subtopic ? "bg-orange-500 text-white" : "border border-orange-100 bg-orange-50 text-orange-600 hover:bg-orange-100"
               }`}
             >
@@ -423,22 +504,21 @@ export function ArchiveBrowser({
             </p>
           </div>
         ) : null}
-        {displayItems.map((item, idx) => (
+        {visibleItems.map((item, idx) => (
           <article
             key={item.id}
-            className="rounded-xl border border-navy-100 bg-white p-[18px] transition-shadow hover:shadow-md md:p-5"
+            data-archive-item
+            className="border-b border-navy-100 pb-[18px] pt-[18px] md:rounded-xl md:border md:border-navy-100 md:bg-white md:p-5 md:shadow-none md:hover:shadow-md"
           >
             {/* 상단: 카테고리 + 날짜 */}
             <div className="mb-3 flex items-center gap-2 flex-wrap">
-              {resolvedShareProfile ? (
-                <input
-                  type="checkbox"
-                  checked={selectedSlugs.includes(item.slug)}
-                  onChange={() => toggleSlug(item.slug)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="h-4 w-4 shrink-0 rounded border-navy-200 text-orange-500 focus:ring-orange-200"
-                />
-              ) : null}
+              <input
+                type="checkbox"
+                checked={selectedSlugs.includes(item.slug)}
+                onChange={() => toggleSlug(item.slug)}
+                onClick={(e) => e.stopPropagation()}
+                className="h-4 w-4 shrink-0 rounded border-navy-200 text-orange-500 focus:ring-orange-200"
+              />
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[item.main_interest] ?? "bg-orange-50 border border-orange-200 text-orange-700"}`}>
                 {interestLabels[item.main_interest] ?? item.main_interest}
                 {item.sub_interest ? ` · ${item.sub_interest}` : ""}
@@ -452,21 +532,32 @@ export function ArchiveBrowser({
             <Link href={`/archive/${item.slug}`} className="group block">
               <div className="md:flex md:items-stretch md:gap-4">
                 <div className="min-w-0 flex-1">
+                  {/* 모바일 글씨 중간/크게: 썸네일 상단 배치 */}
+                  {item.thumbnail_url ? (
+                    <ContentThumbnail
+                      src={item.thumbnail_url}
+                      alt={item.thumbnail_alt?.trim() || item.title}
+                      className="mb-3 aspect-[16/9] w-full overflow-hidden rounded-md font-size-top-thumb md:hidden"
+                      imgClassName="w-full h-full object-cover"
+                      fallbackLabel="준비 중"
+                    />
+                  ) : null}
                   <div className="flex items-stretch gap-3">
-                    <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-keep text-navy-900 transition group-hover:text-orange-600">
+                    <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-all text-navy-900 transition group-hover:text-orange-600">
                       {item.title}
                     </h2>
+                    {/* 모바일 글씨 작게: 썸네일 제목 옆 배치 */}
                     {item.thumbnail_url ? (
                       <ContentThumbnail
                         src={item.thumbnail_url}
                         alt={item.thumbnail_alt?.trim() || item.title}
-                        className="w-20 min-h-[5rem] shrink-0 overflow-hidden rounded-md md:hidden"
+                        className="w-20 min-h-[5rem] shrink-0 overflow-hidden rounded-md font-size-side-thumb md:hidden"
                         imgClassName="w-full h-full object-cover"
                         fallbackLabel="준비 중"
                       />
                     ) : null}
                   </div>
-                  <p className="mt-2 text-sm leading-6 break-keep text-navy-600">
+                  <p className="mt-2 text-sm leading-6 break-all text-navy-600">
                     {item.short_summary}
                   </p>
                   {item.action_line ? (
@@ -489,7 +580,7 @@ export function ArchiveBrowser({
             </Link>
 
             {/* 하단: 액션 버튼 */}
-            <div className="mt-3 flex items-center gap-3 border-t border-gray-100 pt-3">
+            <div className="mt-3 flex items-center justify-end gap-3 border-t border-gray-100 pt-3">
               <ListenButton
                 text={[item.title, item.short_summary, item.action_line].filter(Boolean).join(". ")}
                 speechTitle={item.title}
@@ -521,6 +612,12 @@ export function ArchiveBrowser({
           </article>
         ))}
       </div>
+
+      {visibleCount < displayItems.length && (
+        <div ref={loadMoreRef} className="flex justify-center py-6">
+          <span className="text-sm text-gray-400">더 불러오는 중...</span>
+        </div>
+      )}
 
       {showLoginPrompt ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/45 px-5 py-8">

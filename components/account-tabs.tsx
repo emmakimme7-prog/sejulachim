@@ -13,14 +13,14 @@ export function AccountTabs({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-3">
+      <div className="flex gap-2">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             type="button"
             onClick={() => setActiveKey(tab.key)}
             className={cn(
-              "rounded-full px-5 py-3 text-sm font-semibold transition",
+              "whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold transition",
               activeKey === tab.key ? "bg-navy-900 text-white" : "border border-navy-200 bg-white text-navy-800"
             )}
           >

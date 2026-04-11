@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const title = data.title;
   const description = data.short_summary ?? "";
-  const imageUrl = ("thumbnail_url" in data && data.thumbnail_url) ? data.thumbnail_url : `${BASE_URL}/sejulachim-seo.jpg`;
+  const ogImageUrl = `${BASE_URL}/api/og?slug=${encodeURIComponent(slug)}`;
   const url = `${BASE_URL}/archive/${slug}`;
 
   return {
@@ -57,28 +57,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       siteName: "세줄아침",
       locale: "ko_KR",
       publishedTime: data.published_at ?? undefined,
-      images: [{ url: imageUrl, width: 1200, height: 630, alt: title }],
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: title }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [imageUrl],
+      images: [ogImageUrl],
     },
   };
 }
 
-export const revalidate = 60;
+export const revalidate = 30;
 
 function buildDetailParagraphs(
-  _shortSummary: string | null | undefined,
+  shortSummary: string | null | undefined,
   longSummary: string | null | undefined
 ) {
-  if (!longSummary?.trim()) {
-    return [];
-  }
+  const text = longSummary?.trim() || shortSummary?.trim() || "";
+  if (!text) return [];
 
-  return longSummary
+  return text
     .split(/\n\n+/)
     .map((p) => p.replace(/\s+/g, " ").trim())
     .filter(Boolean);
@@ -154,7 +153,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
     />
-    <div className="mx-auto w-full bg-white px-[18px] lg:px-[34px] py-8 md:py-12" style={{ maxWidth: "min(64rem, 1536px)" }}>
+    <div className="mx-auto w-full bg-white px-[18px] lg:px-[34px] pt-0 pb-8 md:pb-12" style={{ maxWidth: "min(64rem, 1536px)" }}>
       <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-12">
         <article id="article-content" className="min-w-0">
           {/* 썸네일 + 카테고리 배지 오버레이 */}
@@ -187,40 +186,37 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
           <p className="mt-4 text-[0.82rem] text-gray-500">{data.published_at ? formatDate(data.published_at) : "발행 전"}</p>
 
           {/* 제목 */}
-          <h1 className="mt-1 text-[1.3rem] font-bold leading-[1.35] break-keep text-gray-900 sm:text-[1.5rem] md:text-[1.8rem]">
+          <h1 className="mt-1 text-[1.3rem] font-bold leading-[1.35] break-all text-gray-900 sm:text-[1.5rem] md:text-[1.8rem]">
             {data.title}
           </h1>
 
-          {/* 요약 박스 */}
-          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[15px] font-semibold text-gray-900">📋 요약</h2>
-              <DetailListenButton
-                text={listenText}
-                title={data.title}
-                nextItems={relatedItems.map((item) => ({
-                  title: item.title,
-                  short_summary: "short_summary" in item ? item.short_summary : null,
-                  long_summary: "long_summary" in item ? item.long_summary : null,
-                  action_line: "action_line" in item ? item.action_line : null,
-                  slug: item.slug,
-                }))}
-                className="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[0.82rem] !font-normal !text-gray-500 hover:!text-gray-800 !shadow-none"
-              />
-            </div>
-            <ul className="space-y-2">
-              {data.short_summary ? (
-                <li className="text-sm leading-6 text-gray-700">• {data.short_summary}</li>
-              ) : null}
-              {"action_line" in data && data.action_line ? (
-                <li className="text-sm leading-6 font-semibold text-amber-800">• {data.action_line}</li>
-              ) : null}
-            </ul>
-          </div>
+          {/* 요약 (리스트와 동일한 short_summary) */}
+          {data.short_summary ? (
+            <p className="mt-4 text-[0.95rem] leading-7 text-navy-700">{data.short_summary}</p>
+          ) : null}
 
-          {/* 액션바: 좋아요 / 저장 / 공유 / 글씨크기 */}
-          <div className="mt-6">
+          {/* 액션라인 박스 */}
+          {"action_line" in data && data.action_line ? (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
+              <p className="text-sm leading-6 font-semibold text-amber-800">{data.action_line}</p>
+            </div>
+          ) : null}
+
+          {/* 액션바: 좋아요 / 공유 / 듣기 */}
+          <div className="mt-6 flex items-center justify-end gap-4 border-y border-gray-100 py-3">
             <DetailActionBar shareSlug={slug} shareTitle={data.title} />
+            <DetailListenButton
+              text={listenText}
+              title={data.title}
+              nextItems={relatedItems.map((item) => ({
+                title: item.title,
+                short_summary: "short_summary" in item ? item.short_summary : null,
+                long_summary: "long_summary" in item ? item.long_summary : null,
+                action_line: "action_line" in item ? item.action_line : null,
+                slug: item.slug,
+              }))}
+              className="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[0.82rem] !font-normal !text-gray-500 hover:!text-gray-800 !shadow-none"
+            />
           </div>
 
           {mobileProductTop.length > 0 ? (
@@ -271,7 +267,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                   <div className="md:flex md:items-stretch md:gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start gap-3">
-                        <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-keep text-navy-900 transition group-hover:text-orange-600">
+                        <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-all text-navy-900 transition group-hover:text-orange-600">
                           {nextItem.title}
                         </h2>
                         {"thumbnail_url" in nextItem && nextItem.thumbnail_url ? (
@@ -284,7 +280,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                           />
                         ) : null}
                       </div>
-                      <p className="mt-2 text-sm leading-6 break-keep text-navy-600">
+                      <p className="mt-2 text-sm leading-6 break-all text-navy-600">
                         {nextItem.short_summary}
                       </p>
                       {"action_line" in nextItem && nextItem.action_line ? (

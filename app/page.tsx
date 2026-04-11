@@ -1,8 +1,9 @@
 import { ArchiveBrowser } from "@/components/archive-browser";
+import { HomeContent } from "@/components/home-content";
 import { getInterestConfig } from "@/lib/content/interest-config";
-import { listPublicContentItems } from "@/lib/content/public-content";
+import { listPublicContentItems, listTodayPreview } from "@/lib/content/public-content";
 
-export const revalidate = 60;
+export const revalidate = 30;
 
 export default async function HomePage({
   searchParams
@@ -14,8 +15,9 @@ export default async function HomePage({
   const initialTopic = typeof resolvedSearchParams.category === "string" ? resolvedSearchParams.category.trim() : "";
   const initialMode = typeof resolvedSearchParams.mode === "string" ? resolvedSearchParams.mode.trim() : "";
   const initialView = typeof resolvedSearchParams.view === "string" ? resolvedSearchParams.view.trim() : "";
-  const featuredMode = !initialTitleQuery && !initialTopic && !initialView && (!initialMode || initialMode === "popular");
+  const featuredMode = !initialTitleQuery && !initialTopic && (!initialView || initialView === "intro") && (!initialMode || initialMode === "popular");
   const interestConfig = await getInterestConfig();
+  const todayPreviews = await listTodayPreview();
   const data = (await listPublicContentItems(120)) as Array<{
     id: string;
     title: string;
@@ -47,19 +49,21 @@ export default async function HomePage({
     }));
 
   return (
-    <div className="mx-auto w-full px-[18px] lg:px-[34px] pb-10 md:pb-20" style={{ maxWidth: "min(64rem, 1536px)" }}>
-      <h1 className="sr-only">세줄아침 — 매일 아침 세 줄로 읽는 생활 브리핑</h1>
-      <ArchiveBrowser
-        items={archiveItems}
-        initialTitleQuery={initialTitleQuery}
-        initialTopic={initialTopic}
-        mainInterests={interestConfig.mainInterests}
-        interestLabels={interestConfig.labels}
-        subInterestOptions={interestConfig.subInterests}
-        featuredMode={featuredMode}
-        todayMode={initialView === "today"}
-        initialSortOrder={featuredMode ? "popular" : "latest"}
-      />
-    </div>
+    <HomeContent previews={todayPreviews}>
+      <div className="mx-auto w-full px-[18px] lg:px-[34px] pb-10 md:pb-20" style={{ maxWidth: "min(64rem, 1536px)" }}>
+        <h1 className="sr-only">세줄아침 — 매일 아침 세 줄로 읽는 생활 브리핑</h1>
+        <ArchiveBrowser
+          items={archiveItems}
+          initialTitleQuery={initialTitleQuery}
+          initialTopic={initialTopic}
+          mainInterests={interestConfig.mainInterests}
+          interestLabels={interestConfig.labels}
+          subInterestOptions={interestConfig.subInterests}
+          featuredMode={featuredMode}
+          todayMode={initialView === "today"}
+          initialSortOrder={featuredMode ? "popular" : "latest"}
+        />
+      </div>
+    </HomeContent>
   );
 }

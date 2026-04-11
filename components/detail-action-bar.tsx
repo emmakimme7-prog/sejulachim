@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bookmark, Heart } from "lucide-react";
+import { Heart } from "lucide-react";
 
 import { CompleteShareButton } from "@/components/complete-share-button";
 
@@ -15,10 +15,9 @@ export function DetailActionBar({
   shareTitle: string;
 }) {
   const [isLiked, setIsLiked] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(false);
 
   return (
-    <div className="flex items-center gap-4 border-y border-gray-100 py-3">
+    <div className="flex items-center gap-4">
       <button
         type="button"
         onClick={() => setIsLiked((v) => !v)}
@@ -26,14 +25,6 @@ export function DetailActionBar({
       >
         <Heart className={`h-4 w-4 ${isLiked ? "fill-red-500" : ""}`} />
         좋아요
-      </button>
-      <button
-        type="button"
-        onClick={() => setIsBookmarked((v) => !v)}
-        className={`flex items-center gap-1.5 text-[0.82rem] transition ${isBookmarked ? "text-blue-600" : "text-gray-500 hover:text-gray-800"}`}
-      >
-        <Bookmark className={`h-4 w-4 ${isBookmarked ? "fill-blue-600" : ""}`} />
-        저장
       </button>
       <CompleteShareButton
         {...(shareSlug ? { shareSlugs: [shareSlug] } : { shareUrl })}

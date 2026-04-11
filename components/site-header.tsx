@@ -2,7 +2,7 @@
 
 import type { FormEvent, MouseEvent } from "react";
 
-import { Bell, CalendarDays, Flame, LibraryBig, Search, User } from "lucide-react";
+import { Bell, CalendarDays, Flame, Info, LibraryBig, Search, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -23,6 +23,7 @@ type SessionPayload = {
 
 export function SiteHeader() {
   const [payload, setPayload] = useState<SessionPayload>({ session: null, unreadCount: 0 });
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [scrolledDown, setScrolledDown] = useState(false);
@@ -52,6 +53,9 @@ export function SiteHeader() {
         if (!cancelled) {
           setPayload({ session: null, unreadCount: 0 });
         }
+      })
+      .finally(() => {
+        if (!cancelled) setSessionLoaded(true);
       });
 
     return () => {
@@ -80,8 +84,10 @@ export function SiteHeader() {
   const currentCategory = searchParams.get("category")?.trim() ?? "";
   const currentQuery = searchParams.get("q")?.trim() ?? "";
   const currentView = searchParams.get("view")?.trim() ?? "";
+  const isIntroActive = currentView === "intro";
   const isTodayActive = currentView === "today";
-  const isPopularActive = !currentCategory && !currentQuery && !isTodayActive;
+  const isPopularActive = !currentCategory && !currentQuery && !isTodayActive && !isIntroActive;
+  const isLoggedIn = !!payload.session;
   const targetHref = "/";
 
   useEffect(() => {
@@ -109,6 +115,11 @@ export function SiteHeader() {
       window.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showSearch]);
+
+  function shallowNav(url: string) {
+    window.history.pushState(null, "", url);
+    window.dispatchEvent(new Event("shallow-nav"));
+  }
 
   function handleLogoClick(event: MouseEvent<HTMLAnchorElement>) {
     if (pathname === targetHref && !searchParams.toString()) {
@@ -150,9 +161,19 @@ export function SiteHeader() {
 
             {/* 데스크탑 카테고리 탭 */}
             <nav className="hidden lg:flex items-center gap-[6px]">
+              {!isLoggedIn && sessionLoaded ? (
+                <button
+                  type="button"
+                  onClick={() => { if (pathname === "/") shallowNav("/?view=intro"); else router.push("/?view=intro"); }}
+                  className={`relative px-[23px] py-[12px] text-[20px] font-medium transition-colors ${isIntroActive ? "text-orange-500" : "text-gray-600 hover:text-gray-900"}`}
+                >
+                  소개
+                  {isIntroActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
+                </button>
+              ) : null}
               <button
                 type="button"
-                onClick={() => router.push("/")}
+                onClick={() => { if (pathname === "/") shallowNav("/"); else router.push("/"); }}
                 className={`relative px-[23px] py-[12px] text-[20px] font-medium transition-colors ${isPopularActive ? "text-orange-500" : "text-gray-600 hover:text-gray-900"}`}
               >
                 인기
@@ -160,7 +181,7 @@ export function SiteHeader() {
               </button>
               <button
                 type="button"
-                onClick={() => router.push("/?view=today")}
+                onClick={() => { if (pathname === "/") shallowNav("/?view=today"); else router.push("/?view=today"); }}
                 className={`relative px-[23px] py-[12px] text-[20px] font-medium transition-colors ${isTodayActive ? "text-orange-500" : "text-gray-600 hover:text-gray-900"}`}
               >
                 오늘
@@ -168,11 +189,12 @@ export function SiteHeader() {
               </button>
               {MAIN_INTERESTS.map((category) => {
                 const active = currentCategory === category;
+                const url = `/?category=${encodeURIComponent(category)}`;
                 return (
                   <button
                     key={category}
                     type="button"
-                    onClick={() => router.push(`/?category=${encodeURIComponent(category)}`)}
+                    onClick={() => { if (pathname === "/") shallowNav(url); else router.push(url); }}
                     className={`relative px-[23px] py-[12px] text-[20px] font-medium transition-colors ${active ? "text-orange-500" : "text-gray-600 hover:text-gray-900"}`}
                   >
                     {category}
@@ -193,7 +215,13 @@ export function SiteHeader() {
               >
                 <Search className="h-[22px] w-[22px]" />
               </button>
-              {payload.session ? (
+              {!sessionLoaded ? (
+                <div className="flex items-center gap-[6px] sm:gap-[12px]">
+                  <div className="h-[40px] w-[40px] animate-pulse rounded-full bg-gray-100" />
+                  <div className="h-[40px] w-[40px] animate-pulse rounded-full bg-gray-100" />
+                  <div className="hidden sm:block h-[40px] w-[40px] animate-pulse rounded-full bg-gray-100" />
+                </div>
+              ) : payload.session ? (
                 <>
                   <Link
                     href="/notifications"
@@ -214,7 +242,7 @@ export function SiteHeader() {
                   </Link>
                   <Link
                     href="/account"
-                    className="hidden sm:inline-flex h-[40px] w-[40px] items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100"
+                    className="inline-flex h-[40px] w-[40px] items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100"
                     aria-label="프로필"
                   >
                     <User className="h-[22px] w-[22px]" />
@@ -224,15 +252,15 @@ export function SiteHeader() {
                 <>
                   <Link
                     href="/login"
-                    className="hidden sm:inline-flex min-h-[40px] shrink-0 items-center justify-center rounded-full px-[23px] text-[20px] font-semibold text-gray-700 transition hover:bg-gray-100"
+                    className="inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full px-[14px] text-[15px] font-semibold text-gray-700 transition hover:bg-gray-100 sm:min-h-[40px] sm:px-[23px] sm:text-[20px]"
                   >
                     로그인
                   </Link>
                   <Link
                     href="/signup"
-                    className="inline-flex min-h-[40px] shrink-0 items-center justify-center rounded-full bg-orange-500 px-[23px] text-[20px] font-semibold text-white transition hover:bg-orange-600"
+                    className="inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-orange-500 px-[14px] text-[15px] font-semibold text-white transition hover:bg-orange-600 sm:min-h-[40px] sm:px-[23px] sm:text-[20px]"
                   >
-                    무료 신청하기
+                    무료신청
                   </Link>
                 </>
               )}
@@ -241,11 +269,22 @@ export function SiteHeader() {
         </div>
 
         {/* 모바일 카테고리 탭 */}
-        <div className="flex gap-[6px] overflow-x-auto border-t border-gray-100 lg:hidden [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+        <div className="flex overflow-x-auto border-t border-gray-100 lg:hidden [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+          {!isLoggedIn && sessionLoaded ? (
+            <button
+              type="button"
+              onClick={() => { if (pathname === "/") shallowNav("/?view=intro"); else router.push("/?view=intro"); }}
+              className={`relative shrink-0 inline-flex items-center justify-center min-w-[48px] min-h-[48px] px-[14px] transition-colors ${isIntroActive ? "text-orange-500" : "text-gray-600"}`}
+              aria-label="소개"
+            >
+              <Info className="h-[22px] w-[22px]" />
+              {isIntroActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={() => router.push("/")}
-            className={`relative shrink-0 inline-flex items-center justify-center px-[14px] py-[12px] transition-colors ${isPopularActive ? "text-orange-500" : "text-gray-600"}`}
+            onClick={() => { if (pathname === "/") shallowNav("/"); else router.push("/"); }}
+            className={`relative shrink-0 inline-flex items-center justify-center min-w-[48px] min-h-[48px] px-[14px] transition-colors ${isPopularActive ? "text-orange-500" : "text-gray-600"}`}
             aria-label="인기"
           >
             <Flame className="h-[22px] w-[22px]" />
@@ -253,8 +292,8 @@ export function SiteHeader() {
           </button>
           <button
             type="button"
-            onClick={() => router.push("/?view=today")}
-            className={`relative shrink-0 inline-flex items-center justify-center px-[14px] py-[12px] transition-colors ${isTodayActive ? "text-orange-500" : "text-gray-600"}`}
+            onClick={() => { if (pathname === "/") shallowNav("/?view=today"); else router.push("/?view=today"); }}
+            className={`relative shrink-0 inline-flex items-center justify-center min-w-[48px] min-h-[48px] px-[14px] transition-colors ${isTodayActive ? "text-orange-500" : "text-gray-600"}`}
             aria-label="오늘"
           >
             <CalendarDays className="h-[22px] w-[22px]" />
@@ -262,12 +301,13 @@ export function SiteHeader() {
           </button>
           {MAIN_INTERESTS.map((category) => {
             const active = currentCategory === category;
+            const url = `/?category=${encodeURIComponent(category)}`;
             return (
               <button
                 key={category}
                 type="button"
-                onClick={() => router.push(`/?category=${encodeURIComponent(category)}`)}
-                className={`relative shrink-0 px-[17px] py-[12px] text-[20px] font-medium whitespace-nowrap transition-colors ${active ? "text-orange-500" : "text-gray-600"}`}
+                onClick={() => { if (pathname === "/") shallowNav(url); else router.push(url); }}
+                className={`relative shrink-0 min-h-[48px] px-[18px] text-[20px] font-medium whitespace-nowrap transition-colors ${active ? "text-orange-500" : "text-gray-600"}`}
               >
                 {category}
                 {active && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}

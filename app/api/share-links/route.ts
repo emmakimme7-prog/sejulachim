@@ -16,17 +16,25 @@ const shareLinkSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const session = await getCurrentUserSession();
-    if (!session) {
-      return NextResponse.json({ error: "로그인 후 이용할 수 있습니다." }, { status: 401 });
-    }
     const payload = shareLinkSchema.parse(await request.json());
-    const user = await findUserById(session.id);
+
+    let nickname = "익명";
+    let avatarKey: string | null = null;
+    let userId = "anonymous";
+
+    if (session) {
+      const user = await findUserById(session.id);
+      userId = session.id;
+      nickname = typeof user?.nickname === "string" && user.nickname.trim() ? user.nickname : session.email.split("@")[0];
+      avatarKey = isAvatarKey(user?.avatar_key) ? user.avatar_key : null;
+    }
+
     const shareKey = await createSharedLinkRecord({
-      userId: session.id,
+      userId,
       shareKey: payload.shareKey,
       slugs: payload.slugs,
-      nickname: typeof user?.nickname === "string" ? user.nickname : session.email.split("@")[0],
-      avatarKey: isAvatarKey(user?.avatar_key) ? user.avatar_key : null,
+      nickname,
+      avatarKey,
       message: payload.message
     });
     const baseUrl = getServerEnv().APP_URL;

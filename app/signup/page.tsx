@@ -28,7 +28,7 @@ export default async function SignupPage({ searchParams }: PageProps) {
   const googleEnabled = isGoogleOauthConfigured();
 
   return (
-    <div className="app-shell py-10 md:py-16">
+    <div className="app-shell py-10 md:py-16" style={{ fontSize: "16px" }}>
       <PageIntro
         eyebrow="SIGN UP"
         title="아침을 가볍게 시작할 준비를 해보세요."

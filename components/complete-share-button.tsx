@@ -46,6 +46,7 @@ export function CompleteShareButton({
   const [isOpen, setIsOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [kakaoReady, setKakaoReady] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [resolvedShareUrl, setResolvedShareUrl] = useState(shareUrl ?? "");
   const [shareKey, setShareKey] = useState<string | null>(null);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
@@ -124,6 +125,13 @@ export function CompleteShareButton({
       script.onload = null;
     };
   }, [appKey]);
+
+  useEffect(() => {
+    fetch("/api/auth/session", { credentials: "same-origin", cache: "no-store" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.session) setIsLoggedIn(true); })
+      .catch(() => undefined);
+  }, []);
 
   const qrImageUrl = useMemo(
     () => `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(resolvedShareUrl)}`,
@@ -306,7 +314,7 @@ export function CompleteShareButton({
             </div>
 
             <div className="mt-6 space-y-5">
-              {!hideMessage ? (
+              {!hideMessage && isLoggedIn ? (
                 <div className="rounded-[28px] bg-navy-50 p-5">
                   <FieldLabel>선택 사항으로 함께 전달할 메세지를 작성해주세요</FieldLabel>
                   <textarea

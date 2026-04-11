@@ -102,12 +102,12 @@ export function AccountInterestsForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-6">
-      <div className="flex items-end justify-between gap-4">
+      <div className="space-y-3">
         <div>
           <h3 className="text-2xl font-bold tracking-[-0.03em] text-navy-900 md:text-[36px]">딱 3가지를 골라주세요.</h3>
           <p className="mt-3 text-base leading-7 text-navy-700">신청 페이지와 같은 방식으로 지금 받고 있는 주제를 다시 고를 수 있습니다.</p>
         </div>
-        <p className="rounded-full bg-navy-50 px-4 py-2 text-sm font-semibold text-navy-500">선택 수 {selectedInterests.length}/3</p>
+        <p className="inline-block rounded-full bg-navy-50 px-4 py-2 text-sm font-semibold text-navy-500">선택 수 {selectedInterests.length}/3</p>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">

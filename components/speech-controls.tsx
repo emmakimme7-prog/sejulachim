@@ -396,7 +396,7 @@ export function SpeechPlayer() {
                 {snap.segments.slice(snap.currentSegmentIndex, snap.currentSegmentIndex + 2).map((seg, i) => (
                   <span
                     key={seg.label}
-                    className={`text-sm font-semibold leading-6 transition-colors ${
+                    className={`truncate text-sm font-semibold leading-6 transition-colors ${
                       i === 0 ? "text-orange-400" : "text-white/35"
                     }`}
                   >
@@ -409,7 +409,7 @@ export function SpeechPlayer() {
                 {snap.playlist.map((item, i) => (
                   <span
                     key={i}
-                    className={`text-sm font-semibold leading-6 transition-colors ${
+                    className={`truncate text-sm font-semibold leading-6 transition-colors ${
                       i === snap.playlistCurrentIdx ? "text-orange-400" : "text-white/35"
                     }`}
                   >
@@ -493,7 +493,7 @@ export function SpeechPlayer() {
           <button
             type="button"
             onClick={toggleAutoPlay}
-            className="flex items-center gap-2 text-xs font-semibold text-white/50 transition hover:text-white/80"
+            className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-white/50 transition hover:text-white/80 whitespace-nowrap"
           >
             <span>자동재생</span>
             <span
