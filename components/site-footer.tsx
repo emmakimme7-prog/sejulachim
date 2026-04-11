@@ -39,6 +39,7 @@ export function SiteFooter() {
           </div>
 
           <p className="mt-[12px] opacity-70" style={{ fontSize: "12px", lineHeight: "24px" }}>본 서비스는 공개된 뉴스를 AI가 요약·재가공한 정보를 제공합니다. 정보의 정확성을 보장하지 않으며, 투자·의료·법률 판단의 근거로 사용하지 마시기 바랍니다.</p>
+          <p className="mt-[8px] text-[11px] leading-[20px] text-gray-400">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
         </div>
 
         {/* 오른쪽: 약관 + 관련 사이트 + 카피라이트 */}

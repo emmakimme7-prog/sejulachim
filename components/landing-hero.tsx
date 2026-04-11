@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { HeroListenButton } from "@/components/hero-listen-button";
 
 type PreviewItem = {
   category: string;
   title: string;
   slug: string;
+  short_summary?: string;
 };
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -45,12 +47,20 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
             매일 아침 딱 세 줄로 정리해 드립니다.
           </p>
 
+          <div className="slm-hero__listen-badge">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></svg>
+            읽기 귀찮을 땐? 소리로 들으세요
+          </div>
+
           {/* 오늘의 세줄 미리보기 */}
           {previews.length > 0 ? (
             <div className="slm-hero__preview">
               <div className="slm-hero__preview-header">
-                <div className="slm-hero__preview-dot" />
-                오늘의 세줄 미리보기
+                <div className="slm-hero__preview-header-left">
+                  <div className="slm-hero__preview-dot" />
+                  오늘의 세줄 미리보기
+                </div>
+                <HeroListenButton previews={previews} />
               </div>
               {previews.map((item, idx) => (
                 <Link
@@ -89,6 +99,10 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
                 1분이면 충분
               </div>
               <div className="slm-hero__trust-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+                소리로 듣기
+              </div>
+              <div className="slm-hero__trust-item">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
                 언제든 구독 해지
               </div>
@@ -116,6 +130,13 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
             <div className="slm-how__icon" style={{ background: "#F0F7FF" }}>3</div>
             <h3>세 줄로 핵심만</h3>
             <p>긴 기사 대신<br />핵심만 세 줄로.<br />1분이면 오늘을 파악합니다</p>
+          </div>
+          <div className="slm-how__card">
+            <div className="slm-how__icon" style={{ background: "#FFF0F5" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8650A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+            </div>
+            <h3>소리로 들으세요</h3>
+            <p>바쁜 출근길에도<br />듣기 버튼 하나로<br />귀로 편하게 들을 수 있습니다</p>
           </div>
           <div className="slm-how__card">
             <div className="slm-how__icon" style={{ background: "#F5FFF0" }}>+</div>

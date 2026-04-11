@@ -267,13 +267,16 @@ button {
 /* ── Landing Hero ── */
 .slm-hero {
   position: relative;
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: calc(100vh - 118px);
+  min-height: calc(100dvh - 118px);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   background: linear-gradient(170deg, #FFF8F0 0%, #FFF3E6 30%, #FFE8CC 60%, #FFDDB3 100%);
+}
+@media (min-width: 1024px) {
+  .slm-hero { min-height: calc(100vh - 70px); min-height: calc(100dvh - 70px); }
 }
 .slm-hero::before {
   content: '';
@@ -335,6 +338,14 @@ button {
   margin-bottom: 12px; letter-spacing: -0.3px;
 }
 
+.slm-hero__listen-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; margin-bottom: 20px;
+  background: rgba(232,101,10,0.08); border: 1px solid rgba(232,101,10,0.18);
+  border-radius: 12px; font-size: 15px; font-weight: 600;
+  color: #E8650A; letter-spacing: -0.3px;
+}
+
 /* Preview card */
 .slm-hero__preview {
   background: rgba(255,255,255,0.85); backdrop-filter: blur(12px);
@@ -343,9 +354,22 @@ button {
   text-align: left; box-shadow: 0 8px 32px rgba(255,120,30,0.08);
 }
 .slm-hero__preview-header {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
   font-size: 12px; font-weight: 600; color: #E8650A;
   text-transform: uppercase; letter-spacing: 1px;
+}
+.slm-hero__preview-header-left {
+  display: flex; align-items: center; gap: 8px;
+}
+.slm-hero__preview-listen {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 12px; border-radius: 20px;
+  background: rgba(232,101,10,0.1); border: 1px solid rgba(232,101,10,0.25);
+  font-size: 11px; font-weight: 600; color: #E8650A;
+  cursor: pointer; transition: all 0.2s; text-transform: none; letter-spacing: 0;
+}
+.slm-hero__preview-listen:hover {
+  background: rgba(232,101,10,0.18); border-color: rgba(232,101,10,0.4);
 }
 .slm-hero__preview-dot {
   width: 6px; height: 6px; background: #E8650A; border-radius: 50%;
@@ -411,7 +435,8 @@ button {
 .slm-how { padding: 80px 24px; background: #fff; text-align: center; }
 .slm-how h2 { font-size: 1.75rem; font-weight: 800; margin-bottom: 12px; color: #1a1a2e; letter-spacing: -1px; }
 .slm-how__sub { font-size: 1rem; color: #888; margin-bottom: 48px; }
-.slm-how__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; max-width: 800px; margin: 0 auto; }
+.slm-how__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; max-width: 960px; margin: 0 auto; }
+@media (max-width: 768px) and (min-width: 481px) { .slm-how__grid { grid-template-columns: repeat(2, 1fr); } }
 .slm-how__card { padding: 32px 20px; border-radius: 16px; background: #FAFAFA; transition: all 0.3s; }
 .slm-how__card:hover { background: #FFF8F0; transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.04); }
 .slm-how__icon {
@@ -440,6 +465,7 @@ button {
 
 /* Bottom CTA */
 .slm-bottom-cta { padding: 64px 24px; background: #1a1a2e; text-align: center; }
+body.hero-active .slm-footer { margin-top: 0; }
 .slm-bottom-cta h2 { font-size: 2rem; font-weight: 800; color: #fff; margin-bottom: 12px; letter-spacing: -1px; }
 .slm-bottom-cta p { font-size: 1rem; color: rgba(255,255,255,0.6); margin-bottom: 32px; }
 

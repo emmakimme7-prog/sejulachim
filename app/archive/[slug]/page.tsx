@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { ContentThumbnail } from "@/components/content-thumbnail";
 import { DetailActionBar } from "@/components/detail-action-bar";
 import { DetailListenButton } from "@/components/detail-listen-button";
+import { ProductGridCard } from "@/components/product-grid-card";
 import { RelatedProductCard } from "@/components/related-product-card";
 import { SourceDisplay } from "@/components/source-display";
 import { getPublicContentItemBySlug, listRelatedPublicContentItems } from "@/lib/content/public-content";
@@ -100,9 +101,14 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
     data.short_summary,
     "long_summary" in data ? data.long_summary : null
   );
-  const mobileProductTop = relatedProducts[0] ? [relatedProducts[0]] : [];
-  const mobileProductMiddle = relatedProducts[1] ? [relatedProducts[1]] : [];
-  const mobileProductBottom = relatedProducts[2] ? [relatedProducts[2]] : [];
+  // CTA 모드 A: action_line에 상품 키워드 포함 시 첫 번째 상품 링크 연결
+  const actionLineProductLink = relatedProducts[0]
+    ? (() => {
+        const actionText = (data.action_line ?? "").toLowerCase();
+        const keyword = relatedProducts[0].sourceKeyword?.toLowerCase() ?? "";
+        return keyword && actionText.includes(keyword) ? relatedProducts[0].linkUrl : null;
+      })()
+    : null;
   const listenText = [data.title, data.short_summary, data.action_line, ...detailParagraphs]
     .filter(Boolean)
     .join(". ");
@@ -153,12 +159,12 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
     />
-    <div className="mx-auto w-full bg-white px-[18px] lg:px-[34px] pt-0 pb-8 md:pb-12" style={{ maxWidth: "min(64rem, 1536px)" }}>
+    <div className="mx-auto w-full bg-white px-[18px] lg:px-[34px] pt-0 xl:pt-4 pb-8 md:pb-12" style={{ maxWidth: "min(64rem, 1536px)" }}>
       <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-12">
         <article id="article-content" className="min-w-0">
           {/* 썸네일 + 카테고리 배지 오버레이 */}
           {"thumbnail_url" in data && data.thumbnail_url ? (
-            <div className="relative -mx-4 aspect-[16/9] overflow-hidden bg-gray-50 sm:mx-0 sm:rounded-xl sm:border sm:border-gray-100">
+            <div className="relative -mx-[18px] w-[calc(100%+36px)] aspect-[16/9] overflow-hidden bg-gray-50 sm:mx-0 sm:w-full sm:rounded-xl sm:border sm:border-gray-100">
               <ContentThumbnail
                 src={data.thumbnail_url}
                 alt={("thumbnail_alt" in data ? data.thumbnail_alt : "") || data.title}
@@ -198,7 +204,13 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
           {/* 액션라인 박스 */}
           {"action_line" in data && data.action_line ? (
             <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
-              <p className="text-sm leading-6 font-semibold text-amber-800">{data.action_line}</p>
+              {actionLineProductLink ? (
+                <a href={actionLineProductLink} target="_blank" rel="noopener sponsored" className="block text-sm leading-6 font-semibold text-amber-800 hover:underline">
+                  {data.action_line} <ChevronRight className="ml-[2px] inline h-[14px] w-[14px] align-middle" aria-hidden="true" />
+                </a>
+              ) : (
+                <p className="text-sm leading-6 font-semibold text-amber-800">{data.action_line}</p>
+              )}
             </div>
           ) : null}
 
@@ -219,9 +231,10 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
             />
           </div>
 
-          {mobileProductTop.length > 0 ? (
-            <div className="mt-6 xl:hidden">
-              <RelatedProductCard products={mobileProductTop} hideHeading hideDisclosure />
+          {/* 모바일 상품 3-grid */}
+          {relatedProducts.length > 0 ? (
+            <div className="xl:hidden">
+              <ProductGridCard products={relatedProducts} />
             </div>
           ) : null}
 
@@ -243,12 +256,6 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
               </p>
             ) : null}
           </div>
-
-          {mobileProductMiddle.length > 0 ? (
-            <div className="mt-6 xl:hidden">
-              <RelatedProductCard products={mobileProductMiddle} hideHeading hideDisclosure />
-            </div>
-          ) : null}
 
           {nextItem ? (
             <div className="mt-6 border-t border-navy-100 pt-6">
@@ -302,12 +309,6 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                   </div>
                 </div>
               </Link>
-            </div>
-          ) : null}
-
-          {mobileProductBottom.length > 0 ? (
-            <div className="mt-6 xl:hidden">
-              <RelatedProductCard products={mobileProductBottom} hideHeading />
             </div>
           ) : null}
 

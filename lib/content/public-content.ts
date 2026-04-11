@@ -152,7 +152,7 @@ const listTodayPreviewCached = unstable_cache(
     }
 
     const categories = ["건강", "돈", "실생활", "뉴스", "관계"];
-    const result: { category: string; title: string; slug: string }[] = [];
+    const result: { category: string; title: string; slug: string; short_summary?: string }[] = [];
 
     for (const cat of categories) {
       const catItems = items.filter((item) => item.category === cat);
@@ -160,7 +160,7 @@ const listTodayPreviewCached = unstable_cache(
       catItems.sort((a, b) => b.title.length - a.title.length);
       const pick = catItems[0];
       if (pick) {
-        result.push({ category: cat, title: pick.title, slug: pick.slug });
+        result.push({ category: cat, title: pick.title, slug: pick.slug, short_summary: pick.short_summary ?? undefined });
       }
     }
 

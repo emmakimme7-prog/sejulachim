@@ -2,6 +2,7 @@ import { ArchiveBrowser } from "@/components/archive-browser";
 import { HomeContent } from "@/components/home-content";
 import { getInterestConfig } from "@/lib/content/interest-config";
 import { listPublicContentItems, listTodayPreview } from "@/lib/content/public-content";
+import { fetchPopularProductsForContent } from "@/lib/products/coupang-partners";
 
 export const revalidate = 30;
 
@@ -35,6 +36,9 @@ export default async function HomePage({
     view_count?: number | null;
     main_interest?: string;
   }>;
+  // 피드 상품 카드용 데이터 (2개)
+  const feedProducts = await fetchPopularProductsForContent("실생활", null, 2);
+
   const archiveItems = data.map((item) => ({
       ...item,
       action_line: item.action_line ?? "",
@@ -62,6 +66,7 @@ export default async function HomePage({
           featuredMode={featuredMode}
           todayMode={initialView === "today"}
           initialSortOrder={featuredMode ? "popular" : "latest"}
+          feedProducts={feedProducts}
         />
       </div>
     </HomeContent>

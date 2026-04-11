@@ -173,7 +173,7 @@ const SLUG_QUERIES = {
   "brief-2026-04-11-relation-family-1":       ["elderly couple care nursing senior dignity", "senior care elderly couple love support"],
   "brief-2026-04-11-relation-couple-1":       ["couple counseling therapy communication relationship", "marriage counseling couple conversation couch"],
   "brief-2026-04-11-relation-office-1":       ["office worker stress workplace bullying unfair", "corporate workplace employee stress frustration"],
-  "brief-2026-04-11-relation-hobby-1":        ["local community hobby meetup neighbors gathering", "neighborhood social gathering hobby craft group"],
+  "brief-2026-04-11-relation-hobby-1":        ["friends group meeting cafe table happy", "community gathering people hobby cooking class"],
   "brief-2026-04-11-relation-friend-1":       ["lonely man alone solitude friendship crisis", "male friendship loneliness isolation social"],
 };
 
