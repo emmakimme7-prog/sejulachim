@@ -81,9 +81,37 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const currentCategory = searchParams.get("category")?.trim() ?? "";
-  const currentQuery = searchParams.get("q")?.trim() ?? "";
-  const currentView = searchParams.get("view")?.trim() ?? "";
+  // shallow-nav 후에도 즉시 반영되도록 로컬 상태로 관리
+  const [localCategory, setLocalCategory] = useState(searchParams.get("category")?.trim() ?? "");
+  const [localView, setLocalView] = useState(searchParams.get("view")?.trim() ?? "");
+  const [localQuery, setLocalQuery] = useState(searchParams.get("q")?.trim() ?? "");
+
+  // Next.js 라우팅으로 URL이 바뀌면 동기화
+  useEffect(() => {
+    setLocalCategory(searchParams.get("category")?.trim() ?? "");
+    setLocalView(searchParams.get("view")?.trim() ?? "");
+    setLocalQuery(searchParams.get("q")?.trim() ?? "");
+  }, [searchParams]);
+
+  // shallow-nav / popstate 이벤트 시 즉시 갱신
+  useEffect(() => {
+    function syncFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      setLocalCategory(params.get("category")?.trim() ?? "");
+      setLocalView(params.get("view")?.trim() ?? "");
+      setLocalQuery(params.get("q")?.trim() ?? "");
+    }
+    window.addEventListener("shallow-nav", syncFromUrl);
+    window.addEventListener("popstate", syncFromUrl);
+    return () => {
+      window.removeEventListener("shallow-nav", syncFromUrl);
+      window.removeEventListener("popstate", syncFromUrl);
+    };
+  }, []);
+
+  const currentCategory = localCategory;
+  const currentQuery = localQuery;
+  const currentView = localView;
   const isIntroActive = currentView === "intro";
   const isTodayActive = currentView === "today";
   const isPopularActive = !currentCategory && !currentQuery && !isTodayActive && !isIntroActive;
