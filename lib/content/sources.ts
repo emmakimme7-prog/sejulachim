@@ -27,11 +27,13 @@ export function normalizeSources(input: {
   source_name?: string | null;
   source_url?: string | null;
 }): ContentSource[] {
-  const normalized = (input.sources ?? [])
-    .map((source) => ({
+  const raw = input.sources;
+  const sources = Array.isArray(raw) ? raw : typeof raw === "string" ? (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; } })() : [];
+  const normalized = sources
+    .map((source: Partial<ContentSource>) => ({
       name: typeof source.name === "string" ? source.name.trim() : "",
       url: typeof source.url === "string" ? source.url.trim() : "",
-      type: normalizeSourceType(source.type)
+      type: normalizeSourceType(source.type as string | null | undefined)
     }))
     .filter((source) => source.name && source.url);
 
