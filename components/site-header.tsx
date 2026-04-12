@@ -2,15 +2,13 @@
 
 import type { FormEvent, MouseEvent } from "react";
 
-import { Bell, CalendarDays, Flame, Info, LibraryBig, Search, User } from "lucide-react";
+import { Bell, LibraryBig, Search, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { SpeechSearchButton } from "@/components/speech-controls";
-import { MAIN_INTERESTS } from "@/lib/content/sub-interests";
-import { cn } from "@/lib/utils";
 
 type SessionPayload = {
   session: {
@@ -93,7 +91,7 @@ export function SiteHeader() {
     setLocalQuery(searchParams.get("q")?.trim() ?? "");
   }, [searchParams]);
 
-  // shallow-nav / popstate 이벤트 시 즉시 갱신
+  // 브라우저 뒤로/앞으로 버튼 시 즉시 갱신
   useEffect(() => {
     function syncFromUrl() {
       const params = new URLSearchParams(window.location.search);
@@ -101,10 +99,8 @@ export function SiteHeader() {
       setLocalView(params.get("view")?.trim() ?? "");
       setLocalQuery(params.get("q")?.trim() ?? "");
     }
-    window.addEventListener("shallow-nav", syncFromUrl);
     window.addEventListener("popstate", syncFromUrl);
     return () => {
-      window.removeEventListener("shallow-nav", syncFromUrl);
       window.removeEventListener("popstate", syncFromUrl);
     };
   }, []);
@@ -144,14 +140,15 @@ export function SiteHeader() {
     };
   }, [showSearch]);
 
-  function shallowNav(url: string) {
-    window.history.pushState(null, "", url);
-    window.dispatchEvent(new Event("shallow-nav"));
-  }
-
   function handleLogoClick(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    // 비로그인 유저는 소개 탭으로 이동
+    if (!isLoggedIn && sessionLoaded) {
+      router.push("/?view=intro");
+      return;
+    }
+
     if (pathname === targetHref && !searchParams.toString()) {
-      event.preventDefault();
       window.location.assign(targetHref);
       return;
     }
@@ -187,12 +184,12 @@ export function SiteHeader() {
               <Image src="/threeline_morning_logo_v2.png" alt="세줄아침" width={180} height={46} className="h-[32px] w-auto sm:h-[40px]" />
             </Link>
 
-            {/* 데스크탑 카테고리 탭 */}
+            {/* 데스크탑 탭 */}
             <nav className="hidden lg:flex items-center gap-[6px]">
               {!isLoggedIn && sessionLoaded ? (
                 <button
                   type="button"
-                  onClick={() => { if (pathname === "/") shallowNav("/?view=intro"); else router.push("/?view=intro"); }}
+                  onClick={() => router.push("/?view=intro")}
                   className={`relative px-[23px] py-[12px] text-[20px] font-medium transition-colors ${isIntroActive ? "text-orange-500" : "text-gray-600 hover:text-gray-900"}`}
                 >
                   소개
@@ -201,35 +198,20 @@ export function SiteHeader() {
               ) : null}
               <button
                 type="button"
-                onClick={() => { if (pathname === "/") shallowNav("/"); else router.push("/"); }}
+                onClick={() => router.push("/")}
                 className={`relative px-[23px] py-[12px] text-[20px] font-medium transition-colors ${isPopularActive ? "text-orange-500" : "text-gray-600 hover:text-gray-900"}`}
               >
-                인기
+                인기뉴스
                 {isPopularActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
               </button>
               <button
                 type="button"
-                onClick={() => { if (pathname === "/") shallowNav("/?view=today"); else router.push("/?view=today"); }}
+                onClick={() => router.push("/?view=today")}
                 className={`relative px-[23px] py-[12px] text-[20px] font-medium transition-colors ${isTodayActive ? "text-orange-500" : "text-gray-600 hover:text-gray-900"}`}
               >
-                오늘
+                오늘뉴스
                 {isTodayActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
               </button>
-              {MAIN_INTERESTS.map((category) => {
-                const active = currentCategory === category;
-                const url = `/?category=${encodeURIComponent(category)}`;
-                return (
-                  <button
-                    key={category}
-                    type="button"
-                    onClick={() => { if (pathname === "/") shallowNav(url); else router.push(url); }}
-                    className={`relative px-[23px] py-[12px] text-[20px] font-medium transition-colors ${active ? "text-orange-500" : "text-gray-600 hover:text-gray-900"}`}
-                  >
-                    {category}
-                    {active && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
-                  </button>
-                );
-              })}
             </nav>
 
             {/* 우측 액션 버튼 */}
@@ -296,52 +278,34 @@ export function SiteHeader() {
           </div>
         </div>
 
-        {/* 모바일 카테고리 탭 */}
+        {/* 모바일 탭 */}
         <div className="flex overflow-x-auto border-t border-gray-100 lg:hidden [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
           {!isLoggedIn && sessionLoaded ? (
             <button
               type="button"
-              onClick={() => { if (pathname === "/") shallowNav("/?view=intro"); else router.push("/?view=intro"); }}
-              className={`relative shrink-0 inline-flex items-center justify-center min-w-[48px] min-h-[48px] px-[14px] transition-colors ${isIntroActive ? "text-orange-500" : "text-gray-600"}`}
-              aria-label="소개"
+              onClick={() => router.push("/?view=intro")}
+              className={`relative shrink-0 inline-flex items-center justify-center min-h-[44px] px-[16px] text-[15px] font-medium transition-colors ${isIntroActive ? "text-orange-500" : "text-gray-600"}`}
             >
-              <Info className="h-[22px] w-[22px]" />
+              소개
               {isIntroActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
             </button>
           ) : null}
           <button
             type="button"
-            onClick={() => { if (pathname === "/") shallowNav("/"); else router.push("/"); }}
-            className={`relative shrink-0 inline-flex items-center justify-center min-w-[48px] min-h-[48px] px-[14px] transition-colors ${isPopularActive ? "text-orange-500" : "text-gray-600"}`}
-            aria-label="인기"
+            onClick={() => router.push("/")}
+            className={`relative shrink-0 inline-flex items-center justify-center min-h-[44px] px-[16px] text-[15px] font-medium transition-colors ${isPopularActive ? "text-orange-500" : "text-gray-600"}`}
           >
-            <Flame className="h-[22px] w-[22px]" />
+            인기뉴스
             {isPopularActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
           </button>
           <button
             type="button"
-            onClick={() => { if (pathname === "/") shallowNav("/?view=today"); else router.push("/?view=today"); }}
-            className={`relative shrink-0 inline-flex items-center justify-center min-w-[48px] min-h-[48px] px-[14px] transition-colors ${isTodayActive ? "text-orange-500" : "text-gray-600"}`}
-            aria-label="오늘"
+            onClick={() => router.push("/?view=today")}
+            className={`relative shrink-0 inline-flex items-center justify-center min-h-[44px] px-[16px] text-[15px] font-medium transition-colors ${isTodayActive ? "text-orange-500" : "text-gray-600"}`}
           >
-            <CalendarDays className="h-[22px] w-[22px]" />
+            오늘뉴스
             {isTodayActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
           </button>
-          {MAIN_INTERESTS.map((category) => {
-            const active = currentCategory === category;
-            const url = `/?category=${encodeURIComponent(category)}`;
-            return (
-              <button
-                key={category}
-                type="button"
-                onClick={() => { if (pathname === "/") shallowNav(url); else router.push(url); }}
-                className={`relative shrink-0 min-h-[48px] px-[18px] text-[20px] font-medium whitespace-nowrap transition-colors ${active ? "text-orange-500" : "text-gray-600"}`}
-              >
-                {category}
-                {active && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
-              </button>
-            );
-          })}
         </div>
 
       </div>

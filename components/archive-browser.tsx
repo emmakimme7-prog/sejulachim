@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckSquare, ChevronRight } from "lucide-react";
+import { CalendarDays, CheckSquare, ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { CompleteShareButton } from "@/components/complete-share-button";
 import { ContentThumbnail } from "@/components/content-thumbnail";
@@ -9,7 +10,6 @@ import { FeedProductCard } from "@/components/feed-product-card";
 import { type ResolvedAffiliateProduct } from "@/lib/products/catalog";
 import { FavoriteToggleButton } from "@/components/favorite-toggle-button";
 import { ListenButton, playSpeech, setAutoPlayNextFn, setSpeechPlaylist } from "@/components/speech-controls";
-import { SelectInput } from "@/components/ui/field";
 import { type ContentSource, normalizeSources } from "@/lib/content/sources";
 import { type AvatarKey } from "@/lib/profile";
 import { MAIN_INTERESTS, SUB_INTERESTS } from "@/lib/content/sub-interests";
@@ -89,7 +89,8 @@ export function ArchiveBrowser({
   const [sortOrder, setSortOrder] = useState<"latest" | "oldest" | "popular">(initialSortOrder);
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [showSearchPanel, setShowSearchPanel] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showInlineSearch, setShowInlineSearch] = useState(false);
   const [isFeatureView, setIsFeatureView] = useState(featuredMode);
   const [resolvedShareProfile, setResolvedShareProfile] = useState(shareProfile);
   const [resolvedFavoriteIds, setResolvedFavoriteIds] = useState(favoriteIds);
@@ -129,52 +130,61 @@ export function ArchiveBrowser({
     setSelectedTopic(nextTopic);
     setDraftTopic(nextTopic);
     setSelectedSubtopic(ALL_SUBTOPICS);
-    setShowSearchPanel(false);
+    setShowSortMenu(false);
     setSelectedSlugs([]);
   }, [initialTopic, mainInterests]);
 
+  const [localTodayMode, setLocalTodayMode] = useState(todayMode);
+  const searchParams = useSearchParams();
+
   useEffect(() => {
     setIsFeatureView(featuredMode);
-    setShowSearchPanel(false);
+    setLocalTodayMode(todayMode);
+    setShowSortMenu(false);
     setSelectedSlugs([]);
   }, [featuredMode, todayMode]);
 
-  // GNB shallow navigation 감지 — 서버 리로드 없이 즉시 카테고리 전환
+  // GNB 탭 전환 감지 — router.push에 의한 searchParams 변화 반영
+  const prevSearchRef = useRef(searchParams.toString());
   useEffect(() => {
-    function handleShallowNav() {
-      const params = new URLSearchParams(window.location.search);
-      const category = params.get("category")?.trim() ?? "";
-      const view = params.get("view")?.trim() ?? "";
-      const q = params.get("q")?.trim() ?? "";
+    const current = searchParams.toString();
+    if (current === prevSearchRef.current) return;
+    prevSearchRef.current = current;
 
-      const nextTopic = category && mainInterests.includes(category) ? category : ALL_TOPICS;
-      setSelectedTopic(nextTopic);
-      setDraftTopic(nextTopic);
+    const category = searchParams.get("category")?.trim() ?? "";
+    const view = searchParams.get("view")?.trim() ?? "";
+    const q = searchParams.get("q")?.trim() ?? "";
+
+    const nextTopic = category && mainInterests.includes(category) ? category : ALL_TOPICS;
+    setSelectedTopic(nextTopic);
+    setDraftTopic(nextTopic);
+    setSelectedSubtopic(ALL_SUBTOPICS);
+    setDraftSearchQuery(q);
+    setSearchQuery(q);
+    setSelectedSlugs([]);
+    setShowSortMenu(false);
+
+    // 뷰 전환
+    const isToday = view === "today";
+    setLocalTodayMode(isToday);
+    setDateFilter(ALL_DATE);
+    setCustomDate("");
+    if (isToday) {
+      setTodaySelectedDate(new Date().toISOString().slice(0, 10));
+      setSelectedTopic(ALL_TOPICS);
+      setDraftTopic(ALL_TOPICS);
       setSelectedSubtopic(ALL_SUBTOPICS);
-      setDraftSearchQuery(q);
-      setSearchQuery(q);
-      setSelectedSlugs([]);
-      setShowSearchPanel(false);
-
-      // 카테고리/검색 선택 시 featuredMode 해제 → 검색 필터 표시
-      if (category || q || view) {
-        setIsFeatureView(false);
-        setSortOrder("latest");
-      } else {
-        setIsFeatureView(true);
-        setSortOrder("popular");
-      }
-
-      window.scrollTo({ top: 0 });
+    }
+    if (category || q || view) {
+      setIsFeatureView(false);
+      setSortOrder("latest");
+    } else {
+      setIsFeatureView(true);
+      setSortOrder("popular");
     }
 
-    window.addEventListener("shallow-nav", handleShallowNav);
-    window.addEventListener("popstate", handleShallowNav);
-    return () => {
-      window.removeEventListener("shallow-nav", handleShallowNav);
-      window.removeEventListener("popstate", handleShallowNav);
-    };
-  }, [mainInterests]);
+    window.scrollTo({ top: 0 });
+  }, [searchParams, mainInterests]);
 
   const visibleSubtopics = useMemo(() => {
     if (selectedTopic === ALL_TOPICS) {
@@ -231,16 +241,7 @@ export function ArchiveBrowser({
 
     const sorted = [...filtered].sort((left, right) => {
       if (sortOrder === "popular") {
-        const leftTime = left.published_at ? new Date(left.published_at).getTime() : 0;
-        const rightTime = right.published_at ? new Date(right.published_at).getTime() : 0;
-        const leftIsRecent = now - leftTime < ONE_DAY;
-        const rightIsRecent = now - rightTime < ONE_DAY;
-
-        // 최근 24시간 콘텐츠를 상단에 배치, 그 안에서는 최신순
-        if (leftIsRecent !== rightIsRecent) return leftIsRecent ? -1 : 1;
-        if (leftIsRecent && rightIsRecent) return rightTime - leftTime;
-
-        return (right.view_count ?? right.share_count ?? 0) - (left.view_count ?? left.share_count ?? 0);
+        return (right.view_count ?? 0) - (left.view_count ?? 0);
       }
 
       const leftDate = left.published_at ? new Date(left.published_at).getTime() : 0;
@@ -249,24 +250,42 @@ export function ArchiveBrowser({
     });
 
     if (isFeatureView) {
-      return sorted.slice(0, 30);
+      return sorted.slice(0, 10);
     }
 
     return sorted;
   }, [customDate, dateFilter, isFeatureView, items, searchQuery, selectedSubtopic, selectedTopic, sortOrder]);
 
   const latestDate = useMemo(() => {
-    if (!todayMode) return null;
+    if (!localTodayMode) return null;
     return items.reduce((max, item) => {
       const d = item.published_at?.slice(0, 10) ?? "";
       return d > max ? d : max;
     }, "");
-  }, [todayMode, items]);
+  }, [localTodayMode, items]);
+
+  // 오늘 탭 전용: 선택 날짜 (기본 = 오늘 = latestDate)
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [todaySelectedDate, setTodaySelectedDate] = useState<string>(todayStr);
+
+  // todayMode 진입 시 오늘 날짜로 초기화
+  useEffect(() => {
+    if (localTodayMode) setTodaySelectedDate(todayStr);
+  }, [localTodayMode, todayStr]);
 
   const displayItems = useMemo(() => {
-    if (!todayMode || !latestDate) return filteredItems;
-    return filteredItems.filter((item) => item.published_at?.slice(0, 10) === latestDate);
-  }, [todayMode, latestDate, filteredItems]);
+    if (!localTodayMode) return filteredItems;
+    if (!todaySelectedDate) return filteredItems; // "전체"
+    if (todaySelectedDate === "week") {
+      const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      return filteredItems.filter((item) => item.published_at && new Date(item.published_at).getTime() >= cutoff);
+    }
+    if (todaySelectedDate === "month") {
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      return filteredItems.filter((item) => item.published_at && new Date(item.published_at).getTime() >= cutoff);
+    }
+    return filteredItems.filter((item) => item.published_at?.slice(0, 10) === todaySelectedDate);
+  }, [localTodayMode, todaySelectedDate, filteredItems]);
 
   // 무한 스크롤: 10개씩 표시
   const PAGE_SIZE = 10;
@@ -276,7 +295,7 @@ export function ArchiveBrowser({
   // 필터/카테고리 변경 시 visibleCount 초기화
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [selectedTopic, selectedSubtopic, searchQuery, dateFilter, sortOrder, todayMode]);
+  }, [selectedTopic, selectedSubtopic, searchQuery, dateFilter, sortOrder, localTodayMode, todaySelectedDate]);
 
   useEffect(() => {
     const sentinel = loadMoreRef.current;
@@ -366,76 +385,230 @@ export function ArchiveBrowser({
 
   return (
       <div className={`pb-20 sm:pb-12 ${isFeatureView ? "space-y-3 pt-2 md:pt-4" : "space-y-3"}`}>
-      {!isFeatureView && todayMode ? <div className="h-[49px]" /> : null}
-      {!isFeatureView && !todayMode ? (
-        <div data-search-filter className="-mx-4 sm:-mx-6 border-b border-gray-200 bg-white !mt-0">
-          <div className="flex items-center gap-[6px] px-[16px] pt-[16px] pb-[10px] sm:px-[24px]">
-            {/* 좌: 스크롤 가능한 필터 칩 */}
-            <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
-              <SelectInput
-                value={sortOrder}
-                onChange={(event) => setSortOrder(event.target.value as typeof sortOrder)}
-                className="!min-h-[32px] !h-[32px] !w-auto !min-w-0 !max-w-[80px] !rounded-full !px-[10px] !text-[14px] shrink-0"
+      {!isFeatureView && localTodayMode ? (
+        <div className="-mx-4 sm:-mx-6 border-b border-gray-200 bg-white !mt-0">
+          {/* 날짜 필터 행 */}
+          <div className="flex items-center gap-1.5 px-[16px] pt-[16px] pb-[10px] sm:px-[24px] overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+            {(() => {
+              const isCustomDate = todaySelectedDate && todaySelectedDate !== todayStr && todaySelectedDate !== "week" && todaySelectedDate !== "month";
+              return (
+                <div className="flex shrink-0 items-center gap-1">
+                  <label
+                    className={`relative inline-flex h-[32px] w-[32px] shrink-0 cursor-pointer items-center justify-center rounded-full border transition ${
+                      isCustomDate
+                        ? "border-navy-900 bg-navy-900 text-white"
+                        : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    <CalendarDays className="h-[16px] w-[16px]" />
+                    <input
+                      type="date"
+                      value={todaySelectedDate !== "week" && todaySelectedDate !== "month" && todaySelectedDate !== "" ? todaySelectedDate : ""}
+                      onChange={(event) => { if (event.target.value) setTodaySelectedDate(event.target.value); }}
+                      className="absolute inset-0 cursor-pointer opacity-0"
+                    />
+                  </label>
+                  {isCustomDate ? (
+                    <span className="inline-flex h-[32px] shrink-0 items-center gap-1 rounded-full border border-navy-900 bg-navy-900 pl-[10px] pr-[6px] text-[13px] font-medium text-white">
+                      {todaySelectedDate.slice(5).replace("-", "/")}
+                      <button
+                        type="button"
+                        onClick={() => setTodaySelectedDate(todayStr)}
+                        className="inline-flex h-[20px] w-[20px] items-center justify-center rounded-full text-white/70 transition hover:bg-white/20 hover:text-white"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })()}
+            {[
+              { key: todayStr, label: "오늘" },
+              { key: "week", label: "이번주" },
+              { key: "month", label: "이번달" },
+              { key: "all", label: "전체" },
+            ].map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => {
+                  if (option.key === "all") setTodaySelectedDate("");
+                  else if (option.key === "week" || option.key === "month") setTodaySelectedDate(option.key);
+                  else setTodaySelectedDate(option.key);
+                }}
+                className={`inline-flex h-[32px] shrink-0 items-center whitespace-nowrap rounded-full border px-[14px] text-[14px] font-medium transition ${
+                  todaySelectedDate === option.key || (!todaySelectedDate && option.key === "all")
+                    ? "border-navy-900 bg-navy-900 text-white"
+                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                }`}
               >
-                <option value="latest">최신순</option>
-                <option value="oldest">과거순</option>
-                <option value="popular">인기순</option>
-              </SelectInput>
-              {[
-                { key: ALL_DATE, label: "전체" },
-                { key: TODAY_DATE, label: "오늘" },
-                { key: WEEK_DATE, label: "이번주" },
-                { key: MONTH_DATE, label: "이번달" },
-              ].map((option) => (
-                <button
-                  key={option.key}
-                  type="button"
-                  onClick={() => setDateFilter(option.key)}
-                  className={`inline-flex h-[32px] shrink-0 items-center whitespace-nowrap rounded-full border px-[14px] text-[14px] font-medium transition ${
-                    dateFilter === option.key
-                      ? "border-navy-900 bg-navy-900 text-white"
-                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-              {(!initialTopic || initialTopic === ALL_TOPICS) ? (
-                <SelectInput
-                  value={selectedTopic}
-                  onChange={(event) => { setSelectedTopic(event.target.value); setDraftTopic(event.target.value); setSelectedSubtopic(ALL_SUBTOPICS); }}
-                  className="!min-h-[32px] !h-[32px] !w-auto !min-w-0 !max-w-[90px] !rounded-full !px-[10px] !text-[14px] shrink-0"
-                >
-                  <option value={ALL_TOPICS}>전체</option>
-                  {mainInterests.map((topic) => (
-                    <option key={topic} value={topic}>{interestLabels[topic] ?? topic}</option>
-                  ))}
-                </SelectInput>
-              ) : null}
-            </div>
-            {/* 우: 검색 + 전체선택 고정 */}
-            <div className="flex shrink-0 items-center gap-1.5">
-              <input
-                value={draftSearchQuery}
-                onChange={(event) => setDraftSearchQuery(event.target.value)}
-                onKeyDown={(event) => { if (event.key === "Enter") setSearchQuery(draftSearchQuery.trim()); }}
-                placeholder="검색"
-                className="hidden sm:block h-[32px] w-[120px] rounded-full border border-gray-200 px-[10px] text-[14px] text-gray-800 outline-none transition focus:border-orange-300"
-              />
+                {option.label}
+              </button>
+            ))}
+            <div className="ml-auto flex shrink-0 items-center gap-1">
+              {/* 검색 아이콘 */}
               <button
                 type="button"
-                onClick={() => setSearchQuery(draftSearchQuery.trim())}
-                className="hidden sm:inline-flex h-[32px] shrink-0 items-center rounded-full bg-navy-900 px-[14px] text-[14px] font-medium text-white transition hover:bg-navy-700"
+                onClick={() => setShowInlineSearch((v) => !v)}
+                className={`inline-flex h-[32px] w-[32px] items-center justify-center rounded-full border transition ${
+                  showInlineSearch || searchQuery
+                    ? "border-navy-900 bg-navy-900 text-white"
+                    : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+                aria-label="검색"
               >
-                검색
+                <Search className="h-[16px] w-[16px]" />
               </button>
+              {/* 정렬 */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowSortMenu((v) => !v)}
+                  className={`inline-flex h-[32px] w-[32px] items-center justify-center rounded-full border transition ${
+                    showSortMenu
+                      ? "border-navy-900 bg-navy-900 text-white"
+                      : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                  aria-label="정렬"
+                >
+                  <SlidersHorizontal className="h-[16px] w-[16px]" />
+                </button>
+                {showSortMenu ? (
+                  <div className="absolute right-0 top-[36px] z-20 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
+                    {(["latest", "oldest", "popular"] as const).map((order) => (
+                      <button
+                        key={order}
+                        type="button"
+                        onClick={() => { setSortOrder(order); setShowSortMenu(false); }}
+                        className={`block w-full whitespace-nowrap rounded-lg px-4 py-2 text-left text-[14px] font-medium transition ${
+                          sortOrder === order ? "bg-orange-50 text-orange-600" : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        {order === "latest" ? "최신순" : order === "oldest" ? "과거순" : "인기순"}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+          {/* 검색 인풋 (토글) */}
+          {showInlineSearch ? (
+            <div className="flex items-center gap-1.5 px-[16px] pb-[10px] sm:px-[24px]">
+              <div className="relative min-w-0 flex-1">
+                <Search className="absolute left-[10px] top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-gray-400" />
+                <input
+                  autoFocus
+                  value={draftSearchQuery}
+                  onChange={(event) => setDraftSearchQuery(event.target.value)}
+                  onKeyDown={(event) => { if (event.key === "Enter") setSearchQuery(draftSearchQuery.trim()); }}
+                  placeholder="키워드 검색"
+                  className="h-[32px] w-full rounded-full border border-gray-200 pl-[30px] pr-[10px] text-[14px] text-gray-800 outline-none transition focus:border-orange-300"
+                />
+              </div>
               {searchQuery ? (
                 <button
                   type="button"
                   onClick={() => { setDraftSearchQuery(""); setSearchQuery(""); }}
-                  className="hidden sm:inline-flex h-[32px] shrink-0 items-center rounded-full border border-gray-200 bg-white px-[10px] text-[14px] font-medium text-gray-600 transition hover:bg-gray-50"
+                  className="inline-flex h-[32px] shrink-0 items-center rounded-full border border-gray-200 bg-white px-[10px] text-[13px] font-medium text-gray-600 transition hover:bg-gray-50"
                 >
-                  ✕
+                  ✕ 초기화
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {!isFeatureView && !localTodayMode ? (
+        <div data-search-filter className="-mx-4 sm:-mx-6 border-b border-gray-200 bg-white !mt-0">
+          {/* 날짜 필터 행 */}
+          <div className="flex items-center gap-1.5 px-[16px] pt-[16px] pb-[10px] sm:px-[24px] overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+            {[
+              { key: ALL_DATE, label: "전체" },
+              { key: TODAY_DATE, label: "오늘" },
+              { key: WEEK_DATE, label: "이번주" },
+              { key: MONTH_DATE, label: "이번달" },
+            ].map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => setDateFilter(option.key)}
+                className={`inline-flex h-[32px] shrink-0 items-center whitespace-nowrap rounded-full border px-[14px] text-[14px] font-medium transition ${
+                  dateFilter === option.key
+                    ? "border-navy-900 bg-navy-900 text-white"
+                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+            <div className="ml-auto flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setShowInlineSearch((v) => !v)}
+                className={`inline-flex h-[32px] w-[32px] items-center justify-center rounded-full border transition ${
+                  showInlineSearch || searchQuery
+                    ? "border-navy-900 bg-navy-900 text-white"
+                    : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+                aria-label="검색"
+              >
+                <Search className="h-[16px] w-[16px]" />
+              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowSortMenu((v) => !v)}
+                  className={`inline-flex h-[32px] w-[32px] items-center justify-center rounded-full border transition ${
+                    showSortMenu
+                      ? "border-navy-900 bg-navy-900 text-white"
+                      : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                  aria-label="정렬"
+                >
+                  <SlidersHorizontal className="h-[16px] w-[16px]" />
+                </button>
+                {showSortMenu ? (
+                  <div className="absolute right-0 top-[36px] z-20 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
+                    {(["latest", "oldest", "popular"] as const).map((order) => (
+                      <button
+                        key={order}
+                        type="button"
+                        onClick={() => { setSortOrder(order); setShowSortMenu(false); }}
+                        className={`block w-full whitespace-nowrap rounded-lg px-4 py-2 text-left text-[14px] font-medium transition ${
+                          sortOrder === order ? "bg-orange-50 text-orange-600" : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        {order === "latest" ? "최신순" : order === "oldest" ? "과거순" : "인기순"}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+          {/* 검색 인풋 (토글) */}
+          {showInlineSearch ? (
+            <div className="flex items-center gap-1.5 px-[16px] pb-[10px] sm:px-[24px]">
+              <div className="relative min-w-0 flex-1">
+                <Search className="absolute left-[10px] top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-gray-400" />
+                <input
+                  autoFocus
+                  value={draftSearchQuery}
+                  onChange={(event) => setDraftSearchQuery(event.target.value)}
+                  onKeyDown={(event) => { if (event.key === "Enter") setSearchQuery(draftSearchQuery.trim()); }}
+                  placeholder="키워드 검색"
+                  className="h-[32px] w-full rounded-full border border-gray-200 pl-[30px] pr-[10px] text-[14px] text-gray-800 outline-none transition focus:border-orange-300"
+                />
+              </div>
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => { setDraftSearchQuery(""); setSearchQuery(""); }}
+                  className="inline-flex h-[32px] shrink-0 items-center rounded-full border border-gray-200 bg-white px-[10px] text-[13px] font-medium text-gray-600 transition hover:bg-gray-50"
+                >
+                  ✕ 초기화
                 </button>
               ) : null}
               <button
@@ -450,26 +623,46 @@ export function ArchiveBrowser({
                 전체선택
               </button>
             </div>
-          </div>
+          ) : null}
         </div>
       ) : null}
 
-      <p className="text-xs text-gray-400 mt-4 text-center">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+      <p className="text-xs text-gray-500 mt-4 text-center rounded-lg bg-gray-50 py-2 px-3">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+
+      {/* 카테고리 필터 (쿠팡 멘트 아래) */}
+      {!isFeatureView ? (
+        <div className="flex items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+          {[ALL_TOPICS, ...mainInterests].map((topic) => (
+            <button
+              key={topic}
+              type="button"
+              onClick={() => { setSelectedTopic(topic); setDraftTopic(topic); setSelectedSubtopic(ALL_SUBTOPICS); }}
+              className={`inline-flex h-[32px] shrink-0 items-center whitespace-nowrap rounded-full border px-[14px] text-[14px] font-medium transition ${
+                selectedTopic === topic
+                  ? "border-orange-500 bg-orange-500 text-white"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {topic === ALL_TOPICS ? "전체" : (interestLabels[topic] ?? topic)}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {visibleSubtopics.length > 0 ? (
-        <div data-search-filter className="flex flex-wrap gap-1.5 pt-1">
+        <div className="flex flex-wrap gap-1 pt-0.5">
           {[ALL_SUBTOPICS, ...visibleSubtopics].map((subtopic) => (
             <button
               key={subtopic}
               type="button"
               onClick={() => {
                 setSelectedSubtopic(subtopic);
-                if (!showSearchPanel) {
+                if (!showSortMenu) {
                   resetSearchFilters();
                 }
               }}
-              className={`whitespace-nowrap rounded-full px-[14px] py-[7px] text-[14px] font-semibold transition ${
-                selectedSubtopic === subtopic ? "bg-orange-500 text-white" : "border border-orange-100 bg-orange-50 text-orange-600 hover:bg-orange-100"
+              className={`whitespace-nowrap rounded-full px-[10px] h-[26px] text-[12px] font-medium transition ${
+                selectedSubtopic === subtopic ? "bg-orange-100 text-orange-700 border border-orange-300" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
               }`}
             >
               {subtopic}
@@ -480,16 +673,16 @@ export function ArchiveBrowser({
 
       {selectedSlugs.length > 0 ? (
         <div className="fixed bottom-[34px] left-1/2 z-40 -translate-x-1/2 animate-in slide-in-from-bottom-4">
-          <div className="flex items-center gap-[12px] rounded-full border border-navy-200 bg-white px-[29px] py-[17px] shadow-[0_8px_40px_rgba(17,32,51,0.18)]">
-            <span className="whitespace-nowrap text-[20px] font-semibold text-navy-900">{selectedSlugs.length}개 선택됨</span>
-            <div className="h-[23px] w-px bg-navy-200" />
+          <div className="flex items-center gap-[8px] rounded-full border border-navy-200 bg-white pl-[16px] pr-[8px] py-[8px] shadow-[0_8px_40px_rgba(17,32,51,0.18)]">
+            <span className="whitespace-nowrap text-[14px] font-semibold text-navy-900">{selectedSlugs.length}개 선택</span>
+            <div className="h-[20px] w-px bg-navy-200" />
             <ListenButton
               text={selectedListenText}
               speechTitle={`${selectedSlugs.length}개 선택`}
               segments={selectedSegments}
-              label="이어듣기"
+              label="듣기"
               mobileIconOnly
-              className="h-[52px] w-[52px] sm:w-auto sm:px-[17px] !border-navy-200 !bg-white !text-navy-700 hover:!bg-navy-50"
+              className="h-[36px] w-[36px] sm:w-auto sm:px-[12px] !border-navy-200 !bg-white !text-navy-700 hover:!bg-navy-50 !text-[13px]"
             />
             {resolvedShareProfile ? (
               <CompleteShareButton
@@ -498,9 +691,17 @@ export function ArchiveBrowser({
                 buttonLabel="공유"
                 mobileIconOnly
                 modalTitle="선택한 지난 소식을 공유해보세요."
-                triggerClassName="h-[52px] w-[52px] sm:w-auto sm:px-[17px] rounded-full !bg-orange-500 !border-0 !text-white hover:!bg-orange-400 text-[20px] font-semibold"
+                triggerClassName="h-[36px] w-[36px] sm:w-auto sm:px-[12px] rounded-full !bg-orange-500 !border-0 !text-white hover:!bg-orange-400 !text-[13px] font-semibold"
               />
             ) : null}
+            <button
+              type="button"
+              onClick={() => setSelectedSlugs([])}
+              className="inline-flex h-[36px] w-[36px] items-center justify-center rounded-full text-navy-400 transition hover:bg-navy-100 hover:text-navy-700"
+              aria-label="선택 해제"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </div>
       ) : null}
@@ -509,9 +710,9 @@ export function ArchiveBrowser({
       <div className="grid gap-3">
         {displayItems.length === 0 ? (
           <div className="rounded-xl border border-navy-100 bg-white px-5 py-10 text-center md:px-8 md:py-14">
-            <p className="text-lg font-bold text-navy-900 md:text-xl">{todayMode ? "오늘 등록된 콘텐츠가 없습니다." : "검색 결과가 없습니다."}</p>
+            <p className="text-lg font-bold text-navy-900 md:text-xl">{localTodayMode ? "오늘뉴스가 아직 등록되지 않았습니다." : "검색 결과가 없습니다."}</p>
             <p className="mt-3 text-sm leading-7 text-navy-600 md:text-base">
-              {todayMode ? "잠시 후 다시 확인해보세요." : "다른 검색어를 입력하거나 카테고리와 날짜 범위를 다시 선택해보세요."}
+              {localTodayMode ? "잠시 후 다시 확인해보세요." : "다른 검색어를 입력하거나 카테고리와 날짜 범위를 다시 선택해보세요."}
             </p>
           </div>
         ) : null}
