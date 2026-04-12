@@ -44,6 +44,12 @@ const CATEGORY_STYLE: Record<string, string> = {
   "관계": "bg-rose-50 border border-rose-200 text-rose-700",
 };
 
+/** UTC Date를 KST(+9) 날짜 문자열 YYYY-MM-DD로 변환 */
+function toKSTDateString(date: Date): string {
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+}
+
 const ALL_TOPICS = "전체";
 const ALL_SUBTOPICS = "전체";
 const ALL_DATE = "all";
@@ -221,13 +227,13 @@ export function ArchiveBrowser({
         const published = new Date(item.published_at);
         const now = new Date();
         if (dateFilter === TODAY_DATE) {
-          matchesDate = published.toISOString().slice(0, 10) === now.toISOString().slice(0, 10);
+          matchesDate = toKSTDateString(published) === toKSTDateString(now);
         } else if (dateFilter === WEEK_DATE) {
           matchesDate = now.getTime() - published.getTime() <= 1000 * 60 * 60 * 24 * 7;
         } else if (dateFilter === MONTH_DATE) {
           matchesDate = now.getTime() - published.getTime() <= 1000 * 60 * 60 * 24 * 30;
         } else if (dateFilter === CUSTOM_DATE && customDate) {
-          matchesDate = published.toISOString().slice(0, 10) === customDate;
+          matchesDate = toKSTDateString(published) === customDate;
         }
       } else if (dateFilter !== ALL_DATE) {
         matchesDate = false;
@@ -265,7 +271,7 @@ export function ArchiveBrowser({
   }, [localTodayMode, items]);
 
   // 오늘 탭 전용: 선택 날짜 (기본 = 오늘 = latestDate)
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = toKSTDateString(new Date());
   const [todaySelectedDate, setTodaySelectedDate] = useState<string>(todayStr);
 
   // todayMode 진입 시 오늘 날짜로 초기화
@@ -284,8 +290,20 @@ export function ArchiveBrowser({
       const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
       return filteredItems.filter((item) => item.published_at && new Date(item.published_at).getTime() >= cutoff);
     }
-    return filteredItems.filter((item) => item.published_at?.slice(0, 10) === todaySelectedDate);
-  }, [localTodayMode, todaySelectedDate, filteredItems]);
+    const dateFiltered = filteredItems.filter((item) => item.published_at ? toKSTDateString(new Date(item.published_at)) === todaySelectedDate : false);
+    // 오늘 기사가 없으면 가장 최근 날짜 기사를 자동 표시 (fallback)
+    if (dateFiltered.length === 0 && todaySelectedDate === todayStr) {
+      const latestKSTDate = filteredItems.reduce((max, item) => {
+        if (!item.published_at) return max;
+        const d = toKSTDateString(new Date(item.published_at));
+        return d > max ? d : max;
+      }, "");
+      if (latestKSTDate) {
+        return filteredItems.filter((item) => item.published_at ? toKSTDateString(new Date(item.published_at)) === latestKSTDate : false);
+      }
+    }
+    return dateFiltered;
+  }, [localTodayMode, todaySelectedDate, todayStr, filteredItems]);
 
   // 무한 스크롤: 10개씩 표시
   const PAGE_SIZE = 10;
@@ -388,7 +406,8 @@ export function ArchiveBrowser({
       {!isFeatureView && localTodayMode ? (
         <div className="-mx-4 sm:-mx-6 border-b border-gray-200 bg-white !mt-0">
           {/* 날짜 필터 행 */}
-          <div className="flex items-center gap-1.5 px-[16px] pt-[16px] pb-[10px] sm:px-[24px] overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+          <div className="flex items-center gap-1.5 px-[16px] pt-[16px] pb-[10px] sm:px-[24px]">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
             {(() => {
               const isCustomDate = todaySelectedDate && todaySelectedDate !== todayStr && todaySelectedDate !== "week" && todaySelectedDate !== "month";
               return (
@@ -446,7 +465,8 @@ export function ArchiveBrowser({
                 {option.label}
               </button>
             ))}
-            <div className="ml-auto flex shrink-0 items-center gap-1">
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
               {/* 검색 아이콘 */}
               <button
                 type="button"
@@ -523,7 +543,8 @@ export function ArchiveBrowser({
       {!isFeatureView && !localTodayMode ? (
         <div data-search-filter className="-mx-4 sm:-mx-6 border-b border-gray-200 bg-white !mt-0">
           {/* 날짜 필터 행 */}
-          <div className="flex items-center gap-1.5 px-[16px] pt-[16px] pb-[10px] sm:px-[24px] overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+          <div className="flex items-center gap-1.5 px-[16px] pt-[16px] pb-[10px] sm:px-[24px]">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
             {[
               { key: ALL_DATE, label: "전체" },
               { key: TODAY_DATE, label: "오늘" },
@@ -543,7 +564,8 @@ export function ArchiveBrowser({
                 {option.label}
               </button>
             ))}
-            <div className="ml-auto flex shrink-0 items-center gap-1">
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
                 onClick={() => setShowInlineSearch((v) => !v)}
