@@ -627,7 +627,7 @@ export function ArchiveBrowser({
         </div>
       ) : null}
 
-      <p className="text-xs text-gray-500 mt-4 text-center rounded-lg bg-gray-50 py-2 px-3">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+      <p className="text-[11px] text-gray-400 mt-4 text-center rounded-lg bg-gray-50 py-1.5 px-3 lg:text-[10px] lg:max-w-md lg:mx-auto">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
 
       {/* 카테고리 필터 (쿠팡 멘트 아래) */}
       {!isFeatureView ? (
