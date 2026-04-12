@@ -1,3 +1,4 @@
+import { Sun } from "lucide-react";
 import Link from "next/link";
 import { HeroListenButton } from "@/components/hero-listen-button";
 
@@ -31,7 +32,7 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
         </div>
 
         <div className="slm-hero__inner">
-          <div className="slm-hero__badge">매일 아침 7시 업데이트</div>
+          <div className="slm-hero__badge">매일 아침 업데이트</div>
 
           <h1 className="slm-hero__title">
             아침에 <span className="slm-hero__highlight">세 줄</span>이면
@@ -122,9 +123,9 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
         <p className="slm-how__sub">복잡한 뉴스, 세줄아침이 대신 읽어드립니다</p>
         <div className="slm-how__grid">
           <div className="slm-how__card">
-            <div className="slm-how__icon" style={{ background: "#FFF3E6" }}>7:00</div>
+            <div className="slm-how__icon" style={{ background: "#FFF3E6" }}><Sun className="w-8 h-8 text-orange-400" /></div>
             <h3>아침에 도착</h3>
-            <p>매일 아침 7시,<br />카톡 또는 이메일로<br />세 줄 브리핑이 도착합니다</p>
+            <p>매일 아침,<br />카톡 또는 이메일로<br />세 줄 브리핑이 도착합니다</p>
           </div>
           <div className="slm-how__card">
             <div className="slm-how__icon" style={{ background: "#F0F7FF" }}>3</div>
@@ -161,7 +162,7 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
       {/* ===== BOTTOM CTA ===== */}
       <section className="slm-bottom-cta">
         <h2>내일 아침부터 시작하세요</h2>
-        <p>지금 구독하면, 내일 아침 7시에 첫 번째 세줄이 도착합니다</p>
+        <p>지금 구독하면, 내일 아침 첫 번째 세줄이 도착합니다</p>
         <div className="slm-hero__cta-buttons">
           <Link href="/signup" className="slm-hero__cta-btn slm-hero__cta-email" style={{ background: "#fff", color: "#1a1a2e" }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="4" width="20" height="16" rx="3" /><path d="M2 7l10 6 10-6" /></svg>

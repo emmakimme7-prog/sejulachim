@@ -9,7 +9,7 @@ import { ContentThumbnail } from "@/components/content-thumbnail";
 import { FeedProductCard } from "@/components/feed-product-card";
 import { type ResolvedAffiliateProduct } from "@/lib/products/catalog";
 import { FavoriteToggleButton } from "@/components/favorite-toggle-button";
-import { ListenButton, playSpeech, setAutoPlayNextFn, setSpeechPlaylist } from "@/components/speech-controls";
+import { ListenButton, playSpeech, setAutoPlayNextFn, setSpeechPlaylist, SpeechSearchButton } from "@/components/speech-controls";
 import { type ContentSource, normalizeSources } from "@/lib/content/sources";
 import { type AvatarKey } from "@/lib/profile";
 import { MAIN_INTERESTS, SUB_INTERESTS } from "@/lib/content/sub-interests";
@@ -54,8 +54,7 @@ const ALL_TOPICS = "전체";
 const ALL_SUBTOPICS = "전체";
 const ALL_DATE = "all";
 const TODAY_DATE = "today";
-const WEEK_DATE = "week";
-const MONTH_DATE = "month";
+const YESTERDAY_DATE = "yesterday";
 const CUSTOM_DATE = "custom";
 
 export function ArchiveBrowser({
@@ -228,10 +227,10 @@ export function ArchiveBrowser({
         const now = new Date();
         if (dateFilter === TODAY_DATE) {
           matchesDate = toKSTDateString(published) === toKSTDateString(now);
-        } else if (dateFilter === WEEK_DATE) {
-          matchesDate = now.getTime() - published.getTime() <= 1000 * 60 * 60 * 24 * 7;
-        } else if (dateFilter === MONTH_DATE) {
-          matchesDate = now.getTime() - published.getTime() <= 1000 * 60 * 60 * 24 * 30;
+        } else if (dateFilter === YESTERDAY_DATE) {
+          const yesterday = new Date(now);
+          yesterday.setDate(yesterday.getDate() - 1);
+          matchesDate = toKSTDateString(published) === toKSTDateString(yesterday);
         } else if (dateFilter === CUSTOM_DATE && customDate) {
           matchesDate = toKSTDateString(published) === customDate;
         }
@@ -524,9 +523,20 @@ export function ArchiveBrowser({
                   onChange={(event) => setDraftSearchQuery(event.target.value)}
                   onKeyDown={(event) => { if (event.key === "Enter") setSearchQuery(draftSearchQuery.trim()); }}
                   placeholder="키워드 검색"
-                  className="h-[32px] w-full rounded-full border border-gray-200 pl-[30px] pr-[10px] text-[14px] text-gray-800 outline-none transition focus:border-orange-300"
+                  className="h-[32px] w-full rounded-full border border-gray-200 pl-[30px] pr-[36px] text-[14px] text-gray-800 outline-none transition focus:border-orange-300"
+                />
+                <SpeechSearchButton
+                  onTranscript={(transcript) => { setDraftSearchQuery(transcript); setSearchQuery(transcript.trim()); }}
+                  className="absolute right-[4px] top-1/2 min-h-[26px] min-w-[26px] -translate-y-1/2 rounded-full border-0 bg-transparent text-gray-500 hover:bg-gray-100"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => setSearchQuery(draftSearchQuery.trim())}
+                className="inline-flex h-[32px] shrink-0 items-center justify-center rounded-full bg-navy-900 px-[12px] text-[13px] font-medium text-white transition hover:bg-navy-700"
+              >
+                검색
+              </button>
               {searchQuery ? (
                 <button
                   type="button"
@@ -545,16 +555,42 @@ export function ArchiveBrowser({
           {/* 날짜 필터 행 */}
           <div className="flex items-center gap-1.5 px-[16px] pt-[16px] pb-[10px] sm:px-[24px]">
             <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+            <label
+              className={`relative inline-flex h-[32px] w-[32px] shrink-0 cursor-pointer items-center justify-center rounded-full border transition ${
+                dateFilter === CUSTOM_DATE
+                  ? "border-navy-900 bg-navy-900 text-white"
+                  : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              <CalendarDays className="h-[16px] w-[16px]" />
+              <input
+                type="date"
+                value={customDate}
+                onChange={(event) => { if (event.target.value) { setCustomDate(event.target.value); setDateFilter(CUSTOM_DATE); } }}
+                className="absolute inset-0 cursor-pointer opacity-0"
+              />
+            </label>
+            {dateFilter === CUSTOM_DATE && customDate ? (
+              <span className="inline-flex h-[32px] shrink-0 items-center gap-1 rounded-full border border-navy-900 bg-navy-900 pl-[10px] pr-[6px] text-[13px] font-medium text-white">
+                {customDate.slice(5).replace("-", "/")}
+                <button
+                  type="button"
+                  onClick={() => { setCustomDate(""); setDateFilter(ALL_DATE); }}
+                  className="inline-flex h-[20px] w-[20px] items-center justify-center rounded-full text-white/70 transition hover:bg-white/20 hover:text-white"
+                >
+                  ✕
+                </button>
+              </span>
+            ) : null}
             {[
-              { key: ALL_DATE, label: "전체" },
               { key: TODAY_DATE, label: "오늘" },
-              { key: WEEK_DATE, label: "이번주" },
-              { key: MONTH_DATE, label: "이번달" },
+              { key: YESTERDAY_DATE, label: "어제" },
+              { key: ALL_DATE, label: "전체" },
             ].map((option) => (
               <button
                 key={option.key}
                 type="button"
-                onClick={() => setDateFilter(option.key)}
+                onClick={() => { setDateFilter(option.key); setCustomDate(""); }}
                 className={`inline-flex h-[32px] shrink-0 items-center whitespace-nowrap rounded-full border px-[14px] text-[14px] font-medium transition ${
                   dateFilter === option.key
                     ? "border-navy-900 bg-navy-900 text-white"
@@ -621,9 +657,20 @@ export function ArchiveBrowser({
                   onChange={(event) => setDraftSearchQuery(event.target.value)}
                   onKeyDown={(event) => { if (event.key === "Enter") setSearchQuery(draftSearchQuery.trim()); }}
                   placeholder="키워드 검색"
-                  className="h-[32px] w-full rounded-full border border-gray-200 pl-[30px] pr-[10px] text-[14px] text-gray-800 outline-none transition focus:border-orange-300"
+                  className="h-[32px] w-full rounded-full border border-gray-200 pl-[30px] pr-[36px] text-[14px] text-gray-800 outline-none transition focus:border-orange-300"
+                />
+                <SpeechSearchButton
+                  onTranscript={(transcript) => { setDraftSearchQuery(transcript); setSearchQuery(transcript.trim()); }}
+                  className="absolute right-[4px] top-1/2 min-h-[26px] min-w-[26px] -translate-y-1/2 rounded-full border-0 bg-transparent text-gray-500 hover:bg-gray-100"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => setSearchQuery(draftSearchQuery.trim())}
+                className="inline-flex h-[32px] shrink-0 items-center justify-center rounded-full bg-navy-900 px-[12px] text-[13px] font-medium text-white transition hover:bg-navy-700"
+              >
+                검색
+              </button>
               {searchQuery ? (
                 <button
                   type="button"
@@ -649,7 +696,7 @@ export function ArchiveBrowser({
         </div>
       ) : null}
 
-      <p className="text-[11px] text-gray-400 mt-4 text-center rounded-lg bg-gray-50 py-1.5 px-3 lg:text-[10px] lg:max-w-md lg:mx-auto">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+      <p className="text-[10px] text-gray-400 mt-4 text-center rounded-lg bg-gray-50 py-1.5 px-3 lg:max-w-md lg:mx-auto">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
 
       {/* 카테고리 필터 (쿠팡 멘트 아래) */}
       {!isFeatureView ? (

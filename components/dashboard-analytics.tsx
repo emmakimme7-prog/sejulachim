@@ -40,16 +40,17 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
 function TrendChart({ data, metric }: { data: AnalyticsData["dailyTrend"]; metric: "visitors" | "pageviews" }) {
   if (data.length === 0) return null;
   const max = Math.max(...data.map((d) => d[metric]), 1);
+  const barAreaHeight = 100;
 
   return (
-    <div className="flex items-end gap-1" style={{ height: 120 }}>
+    <div className="flex items-end gap-1">
       {data.map((d) => {
-        const h = Math.max((d[metric] / max) * 100, 2);
+        const h = Math.max(Math.round((d[metric] / max) * barAreaHeight), 2);
         return (
           <div key={d.date} className="group relative flex flex-1 flex-col items-center">
             <div
               className="w-full min-w-[6px] rounded-t-md bg-orange-400 transition-all hover:bg-orange-500"
-              style={{ height: `${h}%` }}
+              style={{ height: h }}
             />
             <span className="mt-1 text-[10px] text-navy-400">{d.date.slice(5)}</span>
             <div className="pointer-events-none absolute -top-8 rounded bg-navy-800 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100">
