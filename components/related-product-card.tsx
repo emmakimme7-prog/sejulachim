@@ -70,11 +70,6 @@ export function RelatedProductCard({
             </Link>
           );
         })}
-        {hideDisclosure ? null : (
-          <div className="border-t border-navy-100 px-4 py-3">
-            <p className="text-[11px] leading-5 text-navy-400">{PRODUCT_DISCLOSURE}</p>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, CheckSquare, ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
+import { CalendarDays, CheckSquare, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -96,6 +96,8 @@ export function ArchiveBrowser({
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showInlineSearch, setShowInlineSearch] = useState(false);
+  const [showCalendar, setShowCalendar] = useState<"normal" | "today" | null>(null);
+  const [calendarMonth, setCalendarMonth] = useState(() => { const now = new Date(); return { year: now.getFullYear(), month: now.getMonth() }; });
   const [isFeatureView, setIsFeatureView] = useState(featuredMode);
   const [resolvedShareProfile, setResolvedShareProfile] = useState(shareProfile);
   const [resolvedFavoriteIds, setResolvedFavoriteIds] = useState(favoriteIds);
@@ -400,32 +402,123 @@ export function ArchiveBrowser({
     setAutoPlayNextFn(nextItem ? () => playFromIdx(idx + 1) : null);
   }, [playFromIdx]);
 
+  function renderCalendarModal() {
+    if (!showCalendar) return null;
+    const { year, month } = calendarMonth;
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    const todayStr2 = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const selectedValue = showCalendar === "today" ? todaySelectedDate : customDate;
+    const days: (number | null)[] = [];
+    for (let i = 0; i < firstDay; i++) days.push(null);
+    for (let d = 1; d <= daysInMonth; d++) days.push(d);
+
+    function handleSelect(day: number) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      if (showCalendar === "today") {
+        setTodaySelectedDate(dateStr);
+      } else {
+        setCustomDate(dateStr);
+        setDateFilter(CUSTOM_DATE);
+      }
+      setShowCalendar(null);
+    }
+
+    function prevMonth() {
+      setCalendarMonth((prev) => prev.month === 0 ? { year: prev.year - 1, month: 11 } : { year: prev.year, month: prev.month - 1 });
+    }
+    function nextMonth() {
+      setCalendarMonth((prev) => prev.month === 11 ? { year: prev.year + 1, month: 0 } : { year: prev.year, month: prev.month + 1 });
+    }
+
+    const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowCalendar(null)}>
+        <div className="absolute inset-0 bg-black/40" />
+        <div
+          className="relative w-full sm:max-w-[400px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom-4 duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* 헤더 */}
+          <div className="flex items-center justify-between px-[20px] pt-[20px] pb-[12px]">
+            <button type="button" onClick={prevMonth} className="inline-flex h-[36px] w-[36px] items-center justify-center rounded-full hover:bg-gray-100 transition">
+              <ChevronLeft className="h-[20px] w-[20px] text-gray-600" />
+            </button>
+            <span className="text-[16px] font-bold text-gray-900">{year}년 {month + 1}월</span>
+            <button type="button" onClick={nextMonth} className="inline-flex h-[36px] w-[36px] items-center justify-center rounded-full hover:bg-gray-100 transition">
+              <ChevronRight className="h-[20px] w-[20px] text-gray-600" />
+            </button>
+          </div>
+          {/* 요일 */}
+          <div className="grid grid-cols-7 px-[16px]">
+            {WEEKDAYS.map((wd) => (
+              <div key={wd} className="flex items-center justify-center h-[36px] text-[12px] font-semibold text-gray-400">{wd}</div>
+            ))}
+          </div>
+          {/* 날짜 */}
+          <div className="grid grid-cols-7 px-[16px] pb-[20px]">
+            {days.map((day, i) => {
+              if (day === null) return <div key={`empty-${i}`} />;
+              const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+              const isToday = dateStr === todayStr2;
+              const isSelected = dateStr === selectedValue;
+              const isFuture = dateStr > todayStr2;
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  disabled={isFuture}
+                  onClick={() => handleSelect(day)}
+                  className={`flex items-center justify-center h-[44px] rounded-full text-[14px] font-medium transition ${
+                    isSelected
+                      ? "bg-navy-900 text-white"
+                      : isToday
+                        ? "bg-orange-50 text-orange-600 font-bold"
+                        : isFuture
+                          ? "text-gray-200 cursor-not-allowed"
+                          : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+          {/* 하단 닫기 */}
+          <div className="border-t border-gray-100 px-[20px] py-[12px] flex justify-end">
+            <button type="button" onClick={() => setShowCalendar(null)} className="text-[14px] font-medium text-gray-500 hover:text-gray-800 transition px-[12px] py-[6px] rounded-lg hover:bg-gray-50">
+              닫기
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-      <div className={`pb-20 sm:pb-12 ${isFeatureView ? "space-y-3 pt-2 md:pt-4" : "space-y-3"}`}>
+      <div className="pb-20 sm:pb-12 flex flex-col">
       {!isFeatureView && localTodayMode ? (
-        <div className="-mx-4 sm:-mx-6 border-b border-gray-200 bg-white !mt-0">
+        <div className="border-b border-gray-200 bg-white text-[14px]" style={{ margin: '0 -16px' }}>
           {/* 날짜 필터 행 */}
-          <div className="flex items-center gap-1.5 px-[16px] pt-[16px] pb-[10px] sm:px-[24px]">
-            <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+          <div className="flex items-center gap-[6px] px-[16px] pt-[10px] pb-[10px] sm:px-[24px]">
+            <div className="flex min-w-0 flex-1 items-center gap-[6px] overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
             {(() => {
               const isCustomDate = todaySelectedDate && todaySelectedDate !== todayStr && todaySelectedDate !== "week" && todaySelectedDate !== "month";
               return (
-                <div className="flex shrink-0 items-center gap-1">
-                  <label
-                    className={`relative inline-flex h-[32px] w-[32px] shrink-0 cursor-pointer items-center justify-center rounded-full border transition ${
+                <div className="flex shrink-0 items-center gap-[4px]">
+                  <button
+                    type="button"
+                    onClick={() => { setCalendarMonth({ year: new Date().getFullYear(), month: new Date().getMonth() }); setShowCalendar("today"); }}
+                    className={`inline-flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full border transition ${
                       isCustomDate
                         ? "border-navy-900 bg-navy-900 text-white"
                         : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
                     }`}
                   >
                     <CalendarDays className="h-[16px] w-[16px]" />
-                    <input
-                      type="date"
-                      value={todaySelectedDate !== "week" && todaySelectedDate !== "month" && todaySelectedDate !== "" ? todaySelectedDate : ""}
-                      onChange={(event) => { if (event.target.value) setTodaySelectedDate(event.target.value); }}
-                      className="absolute inset-0 cursor-pointer opacity-0"
-                    />
-                  </label>
+                  </button>
                   {isCustomDate ? (
                     <span className="inline-flex h-[32px] shrink-0 items-center gap-1 rounded-full border border-navy-900 bg-navy-900 pl-[10px] pr-[6px] text-[13px] font-medium text-white">
                       {todaySelectedDate.slice(5).replace("-", "/")}
@@ -443,8 +536,7 @@ export function ArchiveBrowser({
             })()}
             {[
               { key: todayStr, label: "오늘" },
-              { key: "week", label: "이번주" },
-              { key: "month", label: "이번달" },
+              { key: "yesterday", label: "어제" },
               { key: "all", label: "전체" },
             ].map((option) => (
               <button
@@ -452,7 +544,6 @@ export function ArchiveBrowser({
                 type="button"
                 onClick={() => {
                   if (option.key === "all") setTodaySelectedDate("");
-                  else if (option.key === "week" || option.key === "month") setTodaySelectedDate(option.key);
                   else setTodaySelectedDate(option.key);
                 }}
                 className={`inline-flex h-[32px] shrink-0 items-center whitespace-nowrap rounded-full border px-[14px] text-[14px] font-medium transition ${
@@ -465,7 +556,7 @@ export function ArchiveBrowser({
               </button>
             ))}
             </div>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-[4px]">
               {/* 검색 아이콘 */}
               <button
                 type="button"
@@ -514,7 +605,7 @@ export function ArchiveBrowser({
           </div>
           {/* 검색 인풋 (토글) */}
           {showInlineSearch ? (
-            <div className="flex items-center gap-1.5 px-[16px] pb-[10px] sm:px-[24px]">
+            <div className="flex items-center gap-[6px] px-[16px] pb-[10px] sm:px-[24px]">
               <div className="relative min-w-0 flex-1">
                 <Search className="absolute left-[10px] top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-gray-400" />
                 <input
@@ -551,25 +642,21 @@ export function ArchiveBrowser({
         </div>
       ) : null}
       {!isFeatureView && !localTodayMode ? (
-        <div data-search-filter className="-mx-4 sm:-mx-6 border-b border-gray-200 bg-white !mt-0">
+        <div data-search-filter className="border-b border-gray-200 bg-white text-[14px]" style={{ margin: '0 -16px' }}>
           {/* 날짜 필터 행 */}
-          <div className="flex items-center gap-1.5 px-[16px] pt-[16px] pb-[10px] sm:px-[24px]">
-            <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
-            <label
-              className={`relative inline-flex h-[32px] w-[32px] shrink-0 cursor-pointer items-center justify-center rounded-full border transition ${
+          <div className="flex items-center gap-[6px] px-[16px] pt-[10px] pb-[10px] sm:px-[24px]">
+            <div className="flex min-w-0 flex-1 items-center gap-[6px] overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+            <button
+              type="button"
+              onClick={() => { setCalendarMonth({ year: new Date().getFullYear(), month: new Date().getMonth() }); setShowCalendar("normal"); }}
+              className={`inline-flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full border transition ${
                 dateFilter === CUSTOM_DATE
                   ? "border-navy-900 bg-navy-900 text-white"
                   : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
               }`}
             >
               <CalendarDays className="h-[16px] w-[16px]" />
-              <input
-                type="date"
-                value={customDate}
-                onChange={(event) => { if (event.target.value) { setCustomDate(event.target.value); setDateFilter(CUSTOM_DATE); } }}
-                className="absolute inset-0 cursor-pointer opacity-0"
-              />
-            </label>
+            </button>
             {dateFilter === CUSTOM_DATE && customDate ? (
               <span className="inline-flex h-[32px] shrink-0 items-center gap-1 rounded-full border border-navy-900 bg-navy-900 pl-[10px] pr-[6px] text-[13px] font-medium text-white">
                 {customDate.slice(5).replace("-", "/")}
@@ -601,7 +688,7 @@ export function ArchiveBrowser({
               </button>
             ))}
             </div>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-[4px]">
               <button
                 type="button"
                 onClick={() => setShowInlineSearch((v) => !v)}
@@ -648,7 +735,7 @@ export function ArchiveBrowser({
           </div>
           {/* 검색 인풋 (토글) */}
           {showInlineSearch ? (
-            <div className="flex items-center gap-1.5 px-[16px] pb-[10px] sm:px-[24px]">
+            <div className="flex items-center gap-[6px] px-[16px] pb-[10px] sm:px-[24px]">
               <div className="relative min-w-0 flex-1">
                 <Search className="absolute left-[10px] top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-gray-400" />
                 <input
@@ -696,21 +783,22 @@ export function ArchiveBrowser({
         </div>
       ) : null}
 
-      <p className="text-[10px] text-gray-400 mt-4 text-center rounded-lg bg-gray-50 py-1.5 px-3 lg:max-w-md lg:mx-auto">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+      <p className="text-[10px] text-gray-400 text-center bg-gray-50 py-[4px] -mx-[18px] px-[10px] sm:mx-0 sm:px-[12px] sm:rounded-lg lg:max-w-md lg:mx-auto" style={{ marginTop: 0, lineHeight: '14px' }}>이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
 
       {/* 카테고리 필터 (쿠팡 멘트 아래) */}
       {!isFeatureView ? (
-        <div className="flex items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+        <div className="flex items-center gap-[6px] overflow-x-auto [&::-webkit-scrollbar]:hidden mt-[12px]" style={{ scrollbarWidth: "none" }}>
           {[ALL_TOPICS, ...mainInterests].map((topic) => (
             <button
               key={topic}
               type="button"
               onClick={() => { setSelectedTopic(topic); setDraftTopic(topic); setSelectedSubtopic(ALL_SUBTOPICS); }}
-              className={`inline-flex h-[32px] shrink-0 items-center whitespace-nowrap rounded-full border px-[14px] text-[14px] font-medium transition ${
+              className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full border font-medium transition ${
                 selectedTopic === topic
                   ? "border-orange-500 bg-orange-500 text-white"
                   : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
               }`}
+              style={{ height: '2rem', paddingLeft: '0.875rem', paddingRight: '0.875rem', fontSize: '0.875rem' }}
             >
               {topic === ALL_TOPICS ? "전체" : (interestLabels[topic] ?? topic)}
             </button>
@@ -719,7 +807,7 @@ export function ArchiveBrowser({
       ) : null}
 
       {visibleSubtopics.length > 0 ? (
-        <div className="flex flex-wrap gap-1 pt-0.5">
+        <div className="flex flex-wrap gap-[4px] pt-[2px] mt-[8px]">
           {[ALL_SUBTOPICS, ...visibleSubtopics].map((subtopic) => (
             <button
               key={subtopic}
@@ -730,9 +818,10 @@ export function ArchiveBrowser({
                   resetSearchFilters();
                 }
               }}
-              className={`whitespace-nowrap rounded-full px-[10px] h-[26px] text-[12px] font-medium transition ${
+              className={`whitespace-nowrap rounded-full font-medium transition ${
                 selectedSubtopic === subtopic ? "bg-orange-100 text-orange-700 border border-orange-300" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
               }`}
+              style={{ height: '1.625rem', paddingLeft: '0.625rem', paddingRight: '0.625rem', fontSize: '0.75rem' }}
             >
               {subtopic}
             </button>
@@ -776,7 +865,7 @@ export function ArchiveBrowser({
       ) : null}
 
 
-      <div className="grid gap-3">
+      <div className="grid gap-[12px] mt-[12px]">
         {displayItems.length === 0 ? (
           <div className="rounded-xl border border-navy-100 bg-white px-5 py-10 text-center md:px-8 md:py-14">
             <p className="text-lg font-bold text-navy-900 md:text-xl">{localTodayMode ? "오늘뉴스가 아직 등록되지 않았습니다." : "검색 결과가 없습니다."}</p>
@@ -935,6 +1024,7 @@ export function ArchiveBrowser({
           </div>
         </div>
       ) : null}
+      {renderCalendarModal()}
     </div>
   );
 }

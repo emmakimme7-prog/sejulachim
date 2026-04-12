@@ -11,6 +11,7 @@ import { RelatedProductCard } from "@/components/related-product-card";
 import { SourceDisplay } from "@/components/source-display";
 import { getPublicContentItemBySlug, listRelatedPublicContentItems } from "@/lib/content/public-content";
 import { fetchPopularProductsForContent } from "@/lib/products/coupang-partners";
+import { PRODUCT_DISCLOSURE } from "@/lib/products/catalog";
 import { normalizeSources } from "@/lib/content/sources";
 import { formatDate } from "@/lib/utils";
 
@@ -95,7 +96,9 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
   const currentCategory = data.category ?? "";
   const relatedItems = await listRelatedPublicContentItems(currentCategory, slug, 6);
   const currentSubInterest = "sub_interest" in data ? (data.sub_interest ?? null) : null;
-  const relatedProducts = await fetchPopularProductsForContent(currentCategory, currentSubInterest, 3);
+  const allProducts = await fetchPopularProductsForContent(currentCategory, currentSubInterest, 6);
+  const relatedProducts = allProducts.slice(0, 3);
+  const bottomProducts = allProducts.slice(3, 6);
 
   const detailParagraphs = buildDetailParagraphs(
     data.short_summary,
@@ -160,6 +163,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
       dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
     />
     <div className="mx-auto w-full bg-white px-[18px] lg:px-[34px] pt-0 xl:pt-4 pb-8 md:pb-12" style={{ maxWidth: "min(64rem, 1536px)" }}>
+      <p className="text-[10px] text-gray-400 text-center bg-gray-50 py-[4px] -mx-[18px] px-[10px] sm:mx-0 sm:rounded-lg lg:max-w-md lg:mx-auto" style={{ lineHeight: '14px' }}>{PRODUCT_DISCLOSURE}</p>
       <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-12">
         <article id="article-content" className="min-w-0">
           {/* 썸네일 + 카테고리 배지 오버레이 */}
@@ -256,6 +260,13 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
               </p>
             ) : null}
           </div>
+
+          {/* 출처 아래 쿠팡 상품 (위와 다른 상품) */}
+          {bottomProducts.length > 0 ? (
+            <div className="mt-6">
+              <ProductGridCard products={bottomProducts} />
+            </div>
+          ) : null}
 
           {nextItem ? (
             <div className="mt-6 border-t border-navy-100 pt-6">

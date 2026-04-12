@@ -279,12 +279,12 @@ export function SiteHeader() {
         </div>
 
         {/* 모바일 탭 */}
-        <div className="flex overflow-x-auto border-t border-gray-100 lg:hidden [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+        <div className="flex border-t border-gray-100 lg:hidden">
           {!isLoggedIn && sessionLoaded ? (
             <button
               type="button"
               onClick={() => router.push("/?view=intro")}
-              className={`relative shrink-0 inline-flex items-center justify-center min-h-[44px] px-[16px] text-[15px] font-medium transition-colors ${isIntroActive ? "text-orange-500" : "text-gray-600"}`}
+              className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-medium transition-colors ${isIntroActive ? "text-orange-500" : "text-gray-600"}`}
             >
               소개
               {isIntroActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
@@ -293,7 +293,7 @@ export function SiteHeader() {
           <button
             type="button"
             onClick={() => router.push("/")}
-            className={`relative shrink-0 inline-flex items-center justify-center min-h-[44px] px-[16px] text-[15px] font-medium transition-colors ${isPopularActive ? "text-orange-500" : "text-gray-600"}`}
+            className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-medium transition-colors ${isPopularActive ? "text-orange-500" : "text-gray-600"}`}
           >
             인기뉴스
             {isPopularActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
@@ -301,7 +301,7 @@ export function SiteHeader() {
           <button
             type="button"
             onClick={() => router.push("/?view=today")}
-            className={`relative shrink-0 inline-flex items-center justify-center min-h-[44px] px-[16px] text-[15px] font-medium transition-colors ${isTodayActive ? "text-orange-500" : "text-gray-600"}`}
+            className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-medium transition-colors ${isTodayActive ? "text-orange-500" : "text-gray-600"}`}
           >
             오늘뉴스
             {isTodayActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}

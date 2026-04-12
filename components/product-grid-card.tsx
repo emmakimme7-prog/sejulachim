@@ -1,4 +1,4 @@
-import { PRODUCT_DISCLOSURE, type ResolvedAffiliateProduct } from "@/lib/products/catalog";
+import { type ResolvedAffiliateProduct } from "@/lib/products/catalog";
 
 function formatPrice(price: number | null) {
   if (price == null) return null;
@@ -38,7 +38,6 @@ export function ProductGridCard({ products }: { products: ResolvedAffiliateProdu
           );
         })}
       </div>
-      <p className="text-[11px] text-gray-400 mt-3">{PRODUCT_DISCLOSURE}</p>
     </section>
   );
 }

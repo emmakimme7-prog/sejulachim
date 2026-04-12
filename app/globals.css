@@ -480,6 +480,19 @@ body.hero-active .slm-footer { margin-top: 0; }
   .slm-bottom-cta h2 { font-size: 24px; }
 }
 
+/* 글씨 크기 설정에 따른 히어로 미리보기 스케일 */
+html.font-medium .slm-hero__preview-header { font-size: 14px; }
+html.font-medium .slm-hero__preview-listen { font-size: 13px; }
+html.font-medium .slm-hero__preview-num { font-size: 14px; width: 28px; height: 28px; }
+html.font-medium .slm-hero__preview-tag { font-size: 13px; }
+html.font-medium .slm-hero__preview-text { font-size: 1rem; }
+
+html.font-large .slm-hero__preview-header { font-size: 16px; }
+html.font-large .slm-hero__preview-listen { font-size: 15px; }
+html.font-large .slm-hero__preview-num { font-size: 16px; width: 32px; height: 32px; }
+html.font-large .slm-hero__preview-tag { font-size: 15px; }
+html.font-large .slm-hero__preview-text { font-size: 1.125rem; }
+
 /* ── Article body ── */
 .article-body-text { line-height: 1.7; }
 

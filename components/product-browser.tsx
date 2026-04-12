@@ -130,7 +130,7 @@ export function ProductBrowser({
               placeholder="상품명, 설명, 키워드로 찾아보세요"
               className="mt-3 min-h-14 w-full rounded-[24px] border border-navy-200 px-5 text-base text-navy-900 outline-none transition focus:border-orange-300"
             />
-            <p className="mt-3 text-sm leading-6 text-navy-500">{PRODUCT_DISCLOSURE}</p>
+            <p className="text-[10px] text-gray-400 text-center bg-gray-50 py-[4px] px-[10px] mt-[8px]" style={{ lineHeight: '14px' }}>{PRODUCT_DISCLOSURE}</p>
           </div>
         </div>
       </div>

@@ -123,7 +123,7 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
         <p className="slm-how__sub">복잡한 뉴스, 세줄아침이 대신 읽어드립니다</p>
         <div className="slm-how__grid">
           <div className="slm-how__card">
-            <div className="slm-how__icon" style={{ background: "#FFF3E6" }}><Sun className="w-8 h-8 text-orange-400" /></div>
+            <div className="slm-how__icon" style={{ background: "#FFF3E6" }}><Sun style={{ width: 32, height: 32 }} className="text-orange-400" /></div>
             <h3>아침에 도착</h3>
             <p>매일 아침,<br />카톡 또는 이메일로<br />세 줄 브리핑이 도착합니다</p>
           </div>
