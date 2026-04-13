@@ -38,12 +38,17 @@ export default async function HomePage({
     view_count?: number | null;
     main_interest?: string;
   }>;
-  // 피드 상품 카드용 데이터 — 주요 카테고리별 3개씩, DB 캐시 우선
-  const topCategories = interestConfig.mainInterests.slice(0, 2);
-  const feedProductGroups = await Promise.all(
-    topCategories.map((cat) => fetchPopularProductsForContent(cat, null, 3))
+  // 피드 상품 카드용 데이터 — 카테고리별로 미리 로드
+  const feedProductMap: Record<string, Awaited<ReturnType<typeof fetchPopularProductsForContent>>> = {};
+  const productResults = await Promise.all(
+    interestConfig.mainInterests.map(async (cat) => {
+      const products = await fetchPopularProductsForContent(cat, null, 5);
+      return { cat, products };
+    })
   );
-  const feedProducts = feedProductGroups.flat();
+  for (const { cat, products } of productResults) {
+    feedProductMap[cat] = products;
+  }
 
   const archiveItems = data.map((item) => ({
       ...item,
@@ -73,7 +78,7 @@ export default async function HomePage({
             featuredMode={featuredMode}
             todayMode={initialView === "today"}
             initialSortOrder={featuredMode ? "popular" : "latest"}
-            feedProducts={feedProducts}
+            feedProductMap={feedProductMap}
           />
         </Suspense>
       </div>

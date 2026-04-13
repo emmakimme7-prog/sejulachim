@@ -96,7 +96,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
   const currentCategory = data.category ?? "";
   const relatedItems = await listRelatedPublicContentItems(currentCategory, slug, 6);
   const currentSubInterest = "sub_interest" in data ? (data.sub_interest ?? null) : null;
-  const allProducts = await fetchPopularProductsForContent(currentCategory, currentSubInterest, 6);
+  const allProducts = await fetchPopularProductsForContent(currentCategory, currentSubInterest, 6, data.title);
   const relatedProducts = allProducts.slice(0, 3);
   const bottomProducts = allProducts.slice(3, 6);
 
@@ -162,8 +162,8 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
     />
+    <p className="text-[10px] text-gray-400 text-center bg-gray-50 py-[4px] w-screen relative left-1/2 -translate-x-1/2 sticky top-[115px] lg:top-[70px] z-30" style={{ lineHeight: '14px', marginTop: 0, marginBottom: 0 }}>{PRODUCT_DISCLOSURE}</p>
     <div className="mx-auto w-full bg-white px-[18px] lg:px-[34px] pt-0 xl:pt-4 pb-8 md:pb-12" style={{ maxWidth: "min(64rem, 1536px)" }}>
-      <p className="text-[10px] text-gray-400 text-center bg-gray-50 py-[4px] -mx-[18px] px-[10px] sm:mx-0 sm:rounded-lg lg:max-w-md lg:mx-auto" style={{ lineHeight: '14px' }}>{PRODUCT_DISCLOSURE}</p>
       <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-12">
         <article id="article-content" className="min-w-0">
           {/* 썸네일 + 카테고리 배지 오버레이 */}

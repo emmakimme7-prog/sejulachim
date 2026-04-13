@@ -68,7 +68,7 @@ export function ArchiveBrowser({
   mainInterests = [...MAIN_INTERESTS],
   interestLabels = Object.fromEntries(MAIN_INTERESTS.map((interest) => [interest, interest])) as Record<string, string>,
   subInterestOptions = SUB_INTERESTS,
-  feedProducts = []
+  feedProductMap = {} as Record<string, ResolvedAffiliateProduct[]>
 }: {
   items: ArchiveItem[];
   shareProfile?: { nickname: string; avatarKey?: AvatarKey };
@@ -81,7 +81,7 @@ export function ArchiveBrowser({
   mainInterests?: string[];
   interestLabels?: Record<string, string>;
   subInterestOptions?: Record<string, string[]>;
-  feedProducts?: ResolvedAffiliateProduct[];
+  feedProductMap?: Record<string, ResolvedAffiliateProduct[]>;
 }) {
   const [selectedTopic, setSelectedTopic] = useState<string>(initialTopic || ALL_TOPICS);
   const [draftTopic, setDraftTopic] = useState<string>(initialTopic || ALL_TOPICS);
@@ -498,6 +498,7 @@ export function ArchiveBrowser({
 
   return (
       <div className="pb-20 sm:pb-12 flex flex-col">
+      <p className="text-[10px] text-gray-400 text-center bg-gray-50 py-[4px]" style={{ marginTop: 0, marginBottom: 0, lineHeight: '14px', marginLeft: 'calc(-50vw + 50%)', marginRight: 'calc(-50vw + 50%)', paddingLeft: 'calc(50vw - 50%)', paddingRight: 'calc(50vw - 50%)' }}>이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
       {!isFeatureView && localTodayMode ? (
         <div className="border-b border-gray-200 bg-white text-[14px]" style={{ margin: '0 -16px' }}>
           {/* 날짜 필터 행 */}
@@ -790,9 +791,7 @@ export function ArchiveBrowser({
         </div>
       ) : null}
 
-      <p className="text-[10px] text-gray-400 text-center bg-gray-50 py-[4px] -mx-[18px] px-[10px] sm:mx-0 sm:px-[12px] sm:rounded-lg lg:max-w-md lg:mx-auto" style={{ marginTop: 0, lineHeight: '14px' }}>이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
-
-      {/* 카테고리 필터 (쿠팡 멘트 아래) */}
+      {/* 카테고리 필터 */}
       {!isFeatureView ? (
         <div className="flex items-center gap-[6px] overflow-x-auto [&::-webkit-scrollbar]:hidden mt-[12px]" style={{ scrollbarWidth: "none" }}>
           {[ALL_TOPICS, ...mainInterests].map((topic) => (
@@ -882,8 +881,15 @@ export function ArchiveBrowser({
           </div>
         ) : null}
         {visibleItems.map((item, idx) => {
-          // 상품 그리드 삽입: 5번째(idx=4) 뒤 첫 3개, 10번째(idx=9) 뒤 다음 3개
-          const feedSlice = idx === 4 ? feedProducts.slice(0, 3) : idx === 9 ? feedProducts.slice(3, 6) : [];
+          // 상품 그리드 삽입: 5번째 뒤 + 10번째(또는 마지막) 뒤
+          const isLastItem = idx === visibleItems.length - 1;
+          const showFirstSlot = idx === 4 || (isLastItem && idx < 4);
+          const showSecondSlot = !showFirstSlot && (idx === 9 || (isLastItem && idx >= 4 && idx < 9));
+          // 선택된 카테고리 또는 기사의 카테고리에 맞는 상품 선택
+          const feedProducts = selectedTopic !== ALL_TOPICS
+            ? (feedProductMap[selectedTopic] ?? [])
+            : (feedProductMap[item.main_interest] ?? feedProductMap[mainInterests[0]] ?? []);
+          const feedSlice = showFirstSlot ? feedProducts.slice(0, 5) : showSecondSlot ? feedProducts.slice(0, 5) : [];
           const hasFeedProducts = feedSlice.length > 0;
 
           return (
@@ -995,7 +1001,7 @@ export function ArchiveBrowser({
               {hasFeedProducts ? (
                 <section className="pt-4 pb-2">
                   <p className="text-xs text-gray-400 mb-3">이 기사와 관련된 상품</p>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
                     {feedSlice.map((product) => {
                       const price = product.price != null ? new Intl.NumberFormat("ko-KR").format(product.price) : null;
                       return (

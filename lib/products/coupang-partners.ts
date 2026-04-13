@@ -350,7 +350,7 @@ const CATEGORY_KEYWORD_MAP: Record<string, string[]> = {
   건강: ["종합영양제", "마사지건", "체중계", "요가매트"],
   돈: ["재테크도서", "가계부", "다이어리"],
   뉴스: ["베스트셀러도서", "무선이어폰", "텀블러"],
-  관계: ["보드게임"],
+  관계: ["베스트셀러도서", "감성다이어리", "보드게임"],
   // 서브 카테고리
   혈압: ["혈압계"],
   관절: ["관절 보호대"],
@@ -360,20 +360,20 @@ const CATEGORY_KEYWORD_MAP: Record<string, string[]> = {
   연금: ["서류 정리함"],
   세금: ["문서 스캐너"],
   보험: ["문서 보관함"],
-  주의: ["보이스피싱 차단기"],
-  혜택: ["문서 세단기"],
+  주의: ["금융도서", "보안카드케이스"],
+  혜택: ["가계부", "재테크도서"],
   꿀팁: ["구연산", "베이킹소다", "정리수납함", "다용도세제"],
   가전: ["공기청정기", "무선청소기", "에어프라이어", "가습기"],
   청소: ["로봇청소기", "물걸레청소기", "청소세제", "스팀청소기"],
   요리: ["밀키트 베스트", "프라이팬세트", "에어프라이어", "전기그릴"],
   교통: ["차량용충전기", "보조배터리", "우산", "교통카드케이스"],
   IT: ["무선이어폰", "충전케이블", "스마트폰케이스", "보호필름"],
-  "주요 뉴스": ["라디오"],
-  경제: ["전자계산기"],
-  정책: ["아코디언 파일"],
-  사회: ["베스트셀러도서", "무선이어폰", "텀블러"],
+  "주요 뉴스": ["베스트셀러도서", "무선이어폰"],
+  경제: ["재테크도서", "경제신문"],
+  정책: ["시사도서", "다이어리"],
+  사회: ["시사도서", "베스트셀러도서"],
   해외: ["여행 어댑터"],
-  가족: ["가족 보드게임"],
+  가족: ["가족선물세트", "가족앨범", "가족 보드게임"],
   부부: ["커플 선물"],
   회사: ["사무용품"],
   취미: ["취미용품"],
@@ -383,17 +383,36 @@ const CATEGORY_KEYWORD_MAP: Record<string, string[]> = {
 export async function fetchPopularProductsForContent(
   category: string,
   subInterest?: string | null,
-  limit = 3
+  limit = 3,
+  contentTitle?: string | null
 ): Promise<ResolvedAffiliateProduct[]> {
+  // 1순위: 기사 제목에서 명사 키워드 추출 (3~6글자 한글 단어만 — 2글자는 너무 일반적)
+  const titleKeywords: string[] = [];
+  if (contentTitle?.trim()) {
+    const nouns = contentTitle.match(/[가-힣]{3,6}/g) ?? [];
+    const stopWords = new Set([
+      "이것", "그것", "저것", "하는", "있는", "없는", "되는", "이번", "오늘", "내일", "어제",
+      "우리", "이런", "그런", "저런", "아직", "정도", "이상", "이하", "매우", "가장", "모든",
+      "때문", "위해", "대한", "통해", "따른", "관련", "대해", "까지", "부터", "에서",
+      "대폭", "인상", "추진", "배경", "돌파", "발표", "시작", "예정", "확인", "변경",
+      "개선", "강화", "논란", "문제", "현황", "전망", "분석", "지속", "가능", "필요",
+      "월부터", "올해", "내년", "최근", "시대", "방법", "주요", "핵심", "달라진",
+      "활용법", "가지", "알아보", "꿀팁", "정리", "소개", "비교", "추천", "리뷰",
+    ]);
+    for (const w of nouns) {
+      if (!stopWords.has(w) && !titleKeywords.includes(w)) titleKeywords.push(w);
+    }
+  }
+
   const sub = subInterest?.trim() ?? "";
   const subKeywords = sub && CATEGORY_KEYWORD_MAP[sub] ? CATEGORY_KEYWORD_MAP[sub] : [];
   const catKeywords = CATEGORY_KEYWORD_MAP[category] ?? [category];
-  // 서브카테고리명 자체(예: "꿀팁")는 너무 일반적이라 무관한 상품이 매칭되므로,
-  // CATEGORY_KEYWORD_MAP에 매핑된 구체적 키워드만 사용
-  const keywords = [
-    ...subKeywords,
-    ...catKeywords,
-  ].filter((k): k is string => Boolean(k?.trim()));
+  // 뉴스/정치 카테고리는 제목 키워드가 상품 매칭에 부적합하므로 폴백만 사용
+  const skipTitleCategories = new Set(["뉴스"]);
+  const useTitleKeywords = !skipTitleCategories.has(category);
+  // 제목 키워드는 관련성 필터 적용 (minScore=3), 카테고리 키워드는 신뢰 (minScore=0)
+  const titleKws = useTitleKeywords ? titleKeywords.slice(0, 3) : [];
+  const fallbackKws = [...subKeywords, ...catKeywords].filter((k): k is string => Boolean(k?.trim()));
 
   const results: ResolvedAffiliateProduct[] = [];
   const seenIds = new Set<number>();
@@ -416,8 +435,19 @@ export async function fetchPopularProductsForContent(
     }
   }
 
-  // 키워드 순차 검색 — API 호출 최소화 (1개씩, 충분하면 즉시 중단)
-  for (const keyword of keywords) {
+  // 1단계: 제목 키워드 — 상품명에 키워드가 포함된 것만 (minScore=3)
+  for (const keyword of titleKws) {
+    if (results.length >= limit) break;
+    try {
+      const items = await requestTopSearchProducts(keyword, limit * 3, 3);
+      addItems(items, keyword);
+    } catch {
+      // 실패 시 다음 키워드 시도
+    }
+  }
+
+  // 2단계: 카테고리/서브 키워드 — 큐레이션 키워드이므로 관련성 필터 완화 (minScore=0)
+  for (const keyword of fallbackKws) {
     if (results.length >= limit) break;
     try {
       const items = await requestTopSearchProducts(keyword, limit * 3, 0);
