@@ -96,7 +96,15 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
   const currentCategory = data.category ?? "";
   const relatedItems = await listRelatedPublicContentItems(currentCategory, slug, 6);
   const currentSubInterest = "sub_interest" in data ? (data.sub_interest ?? null) : null;
-  const allProducts = await fetchPopularProductsForContent(currentCategory, currentSubInterest, 6, data.title);
+  let allProducts: Awaited<ReturnType<typeof fetchPopularProductsForContent>> = [];
+  try {
+    allProducts = await Promise.race([
+      fetchPopularProductsForContent(currentCategory, currentSubInterest, 6, data.title),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("product fetch timeout")), 5000)),
+    ]);
+  } catch {
+    // 상품 로딩 실패/타임아웃 시 빈 배열로 진행
+  }
   const relatedProducts = allProducts.slice(0, 3);
   const bottomProducts = allProducts.slice(3, 6);
 

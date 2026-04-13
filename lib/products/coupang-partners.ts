@@ -120,6 +120,7 @@ async function requestAffiliateDeepLinks(urls: string[]) {
     },
     body: JSON.stringify({ coupangUrls: urls }),
     cache: "no-store",
+    signal: AbortSignal.timeout(3000),
   });
 
   if (!response.ok) {
@@ -261,6 +262,7 @@ async function callCoupangSearchAPI(
       "Content-Type": "application/json"
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(3000),
   });
 
   if (!response.ok) {

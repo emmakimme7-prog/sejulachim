@@ -38,16 +38,23 @@ export default async function HomePage({
     view_count?: number | null;
     main_interest?: string;
   }>;
-  // 피드 상품 카드용 데이터 — 카테고리별로 미리 로드
+  // 피드 상품 카드용 데이터 — 카테고리별로 미리 로드 (최대 5초, 실패 시 빈 맵)
   const feedProductMap: Record<string, Awaited<ReturnType<typeof fetchPopularProductsForContent>>> = {};
-  const productResults = await Promise.all(
-    interestConfig.mainInterests.map(async (cat) => {
-      const products = await fetchPopularProductsForContent(cat, null, 5);
-      return { cat, products };
-    })
-  );
-  for (const { cat, products } of productResults) {
-    feedProductMap[cat] = products;
+  try {
+    const productResults = await Promise.race([
+      Promise.all(
+        interestConfig.mainInterests.map(async (cat) => {
+          const products = await fetchPopularProductsForContent(cat, null, 5);
+          return { cat, products };
+        })
+      ),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("product fetch timeout")), 5000)),
+    ]);
+    for (const { cat, products } of productResults) {
+      feedProductMap[cat] = products;
+    }
+  } catch {
+    // 상품 로딩 실패/타임아웃 시 빈 맵으로 진행 (페이지 렌더링 우선)
   }
 
   const archiveItems = data.map((item) => ({
