@@ -189,14 +189,13 @@ function scoreSearchResult(item: SearchProductEntry, keyword: string) {
  * 핵심 함수: DB 캐시 우선 조회, 미스/만료 시 API 호출
  * API 실패해도 stale 캐시 반환 → 절대 빈 결과 없음
  */
-async function requestTopSearchProducts(keyword: string, limit = 1, minScore = 1): Promise<SearchProductEntry[]> {
+async function requestTopSearchProducts(keyword: string, limit = 1, minScore = 1, cacheOnly = false): Promise<SearchProductEntry[]> {
   const env = getOptionalServerEnv();
   const accessKey = env.COUPANG_PARTNERS_ACCESS_KEY?.trim();
   const secretKey = env.COUPANG_PARTNERS_SECRET_KEY?.trim();
 
-  if (!accessKey || !secretKey || !keyword.trim()) {
-    return [];
-  }
+  if (!keyword.trim()) return [];
+  if (!cacheOnly && (!accessKey || !secretKey)) return [];
 
   // 1. DB 캐시 조회 (캐시는 score 필터 없이 저장, 반환 시 필터 적용)
   const cached = await getProductCache(keyword);
@@ -211,17 +210,20 @@ async function requestTopSearchProducts(keyword: string, limit = 1, minScore = 1
     if (isFresh) {
       const cachedProducts = (cached.products as SearchProductEntry[]) ?? [];
       const filtered = cachedProducts.filter((p) => scoreSearchResult(p, keyword) >= minScore);
-      // 필터 후 충분한 수가 있으면 즉시 반환, 부족하면 API 재호출
       if (filtered.length >= limit) {
         return filtered;
       }
     }
 
+    // cacheOnly 모드: API 호출 없이 stale 캐시라도 반환
+    if (cacheOnly) {
+      const stale = (cached.products as SearchProductEntry[]) ?? [];
+      return stale.filter((p) => scoreSearchResult(p, keyword) >= minScore);
+    }
+
     if (isWithinStaleWindow) {
-      // 만료됐지만 stale 윈도우 내 → API 시도, 실패하면 stale 반환
       try {
-        // score 필터 없이 API 저장 (minScore=0), 반환 시 필터
-        const fresh = await callCoupangSearchAPI(keyword, limit * 3, accessKey, secretKey, 0);
+        const fresh = await callCoupangSearchAPI(keyword, limit * 3, accessKey!, secretKey!, 0);
         await setProductCache(keyword, fresh);
         return fresh.filter((p) => scoreSearchResult(p, keyword) >= minScore);
       } catch {
@@ -232,9 +234,12 @@ async function requestTopSearchProducts(keyword: string, limit = 1, minScore = 1
     }
   }
 
-  // 2. 캐시 없거나 완전히 만료 → API 호출 (score 필터 없이 저장)
+  // cacheOnly 모드: 캐시 없으면 빈 결과
+  if (cacheOnly) return [];
+
+  // 2. 캐시 없거나 완전히 만료 → API 호출
   try {
-    const fresh = await callCoupangSearchAPI(keyword, limit * 3, accessKey, secretKey, 0);
+    const fresh = await callCoupangSearchAPI(keyword, limit * 3, accessKey!, secretKey!, 0);
     await setProductCache(keyword, fresh);
     return fresh.filter((p) => scoreSearchResult(p, keyword) >= minScore);
   } catch (error) {
@@ -386,7 +391,8 @@ export async function fetchPopularProductsForContent(
   category: string,
   subInterest?: string | null,
   limit = 3,
-  contentTitle?: string | null
+  contentTitle?: string | null,
+  cacheOnly = false
 ): Promise<ResolvedAffiliateProduct[]> {
   // 1순위: 기사 제목에서 명사 키워드 추출 (3~6글자 한글 단어만 — 2글자는 너무 일반적)
   const titleKeywords: string[] = [];
@@ -441,7 +447,7 @@ export async function fetchPopularProductsForContent(
   for (const keyword of titleKws) {
     if (results.length >= limit) break;
     try {
-      const items = await requestTopSearchProducts(keyword, limit * 3, 3);
+      const items = await requestTopSearchProducts(keyword, limit * 3, 3, cacheOnly);
       addItems(items, keyword);
     } catch {
       // 실패 시 다음 키워드 시도
@@ -452,7 +458,7 @@ export async function fetchPopularProductsForContent(
   for (const keyword of fallbackKws) {
     if (results.length >= limit) break;
     try {
-      const items = await requestTopSearchProducts(keyword, limit * 3, 0);
+      const items = await requestTopSearchProducts(keyword, limit * 3, 0, cacheOnly);
       addItems(items, keyword);
     } catch {
       // 실패 시 다음 키워드 시도
