@@ -505,7 +505,10 @@ export function ArchiveBrowser({
           <div className="flex items-center gap-[6px] px-[16px] pt-[10px] pb-[10px] sm:px-[24px]">
             <div className="flex min-w-0 flex-1 items-center gap-[6px] overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
             {(() => {
-              const isCustomDate = todaySelectedDate && todaySelectedDate !== todayStr && todaySelectedDate !== "week" && todaySelectedDate !== "month";
+              const yesterdayCheck = new Date(Date.now() + 9 * 60 * 60 * 1000);
+              yesterdayCheck.setDate(yesterdayCheck.getDate() - 1);
+              const yesterdayCheckStr = yesterdayCheck.toISOString().slice(0, 10);
+              const isCustomDate = todaySelectedDate && todaySelectedDate !== todayStr && todaySelectedDate !== yesterdayCheckStr && todaySelectedDate !== "week" && todaySelectedDate !== "month";
               return (
                 <div className="flex shrink-0 items-center gap-[4px]">
                   <button
@@ -534,27 +537,32 @@ export function ArchiveBrowser({
                 </div>
               );
             })()}
-            {[
-              { key: todayStr, label: "오늘" },
-              { key: "yesterday", label: "어제" },
-              { key: "all", label: "전체" },
-            ].map((option) => (
-              <button
-                key={option.key}
-                type="button"
-                onClick={() => {
-                  if (option.key === "all") setTodaySelectedDate("");
-                  else setTodaySelectedDate(option.key);
-                }}
-                className={`inline-flex h-[32px] shrink-0 items-center whitespace-nowrap rounded-full border px-[14px] text-[14px] font-medium transition ${
-                  todaySelectedDate === option.key || (!todaySelectedDate && option.key === "all")
-                    ? "border-navy-900 bg-navy-900 text-white"
-                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
+            {(() => {
+              const yesterdayDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
+              yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+              const yesterdayStr = yesterdayDate.toISOString().slice(0, 10);
+              return [
+                { key: todayStr, label: "오늘" },
+                { key: yesterdayStr, label: "어제" },
+                { key: "all", label: "전체" },
+              ].map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => {
+                    if (option.key === "all") setTodaySelectedDate("");
+                    else setTodaySelectedDate(option.key);
+                  }}
+                  className={`inline-flex h-[32px] shrink-0 items-center whitespace-nowrap rounded-full border px-[14px] text-[14px] font-medium transition ${
+                    todaySelectedDate === option.key || (!todaySelectedDate && option.key === "all")
+                      ? "border-navy-900 bg-navy-900 text-white"
+                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ));
+            })()}
             </div>
             <div className="flex shrink-0 items-center gap-[4px]">
               {/* 검색 아이콘 */}
