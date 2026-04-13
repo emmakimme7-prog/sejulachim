@@ -249,7 +249,8 @@ async function callCoupangSearchAPI(
   secretKey: string,
   minScore = 1
 ): Promise<SearchProductEntry[]> {
-  const query = `keyword=${encodeURIComponent(keyword)}&limit=${limit}&imageSize=512x512&srpLinkOnly=false`;
+  const clampedLimit = Math.max(1, Math.min(limit, 5));
+  const query = `keyword=${encodeURIComponent(keyword)}&limit=${clampedLimit}&imageSize=512x512&srpLinkOnly=false`;
   const pathWithQuery = `${COUPANG_PRODUCT_SEARCH_PATH}?${query}`;
   const authorization = createAuthorizationHeader("GET", pathWithQuery, accessKey, secretKey);
 

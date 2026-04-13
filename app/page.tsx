@@ -38,8 +38,8 @@ export default async function HomePage({
     view_count?: number | null;
     main_interest?: string;
   }>;
-  // 피드 상품 카드용 데이터 (2개) — 쿠팡 API 차단 중이므로 빈 배열 사용
-  const feedProducts: Awaited<ReturnType<typeof fetchPopularProductsForContent>> = [];
+  // 피드 상품 카드용 데이터 (2개) — DB 캐시 우선, API 호출 최소화
+  const feedProducts = await fetchPopularProductsForContent("실생활", null, 2);
 
   const archiveItems = data.map((item) => ({
       ...item,
