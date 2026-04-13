@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation";
 
 import { CompleteShareButton } from "@/components/complete-share-button";
 import { ContentThumbnail } from "@/components/content-thumbnail";
-import { FeedProductCard } from "@/components/feed-product-card";
 import { type ResolvedAffiliateProduct } from "@/lib/products/catalog";
 import { FavoriteToggleButton } from "@/components/favorite-toggle-button";
 import { ListenButton, playSpeech, setAutoPlayNextFn, setSpeechPlaylist, SpeechSearchButton } from "@/components/speech-controls";
@@ -883,9 +882,9 @@ export function ArchiveBrowser({
           </div>
         ) : null}
         {visibleItems.map((item, idx) => {
-          // 상품 카드 삽입: 5번째(idx=4), 10번째(idx=9) 기사 뒤
-          const productSlotIndex = idx === 4 ? 0 : idx === 9 ? 1 : -1;
-          const feedProduct = productSlotIndex >= 0 ? feedProducts[productSlotIndex] ?? null : null;
+          // 상품 그리드 삽입: 5번째(idx=4) 뒤 첫 3개, 10번째(idx=9) 뒤 다음 3개
+          const feedSlice = idx === 4 ? feedProducts.slice(0, 3) : idx === 9 ? feedProducts.slice(3, 6) : [];
+          const hasFeedProducts = feedSlice.length > 0;
 
           return (
             <div key={item.id}>
@@ -993,7 +992,38 @@ export function ArchiveBrowser({
                   ) : null}
                 </div>
               </article>
-              {feedProduct ? <FeedProductCard product={feedProduct} /> : null}
+              {hasFeedProducts ? (
+                <section className="pt-4 pb-2">
+                  <p className="text-xs text-gray-400 mb-3">이 기사와 관련된 상품</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {feedSlice.map((product) => {
+                      const price = product.price != null ? new Intl.NumberFormat("ko-KR").format(product.price) : null;
+                      return (
+                        <a
+                          key={product.id}
+                          href={product.linkUrl}
+                          target="_blank"
+                          rel="noopener sponsored"
+                          className="block transition hover:opacity-80"
+                        >
+                          <div className="aspect-square rounded-lg overflow-hidden bg-gray-50 mb-2">
+                            {product.imageUrl ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={product.imageUrl} alt={product.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs text-gray-300">상품 이미지</div>
+                            )}
+                          </div>
+                          <p className="text-xs font-medium line-clamp-2 leading-tight text-navy-900">{product.title}</p>
+                          {price ? (
+                            <p className="text-xs text-orange-600 font-bold mt-1">{price}원</p>
+                          ) : null}
+                        </a>
+                      );
+                    })}
+                  </div>
+                </section>
+              ) : null}
             </div>
           );
         })}

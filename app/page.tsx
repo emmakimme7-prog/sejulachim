@@ -38,8 +38,12 @@ export default async function HomePage({
     view_count?: number | null;
     main_interest?: string;
   }>;
-  // 피드 상품 카드용 데이터 (2개) — DB 캐시 우선, API 호출 최소화
-  const feedProducts = await fetchPopularProductsForContent("실생활", null, 2);
+  // 피드 상품 카드용 데이터 — 주요 카테고리별 3개씩, DB 캐시 우선
+  const topCategories = interestConfig.mainInterests.slice(0, 2);
+  const feedProductGroups = await Promise.all(
+    topCategories.map((cat) => fetchPopularProductsForContent(cat, null, 3))
+  );
+  const feedProducts = feedProductGroups.flat();
 
   const archiveItems = data.map((item) => ({
       ...item,
