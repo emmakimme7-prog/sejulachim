@@ -498,7 +498,8 @@ export function ArchiveBrowser({
 
   return (
       <div className="pb-20 sm:pb-12 flex flex-col">
-      <p className="text-[10px] text-gray-400 text-center bg-gray-50 py-[4px]" style={{ marginTop: 0, marginBottom: 0, lineHeight: '14px', marginLeft: 'calc(-50vw + 50%)', marginRight: 'calc(-50vw + 50%)', paddingLeft: 'calc(50vw - 50%)', paddingRight: 'calc(50vw - 50%)' }}>이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+      <p className="fixed left-0 w-full text-[10px] text-gray-400 text-center bg-gray-50 py-[4px] top-[115px] lg:top-[70px] z-30" style={{ lineHeight: '14px' }}>이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+      <div className="h-[22px]" />
       {!isFeatureView && localTodayMode ? (
         <div className="border-b border-gray-200 bg-white text-[14px]" style={{ margin: '0 -16px' }}>
           {/* 날짜 필터 행 */}

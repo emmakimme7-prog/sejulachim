@@ -170,7 +170,8 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
     />
-    <p className="text-[10px] text-gray-400 text-center bg-gray-50 py-[4px] sticky top-[115px] lg:top-[70px] z-30" style={{ lineHeight: '14px', marginTop: 0, marginBottom: 0, marginLeft: 'calc(-50vw + 50%)', marginRight: 'calc(-50vw + 50%)', paddingLeft: 'calc(50vw - 50%)', paddingRight: 'calc(50vw - 50%)' }}>{PRODUCT_DISCLOSURE}</p>
+    <p className="fixed left-0 w-full text-[10px] text-gray-400 text-center bg-gray-50 py-[4px] top-[115px] lg:top-[70px] z-30" style={{ lineHeight: '14px' }}>{PRODUCT_DISCLOSURE}</p>
+    <div className="h-[22px]" />
     <div className="mx-auto w-full bg-white px-[18px] lg:px-[34px] pt-0 xl:pt-4 pb-8 md:pb-12" style={{ maxWidth: "min(64rem, 1536px)" }}>
       <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-12">
         <article id="article-content" className="min-w-0">
