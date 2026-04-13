@@ -6,7 +6,7 @@ import { getInterestConfig } from "@/lib/content/interest-config";
 import { listPublicContentItems, listTodayPreview } from "@/lib/content/public-content";
 import { fetchPopularProductsForContent } from "@/lib/products/coupang-partners";
 
-export const revalidate = 30;
+export const revalidate = 300;
 
 export default async function HomePage({
   searchParams

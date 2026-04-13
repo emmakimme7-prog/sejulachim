@@ -70,7 +70,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export const revalidate = 30;
+export const revalidate = 300;
 
 function buildDetailParagraphs(
   shortSummary: string | null | undefined,
