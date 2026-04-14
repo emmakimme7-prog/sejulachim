@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const maxDuration = 60;
+
 import { generateDailyContentForDate } from "@/lib/content/auto-generate";
 import { getServerEnv } from "@/lib/env";
 import { isAuthorizedCronRequest } from "@/lib/security/request";

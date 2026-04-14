@@ -284,7 +284,7 @@ const STORAGE_BUCKET = "thumbnails";
  * Pixabay 이미지를 다운로드하여 Supabase Storage에 영구 저장.
  * 실패 시 원본 URL 반환 (폴백).
  */
-async function rehostToStorage(imageUrl: string, title: string): Promise<string> {
+async function rehostToStorage(imageUrl: string, title: string): Promise<string | null> {
   try {
     const supabase = createAdminSupabaseClient();
     const hash = createHash("md5").update(title).digest("hex").slice(0, 16);
@@ -292,11 +292,14 @@ async function rehostToStorage(imageUrl: string, title: string): Promise<string>
     const storagePath = `${hash}.${ext}`;
 
     // 이미지 다운로드
-    const response = await fetch(imageUrl);
-    if (!response.ok) return imageUrl;
+    const response = await fetch(imageUrl, { signal: AbortSignal.timeout(8000) });
+    if (!response.ok) return null; // 원본 만료 URL 대신 null 반환
 
     const contentType = response.headers.get("content-type") || `image/${ext === "png" ? "png" : "jpeg"}`;
     const buffer = Buffer.from(await response.arrayBuffer());
+
+    // 너무 작은 이미지 (1KB 미만) 건너뛰기 — placeholder/error 이미지일 가능성
+    if (buffer.byteLength < 1024) return null;
 
     // 버킷 없으면 생성 시도 (이미 있으면 무시)
     await supabase.storage.createBucket(STORAGE_BUCKET, { public: true }).catch(() => undefined);
@@ -306,13 +309,14 @@ async function rehostToStorage(imageUrl: string, title: string): Promise<string>
       .upload(storagePath, buffer, { contentType, upsert: true });
 
     if (error) {
-      return imageUrl;
+      console.warn(`[thumbnails] Storage upload failed for ${storagePath}:`, error.message);
+      return null; // 업로드 실패 시에도 만료 URL 대신 null
     }
 
     const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
-    return data.publicUrl || imageUrl;
+    return data.publicUrl || null;
   } catch {
-    return imageUrl;
+    return null; // 네트워크 오류 등 → 만료 URL 반환하지 않음
   }
 }
 
@@ -338,13 +342,16 @@ export async function findRelatedContentThumbnail(input: {
       if (pixabayResult) {
         // Pixabay URL은 24시간 후 만료 → Supabase Storage에 영구 저장
         const permanentUrl = await rehostToStorage(pixabayResult.url, input.title + query);
-        return {
-          url: permanentUrl,
-          pageUrl: pixabayResult.pageUrl,
-          author: pixabayResult.author,
-          license: null,
-          alt: sanitizePlainText(pixabayResult.alt || input.title || "기사 관련 썸네일", 160)
-        } satisfies ContentThumbnail;
+        if (permanentUrl) {
+          return {
+            url: permanentUrl,
+            pageUrl: pixabayResult.pageUrl,
+            author: pixabayResult.author,
+            license: null,
+            alt: sanitizePlainText(pixabayResult.alt || input.title || "기사 관련 썸네일", 160)
+          } satisfies ContentThumbnail;
+        }
+        // rehost 실패 → 다음 쿼리 시도 (만료 URL 저장 방지)
       }
     }
 

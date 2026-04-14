@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockPulse - 개인 주식 알림 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: { extend: { colors: { gray: { 850: '#1a1d23', 950: '#0d0f12' } } } }
+}
+</script>
+<style>
+  body { background: #111318; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #1f2937; }
+  ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+  @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+  .fade-in { animation: fadeIn 0.2s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body class="dark">
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo, useCallback } = React;
+
+// ============================================================
+// DATA
+// ============================================================
+const MARKET_INDICES = [
+  { name: "코스피", value: 2687.45, change: 1.23, pct: 0.05 },
+  { name: "코스닥", value: 892.31, change: -5.67, pct: -0.63 },
+  { name: "S&P 500", value: 5892.12, change: 23.45, pct: 0.40 },
+  { name: "나스닥", value: 19234.56, change: 112.34, pct: 0.59 },
+];
+
+const STOCK_DB = [
+  { symbol: "삼성전자", code: "005930", market: "KRX", basePrice: 72400 },
+  { symbol: "SK하이닉스", code: "000660", market: "KRX", basePrice: 178000 },
+  { symbol: "카카오", code: "035720", market: "KRX", basePrice: 42150 },
+  { symbol: "네이버", code: "035420", market: "KRX", basePrice: 185000 },
+  { symbol: "LG에너지솔루션", code: "373220", market: "KRX", basePrice: 372000 },
+  { symbol: "현대차", code: "005380", market: "KRX", basePrice: 245000 },
+  { symbol: "셀트리온", code: "068270", market: "KRX", basePrice: 178500 },
+  { symbol: "POSCO홀딩스", code: "005490", market: "KRX", basePrice: 298000 },
+  { symbol: "기아", code: "000270", market: "KRX", basePrice: 125000 },
+  { symbol: "NVDA", code: "NVDA", market: "NASDAQ", basePrice: 142.50 },
+  { symbol: "AAPL", code: "AAPL", market: "NASDAQ", basePrice: 198.30 },
+  { symbol: "TSLA", code: "TSLA", market: "NASDAQ", basePrice: 275.60 },
+  { symbol: "MSFT", code: "MSFT", market: "NASDAQ", basePrice: 428.50 },
+  { symbol: "AMZN", code: "AMZN", market: "NASDAQ", basePrice: 186.40 },
+  { symbol: "GOOG", code: "GOOG", market: "NASDAQ", basePrice: 175.20 },
+  { symbol: "META", code: "META", market: "NASDAQ", basePrice: 510.30 },
+  { symbol: "AMD", code: "AMD", market: "NASDAQ", basePrice: 165.80 },
+  { symbol: "PLTR", code: "PLTR", market: "NASDAQ", basePrice: 24.50 },
+];
+
+const genHistory = (base, days=30) => {
+  const d = []; let p = base;
+  for(let i=days;i>=0;i--){ const dt=new Date(); dt.setDate(dt.getDate()-i); p=p*(1+(Math.random()-0.48)*0.03);
+    d.push({ date:`${dt.getMonth()+1}/${dt.getDate()}`, price:Math.round(p*100)/100, vol:Math.floor(Math.random()*5e6)+5e5 });
+  }
+  return d;
+};
+
+const fmt = (p, m) => m==="KRX" ? `₩${Math.round(p).toLocaleString()}` : `$${p.toFixed(2)}`;
+const fmtVol = v => v>=1e8?`${(v/1e8).toFixed(1)}억`:v>=1e4?`${(v/1e4).toFixed(0)}만`:v.toLocaleString();
+
+// ============================================================
+// SVG ICONS (inline to avoid external deps)
+// ============================================================
+const Icon = ({d, size=18, className=""}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d={d}/></svg>
+);
+const Icons = {
+  activity: (p) => <Icon {...p} d="M22 12h-4l-3 9L9 3l-3 9H2"/>,
+  trendUp: (p) => <Icon {...p} d="M23 6l-9.5 9.5-5-5L1 18"/>,
+  trendDown: (p) => <Icon {...p} d="M23 18l-9.5-9.5-5 5L1 6"/>,
+  bell: (p) => <Icon {...p} d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>,
+  plus: (p) => <Icon {...p} d="M12 5v14M5 12h14"/>,
+  search: (p) => <Icon {...p} d="M11 17.25a6.25 6.25 0 1 1 0-12.5 6.25 6.25 0 0 1 0 12.5zM21 21l-4.35-4.35"/>,
+  star: (p) => <Icon {...p} d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>,
+  briefcase: (p) => <Icon {...p} d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>,
+  barChart: (p) => <Icon {...p} d="M12 20V10M18 20V4M6 20v-4"/>,
+  x: (p) => <Icon {...p} d="M18 6L6 18M6 6l12 12"/>,
+  trash: (p) => <Icon {...p} d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>,
+  settings: (p) => <Icon {...p} d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>,
+  eye: (p) => <Icon {...p} d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>,
+  arrowUp: (p) => <Icon {...p} d="M7 17l5-5 5 5M7 7h10"/>,
+  arrowDown: (p) => <Icon {...p} d="M7 7l5 5 5-5M7 17h10"/>,
+  check: (p) => <Icon {...p} d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"/>,
+  alert: (p) => <Icon {...p} d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/>,
+  clock: (p) => <Icon {...p} d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2"/>,
+  save: (p) => <Icon {...p} d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8"/>,
+  refresh: (p) => <Icon {...p} d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>,
+};
+
+// Mini sparkline chart using SVG
+const Sparkline = ({ data, positive, width=200, height=40 }) => {
+  if(!data||data.length<2) return null;
+  const prices = data.slice(-14).map(d=>d.price);
+  const min = Math.min(...prices), max = Math.max(...prices);
+  const range = max - min || 1;
+  const points = prices.map((p,i) => `${(i/(prices.length-1))*width},${height - ((p-min)/range)*height}`).join(" ");
+  const color = positive ? "#22c55e" : "#ef4444";
+  const fillPoints = `0,${height} ${points} ${width},${height}`;
+  return (
+    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={`sg${positive?1:0}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.2"/>
+          <stop offset="100%" stopColor={color} stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <polygon points={fillPoints} fill={`url(#sg${positive?1:0})`}/>
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5"/>
+    </svg>
+  );
+};
+
+// Big chart using SVG
+const PriceChart = ({ data, width=800, height=280 }) => {
+  if(!data||data.length<2) return null;
+  const prices = data.map(d=>d.price);
+  const min = Math.min(...prices)*0.98, max = Math.max(...prices)*1.02;
+  const range = max-min||1;
+  const px = (i) => (i/(data.length-1))*width;
+  const py = (p) => height - ((p-min)/range)*height;
+  const points = prices.map((p,i) => `${px(i)},${py(p)}`).join(" ");
+  const fillPts = `0,${height} ${points} ${width},${height}`;
+  // grid lines
+  const gridY = Array.from({length:5}, (_,i) => min + (range/4)*i);
+  return (
+    <svg width="100%" height={height+30} viewBox={`-40 -10 ${width+50} ${height+40}`} preserveAspectRatio="none" style={{overflow:'visible'}}>
+      {gridY.map((v,i) => (
+        <g key={i}>
+          <line x1="0" y1={py(v)} x2={width} y2={py(v)} stroke="#374151" strokeDasharray="3 3"/>
+          <text x="-5" y={py(v)+4} textAnchor="end" fill="#9ca3af" fontSize="10">{Math.round(v).toLocaleString()}</text>
+        </g>
+      ))}
+      {data.filter((_,i) => i%5===0).map((d,i) => (
+        <text key={i} x={px(data.indexOf(d))} y={height+18} textAnchor="middle" fill="#9ca3af" fontSize="10">{d.date}</text>
+      ))}
+      <defs>
+        <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3"/>
+          <stop offset="100%" stopColor="#3b82f6" stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <polygon points={fillPts} fill="url(#cg)"/>
+      <polyline points={points} fill="none" stroke="#3b82f6" strokeWidth="2"/>
+    </svg>
+  );
+};
+
+// Volume chart
+const VolumeChart = ({ data, width=800, height=80 }) => {
+  if(!data||data.length<2) return null;
+  const vols = data.map(d=>d.vol);
+  const maxV = Math.max(...vols);
+  const bw = width / data.length * 0.7;
+  return (
+    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      {data.map((d,i) => {
+        const bh = (d.vol/maxV)*height;
+        const x = (i/data.length)*width;
+        return <rect key={i} x={x} y={height-bh} width={bw} height={bh} fill="#6366f1" rx="1"/>;
+      })}
+    </svg>
+  );
+};
+
+// ============================================================
+// BADGE COMPONENTS
+// ============================================================
+const RsiBadge = ({value}) => {
+  const c = value<=30?"bg-green-900/60 text-green-400":value>=70?"bg-red-900/60 text-red-400":"bg-gray-700 text-gray-300";
+  const l = value<=30?"과매도":value>=70?"과매수":"중립";
+  return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${c}`}>RSI {value} ({l})</span>;
+};
+
+const MacdBadge = ({value}) => {
+  const c={"매수":"bg-green-900/60 text-green-400","매도":"bg-red-900/60 text-red-400","중립":"bg-gray-700 text-gray-300"};
+  return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${c[value]}`}>MACD {value}</span>;
+};
+
+const SignalBadge = ({type}) => {
+  const cfg = {
+    buy:{bg:"bg-green-500/20 text-green-400 border-green-500/30",label:"매수",icon:"↑"},
+    sell:{bg:"bg-red-500/20 text-red-400 border-red-500/30",label:"매도",icon:"↓"},
+    hold:{bg:"bg-yellow-500/20 text-yellow-400 border-yellow-500/30",label:"관망",icon:"→"},
+  };
+  const c=cfg[type];
+  return <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${c.bg}`}>{c.icon} {c.label}</span>;
+};
+
+// ============================================================
+// MODAL: 종목 검색 & 추가
+// ============================================================
+const AddStockModal = ({onClose, onAdd, type="watchlist"}) => {
+  const [query, setQuery] = useState("");
+  const [step, setStep] = useState("search");
+  const [selected, setSelected] = useState(null);
+  const [form, setForm] = useState({qty:"",avgPrice:"",targetPrice:"",stopLoss:""});
+
+  const results = query.length > 0 ? STOCK_DB.filter(s =>
+    s.symbol.toLowerCase().includes(query.toLowerCase()) || s.code.toLowerCase().includes(query.toLowerCase())
+  ) : [];
+
+  const handleSelect = (stock) => {
+    setSelected(stock);
+    if(type==="portfolio"){ setStep("form"); return; }
+    const change = (Math.random()-0.4)*8;
+    const rsi = Math.floor(Math.random()*60)+20;
+    onAdd({
+      ...stock, price: stock.basePrice, change: Math.round(change*10)/10,
+      rsi, macd: ["매수","중립","매도"][Math.floor(Math.random()*3)],
+      volume: Math.floor(Math.random()*1e7)+5e5,
+      history: genHistory(stock.basePrice),
+    });
+    onClose();
+  };
+
+  const handleSubmit = () => {
+    if(!form.qty||!form.avgPrice) return;
+    const avg = Number(form.avgPrice);
+    onAdd({
+      ...selected, qty:Number(form.qty), avgPrice:avg,
+      currentPrice: Math.round(avg*(1+(Math.random()-0.3)*0.1)*100)/100,
+      targetPrice: form.targetPrice ? Number(form.targetPrice) : Math.round(avg*1.15*100)/100,
+      stopLoss: form.stopLoss ? Number(form.stopLoss) : Math.round(avg*0.9*100)/100,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-gray-800 border border-gray-700 rounded-2xl w-full max-w-lg shadow-2xl fade-in" onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <h3 className="text-lg font-semibold text-white">{type==="portfolio"?"포트폴리오에 종목 추가":"관심종목 추가"}</h3>
+          <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded-lg">{Icons.x({size:20,className:"text-gray-400"})}</button>
+        </div>
+
+        {step==="search" && (
+          <div className="p-4">
+            <div className="relative mb-3">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{Icons.search({size:18})}</div>
+              <input type="text" autoFocus placeholder="종목명 또는 코드 입력 (예: 삼성전자, NVDA)"
+                value={query} onChange={e=>setQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-gray-900 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 text-sm"/>
+            </div>
+            <div className="max-h-72 overflow-y-auto space-y-1">
+              {query.length===0 && <p className="text-gray-500 text-sm text-center py-8">종목명이나 코드를 입력하세요</p>}
+              {results.length===0 && query.length>0 && <p className="text-gray-500 text-sm text-center py-8">검색 결과가 없습니다</p>}
+              {results.map(s => (
+                <button key={s.code} onClick={()=>handleSelect(s)}
+                  className="w-full flex items-center justify-between p-3 hover:bg-gray-700/50 rounded-lg transition-colors text-left">
+                  <div>
+                    <span className="text-white font-medium">{s.symbol}</span>
+                    <span className="text-gray-500 text-sm ml-2">{s.code}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400 text-sm">{fmt(s.basePrice, s.market)}</span>
+                    <span className="text-xs px-2 py-0.5 bg-gray-700 text-gray-400 rounded">{s.market}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step==="form" && selected && (
+          <div className="p-4 space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-gray-900/50 rounded-xl">
+              <div className="w-10 h-10 bg-blue-600/20 rounded-lg flex items-center justify-center text-blue-400">{Icons.activity({size:20})}</div>
+              <div className="flex-1">
+                <p className="text-white font-semibold">{selected.symbol}</p>
+                <p className="text-gray-500 text-xs">{selected.code} · {selected.market} · 현재가 {fmt(selected.basePrice, selected.market)}</p>
+              </div>
+              <button onClick={()=>{setStep("search");setSelected(null);}} className="text-gray-400 hover:text-white text-sm">변경</button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-gray-400 text-xs block mb-1">보유 수량 *</label>
+                <input type="number" placeholder="예: 50" value={form.qty} onChange={e=>setForm({...form,qty:e.target.value})}
+                  className="w-full px-3 py-2.5 bg-gray-900 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"/>
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs block mb-1">평균 매입가 *</label>
+                <input type="number" placeholder={selected.market==="KRX"?"예: 72000":"예: 142.50"} value={form.avgPrice} onChange={e=>setForm({...form,avgPrice:e.target.value})}
+                  className="w-full px-3 py-2.5 bg-gray-900 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"/>
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs block mb-1">목표가 <span className="text-gray-600">(선택, 기본 +15%)</span></label>
+                <input type="number" placeholder="미입력시 자동" value={form.targetPrice} onChange={e=>setForm({...form,targetPrice:e.target.value})}
+                  className="w-full px-3 py-2.5 bg-gray-900 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"/>
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs block mb-1">손절가 <span className="text-gray-600">(선택, 기본 -10%)</span></label>
+                <input type="number" placeholder="미입력시 자동" value={form.stopLoss} onChange={e=>setForm({...form,stopLoss:e.target.value})}
+                  className="w-full px-3 py-2.5 bg-gray-900 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"/>
+              </div>
+            </div>
+
+            <button onClick={handleSubmit} disabled={!form.qty||!form.avgPrice}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2">
+              {Icons.plus({size:18})} 포트폴리오에 추가
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// 알림 규칙 설정 모달
+// ============================================================
+const AlertRulesModal = ({rules, onUpdate, onClose}) => {
+  const [local, setLocal] = useState(rules);
+  const toggle = i => { const n=[...local]; n[i]={...n[i],enabled:!n[i].enabled}; setLocal(n); };
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-gray-800 border border-gray-700 rounded-2xl w-full max-w-lg shadow-2xl fade-in" onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2">{Icons.settings({size:18,className:"text-gray-400"})} 알림 규칙 설정</h3>
+          <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded-lg">{Icons.x({size:20,className:"text-gray-400"})}</button>
+        </div>
+        <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
+          {local.map((r,i) => (
+            <div key={i} className="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+              <div><p className="text-gray-200 text-sm">{r.label}</p><p className="text-gray-500 text-xs mt-0.5">{r.desc}</p></div>
+              <button onClick={()=>toggle(i)} className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 ${r.enabled?"bg-blue-600":"bg-gray-600"}`}>
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${r.enabled?"left-6":"left-1"}`}/>
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="p-4 border-t border-gray-700">
+          <button onClick={()=>{onUpdate(local);onClose();}} className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium flex items-center justify-center gap-2">
+            {Icons.save({size:16})} 저장
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// TAB: 대시보드
+// ============================================================
+const DashboardView = ({portfolio, signals, onNav}) => {
+  const [now, setNow] = useState(new Date());
+  useEffect(()=>{const t=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(t);},[]);
+  const tI = portfolio.reduce((s,p)=>s+p.avgPrice*p.qty,0);
+  const tC = portfolio.reduce((s,p)=>s+p.currentPrice*p.qty,0);
+  const tP = tC-tI; const pp = tI>0?(tP/tI*100):0;
+
+  return (
+    <div className="space-y-6 fade-in">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 className="text-2xl font-bold text-white">시장 현황</h2>
+          <p className="text-gray-400 text-sm mt-1">{now.toLocaleDateString("ko-KR",{weekday:"long",year:"numeric",month:"long",day:"numeric"})} · {now.toLocaleTimeString("ko-KR")}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-full text-xs font-medium"><span className="w-2 h-2 bg-green-400 rounded-full pulse-dot"/>KRX 장중</span>
+          <span className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 text-gray-400 rounded-full text-xs font-medium"><span className="w-2 h-2 bg-gray-500 rounded-full"/>NYSE 장전</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {MARKET_INDICES.map(idx=>(
+          <div key={idx.name} className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+            <p className="text-gray-400 text-sm">{idx.name}</p>
+            <p className="text-xl font-bold text-white mt-1">{idx.value.toLocaleString()}</p>
+            <div className={`flex items-center gap-1 mt-1 text-sm ${idx.change>=0?"text-green-400":"text-red-400"}`}>
+              {idx.change>=0?Icons.trendUp({size:14}):Icons.trendDown({size:14})}
+              <span>{idx.change>=0?"+":""}{idx.pct.toFixed(2)}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2">{Icons.bell({size:18,className:"text-yellow-400"})} 오늘의 매매 시그널</h3>
+          <button onClick={()=>onNav("signals")} className="text-blue-400 text-xs hover:underline">전체보기 →</button>
+        </div>
+        {signals.length===0 ? (
+          <p className="text-gray-500 text-sm text-center py-6">관심종목을 등록하면 시그널이 자동 생성됩니다</p>
+        ) : (
+          <div className="space-y-2">
+            {signals.slice(0,5).map((sig,i)=>(
+              <div key={i} className="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <span className="text-gray-500 text-xs font-mono w-12">{sig.time}</span>
+                  <SignalBadge type={sig.type}/>
+                  <span className="text-white font-medium">{sig.symbol}</span>
+                </div>
+                <p className="text-gray-400 text-sm hidden md:block max-w-xs truncate">{sig.reason}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/20 border border-blue-700/30 rounded-xl p-5">
+          <p className="text-blue-300 text-sm">총 투자금</p>
+          <p className="text-2xl font-bold text-white mt-1">{portfolio.length>0?`₩${Math.round(tI).toLocaleString()}`:"—"}</p>
+          <p className="text-blue-400 text-xs mt-1">{portfolio.length}종목 보유중</p>
+        </div>
+        <div className={`bg-gradient-to-br ${tP>=0?"from-green-900/40 to-green-800/20 border-green-700/30":"from-red-900/40 to-red-800/20 border-red-700/30"} border rounded-xl p-5`}>
+          <p className={`${tP>=0?"text-green-300":"text-red-300"} text-sm`}>총 평가금</p>
+          <p className="text-2xl font-bold text-white mt-1">{portfolio.length>0?`₩${Math.round(tC).toLocaleString()}`:"—"}</p>
+          <p className={`${tP>=0?"text-green-400":"text-red-400"} text-xs mt-1`}>{tP>=0?"+":""}{Math.round(tP).toLocaleString()} ({pp>=0?"+":""}{pp.toFixed(1)}%)</p>
+        </div>
+        <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border border-purple-700/30 rounded-xl p-5 flex flex-col justify-center items-center cursor-pointer hover:border-purple-600/50 transition-colors" onClick={()=>onNav("portfolio")}>
+          <div className="text-purple-400 mb-1">{Icons.plus({size:24})}</div>
+          <p className="text-purple-300 text-sm">종목 관리하기</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// TAB: 관심종목
+// ============================================================
+const WatchlistView = ({watchlist, setWatchlist, onSelect}) => {
+  const [search, setSearch] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const filtered = watchlist.filter(s=>s.symbol.toLowerCase().includes(search.toLowerCase())||s.code.includes(search));
+  const handleRemove = code => setWatchlist(prev=>prev.filter(s=>s.code!==code));
+
+  return (
+    <div className="space-y-4 fade-in">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-white">관심종목 <span className="text-gray-500 text-lg font-normal">({watchlist.length})</span></h2>
+        <button onClick={()=>setShowAdd(true)} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors">
+          {Icons.plus({size:16})} 종목 추가
+        </button>
+      </div>
+
+      {watchlist.length>0 && (
+        <div className="relative">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{Icons.search({size:18})}</div>
+          <input type="text" placeholder="종목명 또는 코드 검색..." value={search} onChange={e=>setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 text-sm"/>
+        </div>
+      )}
+
+      {watchlist.length===0 ? (
+        <div className="text-center py-16 bg-gray-800/30 rounded-xl border-2 border-dashed border-gray-700">
+          <div className="text-gray-600 mb-3">{Icons.star({size:40})}</div>
+          <p className="text-gray-400 text-lg font-medium">관심종목이 없습니다</p>
+          <p className="text-gray-500 text-sm mt-1">모니터링할 종목을 등록하세요</p>
+          <button onClick={()=>setShowAdd(true)} className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1">
+            {Icons.plus({size:16})} 첫 종목 추가하기
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {filtered.map(stock=>(
+            <div key={stock.code} className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 hover:border-gray-600 transition-all group">
+              <div className="flex justify-between items-start">
+                <div className="cursor-pointer flex-1" onClick={()=>onSelect(stock.symbol)}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-semibold">{stock.symbol}</span>
+                    <span className="text-xs px-1.5 py-0.5 bg-gray-700 text-gray-400 rounded">{stock.market}</span>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-0.5">{stock.code}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <p className="text-white font-bold">{fmt(stock.price, stock.market)}</p>
+                    <p className={`text-sm ${stock.change>=0?"text-green-400":"text-red-400"}`}>{stock.change>=0?"+":""}{stock.change.toFixed(1)}%</p>
+                  </div>
+                  <button onClick={()=>handleRemove(stock.code)} className="p-1.5 hover:bg-red-600/20 rounded-lg opacity-0 group-hover:opacity-100 transition-all">
+                    {Icons.trash({size:14,className:"text-red-400"})}
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3"><Sparkline data={stock.history} positive={stock.change>=0}/></div>
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex gap-2"><RsiBadge value={stock.rsi}/><MacdBadge value={stock.macd}/></div>
+                <span className="text-xs text-gray-500">Vol {fmtVol(stock.volume)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {showAdd && <AddStockModal type="watchlist" onClose={()=>setShowAdd(false)} onAdd={s=>setWatchlist(p=>[...p,s])}/>}
+    </div>
+  );
+};
+
+// ============================================================
+// TAB: 포트폴리오
+// ============================================================
+const PortfolioView = ({portfolio, setPortfolio}) => {
+  const [showAdd, setShowAdd] = useState(false);
+  const handleRemove = code => setPortfolio(p=>p.filter(s=>s.code!==code));
+
+  return (
+    <div className="space-y-4 fade-in">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-white">포트폴리오 <span className="text-gray-500 text-lg font-normal">({portfolio.length})</span></h2>
+        <button onClick={()=>setShowAdd(true)} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors">
+          {Icons.plus({size:16})} 보유종목 추가
+        </button>
+      </div>
+
+      {portfolio.length===0 ? (
+        <div className="text-center py-16 bg-gray-800/30 rounded-xl border-2 border-dashed border-gray-700">
+          <div className="text-gray-600 mb-3">{Icons.briefcase({size:40})}</div>
+          <p className="text-gray-400 text-lg font-medium">보유종목이 없습니다</p>
+          <p className="text-gray-500 text-sm mt-1">보유 중인 종목, 수량, 평균매입가를 등록하세요</p>
+          <button onClick={()=>setShowAdd(true)} className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1">
+            {Icons.plus({size:16})} 첫 보유종목 등록
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto bg-gray-800/30 rounded-xl border border-gray-700/50">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-gray-400 text-xs border-b border-gray-700/50">
+                  {["종목","수량","평균단가","현재가","수익률","평가손익","목표가","손절가","상태",""].map((h,i)=>
+                    <th key={i} className="px-4 py-3 font-medium">{h}</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {portfolio.map(p=>{
+                  const pnl=(p.currentPrice-p.avgPrice)*p.qty;
+                  const pPct=((p.currentPrice-p.avgPrice)/p.avgPrice)*100;
+                  const near = p.currentPrice>=p.targetPrice*0.95?"target":p.currentPrice<=p.stopLoss*1.05?"stop":"normal";
+                  return (
+                    <tr key={p.code} className="border-b border-gray-800/50 hover:bg-gray-800/30 group">
+                      <td className="px-4 py-3"><span className="text-white font-medium">{p.symbol}</span> <span className="text-xs text-gray-500">{p.market}</span></td>
+                      <td className="px-4 py-3 text-gray-300">{p.qty}</td>
+                      <td className="px-4 py-3 text-gray-300">{fmt(p.avgPrice,p.market)}</td>
+                      <td className="px-4 py-3 text-white font-medium">{fmt(p.currentPrice,p.market)}</td>
+                      <td className={`px-4 py-3 font-medium ${pnl>=0?"text-green-400":"text-red-400"}`}>{pPct>=0?"+":""}{pPct.toFixed(1)}%</td>
+                      <td className={`px-4 py-3 font-medium ${pnl>=0?"text-green-400":"text-red-400"}`}>{pnl>=0?"+":""}{fmt(Math.abs(Math.round(pnl)),p.market)}</td>
+                      <td className="px-4 py-3 text-gray-300">{fmt(p.targetPrice,p.market)}</td>
+                      <td className="px-4 py-3 text-gray-300">{fmt(p.stopLoss,p.market)}</td>
+                      <td className="px-4 py-3">
+                        {near==="target"&&<span className="text-xs text-green-400 flex items-center gap-1">{Icons.check({size:12})} 목표근접</span>}
+                        {near==="stop"&&<span className="text-xs text-red-400 flex items-center gap-1">{Icons.alert({size:12})} 손절주의</span>}
+                        {near==="normal"&&<span className="text-xs text-gray-500 flex items-center gap-1">{Icons.eye({size:12})} 보유중</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button onClick={()=>handleRemove(p.code)} className="p-1.5 hover:bg-red-600/20 rounded-lg opacity-0 group-hover:opacity-100 transition-all">
+                          {Icons.trash({size:14,className:"text-red-400"})}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
+            <h3 className="text-white font-semibold mb-3">포트폴리오 비중</h3>
+            {(()=>{
+              const total=portfolio.reduce((s,p)=>s+p.currentPrice*p.qty,0);
+              const colors=["bg-blue-500","bg-green-500","bg-purple-500","bg-yellow-500","bg-pink-500","bg-cyan-500","bg-orange-500"];
+              return (<>
+                <div className="flex rounded-full overflow-hidden h-4">
+                  {portfolio.map((p,i)=>{const w=total>0?(p.currentPrice*p.qty/total*100):0;
+                    return <div key={p.code} className={colors[i%colors.length]} style={{width:`${w}%`}}/>;
+                  })}
+                </div>
+                <div className="flex flex-wrap gap-3 mt-3 text-xs text-gray-300">
+                  {portfolio.map((p,i)=>{const w=total>0?(p.currentPrice*p.qty/total*100):0;
+                    return <span key={p.code} className="flex items-center gap-1.5"><span className={`w-3 h-3 rounded ${colors[i%colors.length]}`}/>{p.symbol} {w.toFixed(0)}%</span>;
+                  })}
+                </div>
+              </>);
+            })()}
+          </div>
+        </>
+      )}
+      {showAdd && <AddStockModal type="portfolio" onClose={()=>setShowAdd(false)} onAdd={s=>setPortfolio(p=>[...p,s])}/>}
+    </div>
+  );
+};
+
+// ============================================================
+// TAB: 시그널
+// ============================================================
+const SignalView = ({signals, onOpenRules}) => (
+  <div className="space-y-4 fade-in">
+    <div className="flex items-center justify-between">
+      <h2 className="text-2xl font-bold text-white">매매 시그널</h2>
+      <button onClick={onOpenRules} className="flex items-center gap-1.5 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm font-medium transition-colors">
+        {Icons.settings({size:16})} 규칙 설정
+      </button>
+    </div>
+    {signals.length===0 ? (
+      <div className="text-center py-16 bg-gray-800/30 rounded-xl border-2 border-dashed border-gray-700">
+        <div className="text-gray-600 mb-3">{Icons.activity({size:40})}</div>
+        <p className="text-gray-400 text-lg font-medium">시그널이 없습니다</p>
+        <p className="text-gray-500 text-sm mt-1">관심종목을 등록하면 기술적 분석 기반 시그널이 자동 생성됩니다</p>
+      </div>
+    ) : (
+      <div className="space-y-3">
+        {signals.map((sig,i)=>(
+          <div key={i} className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <SignalBadge type={sig.type}/>
+                <span className="text-white font-semibold text-lg">{sig.symbol}</span>
+                <span className="text-gray-400">{fmt(sig.price, sig.symbol.match(/^[A-Z]+$/)?"NASDAQ":"KRX")}</span>
+              </div>
+              <span className="text-gray-500 text-xs">{sig.time}</span>
+            </div>
+            <div className="mt-3 p-3 bg-gray-900/50 rounded-lg">
+              <p className="text-gray-300 text-sm">{sig.reason}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
+// ============================================================
+// TAB: 종목 상세
+// ============================================================
+const StockDetailView = ({symbol, watchlist, onBack}) => {
+  const stock = watchlist.find(s=>s.symbol===symbol);
+  if(!stock) return <div className="text-center py-16"><p className="text-gray-400">종목을 찾을 수 없습니다</p><button onClick={onBack} className="mt-2 text-blue-400 hover:underline text-sm">돌아가기</button></div>;
+  return (
+    <div className="space-y-4 fade-in">
+      <button onClick={onBack} className="text-gray-400 hover:text-white text-sm">← 뒤로가기</button>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 className="text-2xl font-bold text-white">{stock.symbol}</h2>
+          <p className="text-gray-400 text-sm">{stock.code} · {stock.market}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-3xl font-bold text-white">{fmt(stock.price, stock.market)}</p>
+          <p className={`text-lg ${stock.change>=0?"text-green-400":"text-red-400"}`}>{stock.change>=0?"+":""}{stock.change.toFixed(1)}%</p>
+        </div>
+      </div>
+
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
+        <h3 className="text-white font-semibold mb-3">가격 차트 (30일)</h3>
+        <PriceChart data={stock.history}/>
+      </div>
+
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
+        <h3 className="text-white font-semibold mb-3">거래량</h3>
+        <VolumeChart data={stock.history}/>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          {label:"RSI (14)", val:stock.rsi, badge:<RsiBadge value={stock.rsi}/>},
+          {label:"MACD", val:stock.macd==="매수"?"↑":stock.macd==="매도"?"↓":"→", badge:<MacdBadge value={stock.macd}/>},
+          {label:"거래량", val:fmtVol(stock.volume), sub:"일 거래량"},
+          {label:"시장", val:stock.market, sub:stock.code},
+        ].map((item,i)=>(
+          <div key={i} className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 text-center">
+            <p className="text-gray-400 text-xs">{item.label}</p>
+            <p className="text-2xl font-bold text-white mt-1">{item.val}</p>
+            {item.badge||<span className="text-xs text-gray-500">{item.sub}</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// MAIN APP
+// ============================================================
+const DEFAULT_RULES = [
+  {label:"RSI 과매도 (30 이하) 매수 신호",desc:"RSI가 30 밑으로 떨어지면 매수 알림",enabled:true},
+  {label:"RSI 과매수 (70 이상) 매도 신호",desc:"RSI가 70 위로 올라가면 매도 알림",enabled:true},
+  {label:"골든크로스 (5일/20일)",desc:"5일 이동평균이 20일선을 상향 돌파",enabled:true},
+  {label:"데드크로스 (5일/20일)",desc:"5일 이동평균이 20일선을 하향 돌파",enabled:true},
+  {label:"거래량 300% 급증",desc:"평균 거래량 대비 3배 이상 거래량 발생",enabled:false},
+  {label:"목표가 95% 도달",desc:"설정한 목표가의 95%에 도달 시 알림",enabled:true},
+  {label:"손절가 105% 근접",desc:"손절가에 5% 이내로 접근 시 알림",enabled:true},
+];
+
+function App() {
+  const [tab, setTab] = useState("dashboard");
+  const [selectedStock, setSelectedStock] = useState(null);
+  const [watchlist, setWatchlist] = useState([]);
+  const [portfolio, setPortfolio] = useState([]);
+  const [rules, setRules] = useState(DEFAULT_RULES);
+  const [showRules, setShowRules] = useState(false);
+
+  const signals = useMemo(()=>{
+    return watchlist.map(s=>{
+      const reasons = {
+        buy:[`RSI ${s.rsi} 과매도 반등`,`5일선 20일선 골든크로스 임박`,`지지선 반등 + 거래량 증가`],
+        sell:[`RSI ${s.rsi} 과매수 진입`,`데드크로스 접근 중`,`거래량 급감 + 하락 추세`],
+        hold:[`박스권 횡보 중, 관망 추천`,`추세 불명확, 대기`,`이동평균선 수렴 중`],
+      };
+      const type = s.rsi<=30?"buy":s.rsi>=70?"sell":["buy","sell","hold"][Math.floor(Math.random()*3)];
+      const h=Math.floor(Math.random()*8)+9, m=Math.floor(Math.random()*60);
+      return {time:`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`, symbol:s.symbol, type, price:s.price, reason:reasons[type][Math.floor(Math.random()*reasons[type].length)]};
+    }).sort((a,b)=>a.time.localeCompare(b.time));
+  },[watchlist]);
+
+  const handleSelect = symbol => { setSelectedStock(symbol); setTab("detail"); };
+  const handleNav = t => { setTab(t); setSelectedStock(null); };
+
+  const tabs = [
+    {id:"dashboard", label:"대시보드", icon:Icons.barChart},
+    {id:"watchlist", label:"관심종목", icon:Icons.star},
+    {id:"portfolio", label:"포트폴리오", icon:Icons.briefcase},
+    {id:"signals", label:"시그널", icon:Icons.activity},
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#111318] text-gray-100">
+      <header className="bg-[#111318]/80 backdrop-blur-lg border-b border-gray-800 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white">
+              {Icons.activity({size:18})}
+            </div>
+            <h1 className="text-lg font-bold text-white">StockPulse</h1>
+            <span className="text-xs px-2 py-0.5 bg-blue-600/30 text-blue-400 rounded-full font-medium">Personal</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="p-2 hover:bg-gray-800 rounded-lg">{Icons.refresh({size:18,className:"text-gray-400"})}</button>
+            <button className="p-2 hover:bg-gray-800 rounded-lg relative">
+              {Icons.bell({size:18,className:"text-gray-400"})}
+              {signals.length>0&&<span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"/>}
+            </button>
+            <button onClick={()=>setShowRules(true)} className="p-2 hover:bg-gray-800 rounded-lg">{Icons.settings({size:18,className:"text-gray-400"})}</button>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <nav className="flex gap-1 mb-6 bg-gray-800/50 rounded-xl p-1 overflow-x-auto">
+          {tabs.map(t=>(
+            <button key={t.id} onClick={()=>handleNav(t.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                tab===t.id||(tab==="detail"&&t.id==="watchlist") ? "bg-gray-700 text-white shadow-lg":"text-gray-400 hover:text-gray-200"
+              }`}>
+              {t.icon({size:18})} {t.label}
+              {t.id==="signals"&&signals.length>0&&<span className="bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded-full ml-1">{signals.length}</span>}
+            </button>
+          ))}
+        </nav>
+
+        {tab==="dashboard"&&<DashboardView portfolio={portfolio} signals={signals} onNav={handleNav}/>}
+        {tab==="watchlist"&&<WatchlistView watchlist={watchlist} setWatchlist={setWatchlist} onSelect={handleSelect}/>}
+        {tab==="portfolio"&&<PortfolioView portfolio={portfolio} setPortfolio={setPortfolio}/>}
+        {tab==="signals"&&<SignalView signals={signals} onOpenRules={()=>setShowRules(true)}/>}
+        {tab==="detail"&&selectedStock&&<StockDetailView symbol={selectedStock} watchlist={watchlist} onBack={()=>setTab("watchlist")}/>}
+      </div>
+
+      <footer className="border-t border-gray-800 mt-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-xs text-gray-600">
+          <span>StockPulse v0.1 · 개인용</span>
+          <span>데이터: 네이버증권 · Yahoo Finance · Alpha Vantage · Finnhub</span>
+        </div>
+      </footer>
+
+      {showRules&&<AlertRulesModal rules={rules} onUpdate={setRules} onClose={()=>setShowRules(false)}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

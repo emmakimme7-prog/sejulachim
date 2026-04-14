@@ -399,13 +399,22 @@ export async function fetchPopularProductsForContent(
   if (contentTitle?.trim()) {
     const nouns = contentTitle.match(/[가-힣]{3,6}/g) ?? [];
     const stopWords = new Set([
+      // 일반 대명사/부사
       "이것", "그것", "저것", "하는", "있는", "없는", "되는", "이번", "오늘", "내일", "어제",
       "우리", "이런", "그런", "저런", "아직", "정도", "이상", "이하", "매우", "가장", "모든",
       "때문", "위해", "대한", "통해", "따른", "관련", "대해", "까지", "부터", "에서",
+      // 뉴스 동사/명사
       "대폭", "인상", "추진", "배경", "돌파", "발표", "시작", "예정", "확인", "변경",
       "개선", "강화", "논란", "문제", "현황", "전망", "분석", "지속", "가능", "필요",
+      // 시간/콘텐츠 유형
       "월부터", "올해", "내년", "최근", "시대", "방법", "주요", "핵심", "달라진",
       "활용법", "가지", "알아보", "꿀팁", "정리", "소개", "비교", "추천", "리뷰",
+      // 인구 통계 / 대상 그룹 (상품 검색에 부적합)
+      "중장년", "청장년", "청년층", "노년층", "고령자", "시니어", "청소년", "장년층",
+      "대상자", "수급자", "국민", "시민",
+      // 정부/정책 일반 용어
+      "지원사업", "지원금", "모집", "신청", "접수", "공고", "대상",
+      "정부", "사업", "제도", "시행", "실시", "개정", "확대", "축소",
     ]);
     for (const w of nouns) {
       if (!stopWords.has(w) && !titleKeywords.includes(w)) titleKeywords.push(w);
@@ -416,7 +425,7 @@ export async function fetchPopularProductsForContent(
   const subKeywords = sub && CATEGORY_KEYWORD_MAP[sub] ? CATEGORY_KEYWORD_MAP[sub] : [];
   const catKeywords = CATEGORY_KEYWORD_MAP[category] ?? [category];
   // 뉴스/정치 카테고리는 제목 키워드가 상품 매칭에 부적합하므로 폴백만 사용
-  const skipTitleCategories = new Set(["뉴스"]);
+  const skipTitleCategories = new Set(["뉴스", "관계"]);
   const useTitleKeywords = !skipTitleCategories.has(category);
   // 제목 키워드는 관련성 필터 적용 (minScore=3), 카테고리 키워드는 신뢰 (minScore=0)
   const titleKws = useTitleKeywords ? titleKeywords.slice(0, 3) : [];

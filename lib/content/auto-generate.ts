@@ -365,27 +365,110 @@ async function buildRowFromSource(params: {
   };
 }
 
-export async function generateDailyContentForDate(date = getKstDateParts().date) {
-  const supabase = createAdminSupabaseClient();
-  const rows: Array<Record<string, unknown>> = [];
+/**
+ * 카테고리 1개에 대해 서브카테고리 전체(5개)를 병렬 처리.
+ * 서브카테고리당 1개 기사 = 카테고리당 5개 기사.
+ * summary_type은 서브카테고리 인덱스 기반으로 MUST/USEFUL/ACTION 순환 배정.
+ */
+async function generateCategoryArticles(
+  category: string,
+  date: string,
+  globalIndex: number,
+  usedPageUrls: Set<string>
+): Promise<Array<Record<string, unknown>>> {
+  const subInterests = (SUB_INTERESTS as Record<string, string[]>)[category] ?? [];
 
-  for (const category of MAIN_INTERESTS) {
-    for (const subInterest of SUB_INTERESTS[category]) {
-      const sourceItems = await collectSourceItemsForSubInterest(subInterest, date);
+  // 모든 서브카테고리 RSS 수집을 병렬로
+  const sourceResults = await Promise.allSettled(
+    subInterests.map((sub: string) => collectSourceItemsForSubInterest(sub, date))
+  );
 
-      for (let index = 0; index < sourceItems.length && index < 3; index += 1) {
-        const row = await buildRowFromSource({
-          category,
-          subInterest,
-          item: sourceItems[index],
-          date,
-          index
-        });
-        rows.push(row);
-      }
+  // 각 서브카테고리에서 1개 기사를 선택하고 빌드 (병렬)
+  const buildTasks: Array<Promise<Record<string, unknown> | null>> = [];
+
+  for (let i = 0; i < subInterests.length; i++) {
+    const result = sourceResults[i];
+    if (result.status !== "fulfilled" || result.value.length === 0) continue;
+
+    const item = result.value[0];
+    const articleIndex = globalIndex + i;
+
+    buildTasks.push(
+      buildRowFromSource({
+        category,
+        subInterest: subInterests[i],
+        item,
+        date,
+        index: articleIndex
+      })
+        .then(async (built) => {
+          const row: Record<string, unknown> = { ...built };
+          try {
+            const thumbnail = await findRelatedContentThumbnail({
+              title: String(row.title ?? ""),
+              category: String(row.category ?? ""),
+              subInterest: String(row.sub_interest ?? ""),
+              summary: String(row.short_summary ?? ""),
+              excludePageUrls: usedPageUrls
+            });
+
+            if (thumbnail) {
+              row.thumbnail_url = thumbnail.url;
+              row.thumbnail_alt = thumbnail.alt;
+              row.thumbnail_page_url = thumbnail.pageUrl;
+              row.thumbnail_author = thumbnail.author ?? null;
+              row.thumbnail_license = thumbnail.license ?? null;
+              if (thumbnail.pageUrl) usedPageUrls.add(thumbnail.pageUrl);
+            } else {
+              row.thumbnail_url = null;
+              row.thumbnail_alt = null;
+              row.thumbnail_page_url = null;
+              row.thumbnail_author = null;
+              row.thumbnail_license = null;
+            }
+          } catch {
+            row.thumbnail_url = null;
+            row.thumbnail_alt = null;
+            row.thumbnail_page_url = null;
+            row.thumbnail_author = null;
+            row.thumbnail_license = null;
+          }
+          return row;
+        })
+        .catch(() => null)
+    );
+  }
+
+  const results = await Promise.allSettled(buildTasks);
+  const articles: Array<Record<string, unknown>> = [];
+  for (const r of results) {
+    if (r.status === "fulfilled" && r.value) {
+      articles.push(r.value);
     }
   }
 
+  return articles;
+}
+
+export async function generateDailyContentForDate(date = getKstDateParts().date) {
+  const supabase = createAdminSupabaseClient();
+  const usedPageUrls = new Set<string>();
+
+  // 5개 카테고리를 병렬로 처리 (각 5개 서브카테고리 = 총 25개 기사)
+  const categoryResults = await Promise.allSettled(
+    MAIN_INTERESTS.map((category, catIdx) =>
+      generateCategoryArticles(category, date, catIdx * 5, usedPageUrls)
+    )
+  );
+
+  const rows: Array<Record<string, unknown>> = [];
+  for (const result of categoryResults) {
+    if (result.status === "fulfilled") {
+      rows.push(...result.value);
+    }
+  }
+
+  // 기존 동일 slug 데이터 정리 (충돌 방지)
   const existingSlugs = rows.map((row) => String(row.slug));
   if (existingSlugs.length > 0) {
     const { data: existingRows, error: existingRowsError } = await supabase
@@ -413,41 +496,6 @@ export async function generateDailyContentForDate(date = getKstDateParts().date)
       if (contentDeleteError) {
         throw contentDeleteError;
       }
-    }
-  }
-
-  const usedPageUrls = new Set<string>();
-
-  for (const row of rows) {
-    try {
-      const thumbnail = await findRelatedContentThumbnail({
-        title: String(row.title ?? ""),
-        category: String(row.category ?? ""),
-        subInterest: String(row.sub_interest ?? ""),
-        summary: String(row.short_summary ?? ""),
-        excludePageUrls: usedPageUrls
-      });
-
-      if (thumbnail) {
-        row.thumbnail_url = thumbnail.url;
-        row.thumbnail_alt = thumbnail.alt;
-        row.thumbnail_page_url = thumbnail.pageUrl;
-        row.thumbnail_author = thumbnail.author ?? null;
-        row.thumbnail_license = thumbnail.license ?? null;
-        if (thumbnail.pageUrl) usedPageUrls.add(thumbnail.pageUrl);
-      } else {
-        row.thumbnail_url = null;
-        row.thumbnail_alt = null;
-        row.thumbnail_page_url = null;
-        row.thumbnail_author = null;
-        row.thumbnail_license = null;
-      }
-    } catch {
-      row.thumbnail_url = null;
-      row.thumbnail_alt = null;
-      row.thumbnail_page_url = null;
-      row.thumbnail_author = null;
-      row.thumbnail_license = null;
     }
   }
 

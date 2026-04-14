@@ -11,16 +11,17 @@ export function ProductGridCard({ products }: { products: ResolvedAffiliateProdu
   return (
     <section className="mt-6 pt-4 border-t border-gray-100">
       <p className="text-xs text-gray-400 mb-3">이 기사와 관련된 상품</p>
-      <div className="grid grid-cols-3 gap-3">
-        {products.map((product) => {
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+        {products.slice(0, 5).map((product, idx) => {
           const price = formatPrice(product.price);
+          const hideClass = idx >= 4 ? "hidden lg:block" : idx >= 3 ? "hidden sm:block" : "";
           return (
             <a
               key={product.id}
               href={product.linkUrl}
               target="_blank"
               rel="noopener sponsored"
-              className="block transition hover:opacity-80"
+              className={`block transition hover:opacity-80 ${hideClass}`}
             >
               <div className="aspect-square rounded-lg overflow-hidden bg-gray-50 mb-2">
                 {product.imageUrl ? (

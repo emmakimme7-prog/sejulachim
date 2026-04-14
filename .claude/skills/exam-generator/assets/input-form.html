@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시험문제 생성기 - 입력 폼</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Pretendard', -apple-system, 'Malgun Gothic', sans-serif;
+    background: #f5f7fa;
+    color: #1a1a2e;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .container {
+    max-width: 580px;
+    width: 100%;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 6px;
+  }
+  .header p {
+    font-size: 14px;
+    color: #6b7280;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+    padding: 28px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #6366f1;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .num {
+    background: #6366f1;
+    color: #fff;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .form-group {
+    margin-bottom: 18px;
+  }
+  .form-group:last-child {
+    margin-bottom: 0;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+  }
+  label .required {
+    color: #ef4444;
+    margin-left: 2px;
+  }
+  label .hint {
+    font-weight: 400;
+    color: #9ca3af;
+    font-size: 12px;
+    margin-left: 4px;
+  }
+  input[type="text"], input[type="number"], select, textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1a1a2e;
+    background: #fafbfc;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+    background: #fff;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 72px;
+  }
+  .row {
+    display: flex;
+    gap: 12px;
+  }
+  .row .form-group {
+    flex: 1;
+  }
+  .radio-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 400;
+    font-size: 14px;
+    padding: 8px 16px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #fafbfc;
+  }
+  .radio-group label:hover {
+    border-color: #c7c9fc;
+  }
+  .radio-group input[type="radio"] {
+    display: none;
+  }
+  .radio-group input[type="radio"]:checked + label,
+  .radio-group label.selected {
+    border-color: #6366f1;
+    background: #eef2ff;
+    color: #4338ca;
+    font-weight: 600;
+  }
+  .btn-generate {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+  }
+  .btn-generate:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(99,102,241,0.4);
+  }
+  .btn-generate:active {
+    transform: translateY(0);
+  }
+  .output-area {
+    display: none;
+    margin-top: 16px;
+  }
+  .output-area.show {
+    display: block;
+  }
+  .output-box {
+    background: #1a1a2e;
+    color: #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    font-size: 14px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    position: relative;
+  }
+  .btn-copy {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 6px 14px;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-copy:hover {
+    background: rgba(255,255,255,0.25);
+  }
+  .btn-copy.copied {
+    background: #22c55e;
+  }
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1a1a2e;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    transition: transform 0.3s ease;
+    z-index: 100;
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>시험문제 생성기</h1>
+    <p>아래 항목을 채우고 "프롬프트 생성" 버튼을 누르세요</p>
+  </div>
+
+  <!-- Card 1: 기본 정보 -->
+  <div class="card">
+    <div class="card-title"><span class="num">1</span> 기본 정보</div>
+
+    <div class="row">
+      <div class="form-group">
+        <label>학교급 / 학년 <span class="required">*</span></label>
+        <select id="grade">
+          <option value="">선택</option>
+          <option value="중1">중학교 1학년</option>
+          <option value="중2">중학교 2학년</option>
+          <option value="중3">중학교 3학년</option>
+          <option value="고1">고등학교 1학년</option>
+          <option value="고2">고등학교 2학년</option>
+          <option value="고3">고등학교 3학년</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>과목 <span class="required">*</span></label>
+        <select id="subject">
+          <option value="">선택</option>
+          <option value="국어">국어</option>
+          <option value="수학">수학</option>
+          <option value="영어">영어</option>
+          <option value="사회">사회</option>
+          <option value="역사">역사</option>
+          <option value="도덕">도덕</option>
+          <option value="과학">과학</option>
+          <option value="기술가정">기술가정</option>
+          <option value="음악">음악</option>
+          <option value="미술">미술</option>
+          <option value="체육">체육</option>
+          <option value="기타">기타 (직접 입력)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group" id="customSubjectGroup" style="display:none;">
+      <label>과목명 직접 입력</label>
+      <input type="text" id="customSubject" placeholder="예: 한문, 정보, 제2외국어">
+    </div>
+
+    <div class="form-group">
+      <label>단원 / 시험 범위 <span class="required">*</span></label>
+      <input type="text" id="unit" placeholder="예: 2단원 일차방정식, 근대사 개항~일제강점기">
+    </div>
+  </div>
+
+  <!-- Card 2: 시험 설정 -->
+  <div class="card">
+    <div class="card-title"><span class="num">2</span> 시험 설정</div>
+
+    <div class="form-group">
+      <label>시험 종류</label>
+      <div class="radio-group" id="examType">
+        <div><input type="radio" name="examType" value="단원평가" id="et1" checked><label for="et1" class="selected">단원평가</label></div>
+        <div><input type="radio" name="examType" value="쪽지시험" id="et2"><label for="et2">쪽지시험</label></div>
+        <div><input type="radio" name="examType" value="중간고사" id="et3"><label for="et3">중간고사</label></div>
+        <div><input type="radio" name="examType" value="기말고사" id="et4"><label for="et4">기말고사</label></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label>문제 수</label>
+        <input type="number" id="questionCount" value="20" min="5" max="50">
+      </div>
+      <div class="form-group">
+        <label>난이도</label>
+        <select id="difficulty">
+          <option value="하">하 (기본 확인)</option>
+          <option value="중" selected>중 (표준)</option>
+          <option value="상">상 (심화)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>문제 유형 비율 <span class="hint">(객관식 : 주관식)</span></label>
+      <div class="radio-group" id="ratioGroup">
+        <div><input type="radio" name="ratio" value="10:0" id="r0"><label for="r0">객관식만</label></div>
+        <div><input type="radio" name="ratio" value="8:2" id="r1"><label for="r1">8 : 2</label></div>
+        <div><input type="radio" name="ratio" value="7:3" id="r2" checked><label for="r2" class="selected">7 : 3</label></div>
+        <div><input type="radio" name="ratio" value="6:4" id="r3"><label for="r3">6 : 4</label></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 3: 추가 옵션 -->
+  <div class="card">
+    <div class="card-title"><span class="num">3</span> 추가 옵션 <span style="font-weight:400;color:#9ca3af;font-size:12px;">(선택)</span></div>
+
+    <div class="row">
+      <div class="form-group">
+        <label>배점 <span class="hint">(총점)</span></label>
+        <input type="number" id="totalPoints" value="100" min="10" max="200">
+      </div>
+      <div class="form-group">
+        <label>시험 시간 <span class="hint">(분)</span></label>
+        <input type="number" id="examTime" value="45" min="10" max="120">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>추가 요청사항</label>
+      <textarea id="additionalNotes" placeholder="예: 서술형 2문항 꼭 넣어줘, 그래프 해석 문제 포함, 교과서 p.45~72 범위"></textarea>
+    </div>
+  </div>
+
+  <!-- Generate Button -->
+  <button class="btn-generate" onclick="generatePrompt()">프롬프트 생성</button>
+
+  <!-- Output -->
+  <div class="output-area" id="outputArea">
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="output-box" id="outputBox">
+        <button class="btn-copy" onclick="copyToClipboard()">복사</button>
+      </div>
+    </div>
+    <p style="text-align:center;font-size:13px;color:#6b7280;margin-top:12px;">
+      위 텍스트를 복사해서 Claude 채팅에 붙여넣으세요
+    </p>
+  </div>
+</div>
+
+<div class="toast" id="toast">클립보드에 복사되었습니다!</div>
+
+<script>
+  // Radio group selection UI
+  document.querySelectorAll('.radio-group').forEach(group => {
+    group.querySelectorAll('input[type="radio"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        group.querySelectorAll('label').forEach(l => l.classList.remove('selected'));
+        if (radio.checked) {
+          radio.nextElementSibling?.classList.add('selected');
+          // For labels that are siblings (label follows input)
+          const label = group.querySelector(`label[for="${radio.id}"]`);
+          if (label) label.classList.add('selected');
+        }
+      });
+    });
+  });
+
+  // Show/hide custom subject field
+  document.getElementById('subject').addEventListener('change', function() {
+    document.getElementById('customSubjectGroup').style.display =
+      this.value === '기타' ? 'block' : 'none';
+  });
+
+  function generatePrompt() {
+    const grade = document.getElementById('grade').value;
+    const subjectSelect = document.getElementById('subject').value;
+    const subject = subjectSelect === '기타'
+      ? document.getElementById('customSubject').value
+      : subjectSelect;
+    const unit = document.getElementById('unit').value;
+
+    // Validation
+    if (!grade || !subject || !unit) {
+      alert('학년, 과목, 단원/범위는 필수 항목입니다.');
+      return;
+    }
+
+    const examType = document.querySelector('input[name="examType"]:checked').value;
+    const questionCount = document.getElementById('questionCount').value;
+    const difficulty = document.getElementById('difficulty').value;
+    const ratio = document.querySelector('input[name="ratio"]:checked').value;
+    const totalPoints = document.getElementById('totalPoints').value;
+    const examTime = document.getElementById('examTime').value;
+    const notes = document.getElementById('additionalNotes').value.trim();
+
+    const diffLabel = { '하': '쉽게', '중': '보통 난이도로', '상': '어렵게' };
+
+    let prompt = `${grade} ${subject} ${unit} ${examType} 시험지 만들어줘.\n`;
+    prompt += `${questionCount}문제, 객관식:주관식 = ${ratio}, 난이도 ${diffLabel[difficulty]}.\n`;
+    prompt += `총 ${totalPoints}점 만점, 시험 시간 ${examTime}분.`;
+
+    if (notes) {
+      prompt += `\n추가 요청: ${notes}`;
+    }
+
+    prompt += `\nWord 문서(.docx)로 만들어줘. 정답 및 해설도 포함해줘.`;
+
+    const outputBox = document.getElementById('outputBox');
+    outputBox.innerHTML = `<button class="btn-copy" onclick="copyToClipboard()">복사</button>${prompt}`;
+
+    const outputArea = document.getElementById('outputArea');
+    outputArea.classList.add('show');
+    outputArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Auto copy
+    copyToClipboard();
+  }
+
+  function copyToClipboard() {
+    const outputBox = document.getElementById('outputBox');
+    const text = outputBox.textContent.replace('복사', '').trim();
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.querySelector('.btn-copy');
+      btn.textContent = '복사됨!';
+      btn.classList.add('copied');
+      showToast();
+      setTimeout(() => {
+        btn.textContent = '복사';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+
+  function showToast() {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+</script>
+</body>
+</html>

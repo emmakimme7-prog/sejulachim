@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const maxDuration = 60;
+
 import { getServerEnv } from "@/lib/env";
 import { isAuthorizedCronRequest } from "@/lib/security/request";
 import { getKstDateParts } from "@/lib/utils";

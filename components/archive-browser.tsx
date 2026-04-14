@@ -498,8 +498,7 @@ export function ArchiveBrowser({
 
   return (
       <div className="pb-20 sm:pb-12 flex flex-col">
-      <p className="fixed left-0 w-full text-[10px] text-gray-400 text-center bg-gray-50 py-[4px] top-[115px] lg:top-[70px] z-30" style={{ lineHeight: '14px' }}>이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
-      <div className="h-[22px]" />
+      <p className="text-[10px] text-gray-400 text-center bg-gray-50 py-[4px]" style={{ lineHeight: '14px', margin: '0 -16px' }}>이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
       {!isFeatureView && localTodayMode ? (
         <div className="border-b border-gray-200 bg-white text-[14px]" style={{ margin: '0 -16px' }}>
           {/* 날짜 필터 행 */}
@@ -1003,15 +1002,16 @@ export function ArchiveBrowser({
                 <section className="pt-4 pb-2">
                   <p className="text-xs text-gray-400 mb-3">이 기사와 관련된 상품</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {feedSlice.map((product) => {
+                    {feedSlice.slice(0, 5).map((product, idx) => {
                       const price = product.price != null ? new Intl.NumberFormat("ko-KR").format(product.price) : null;
+                      const hideClass = idx >= 4 ? "hidden lg:block" : idx >= 3 ? "hidden sm:block" : "";
                       return (
                         <a
                           key={product.id}
                           href={product.linkUrl}
                           target="_blank"
                           rel="noopener sponsored"
-                          className="block transition hover:opacity-80"
+                          className={`block transition hover:opacity-80 ${hideClass}`}
                         >
                           <div className="aspect-square rounded-lg overflow-hidden bg-gray-50 mb-2">
                             {product.imageUrl ? (

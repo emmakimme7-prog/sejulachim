@@ -30,13 +30,12 @@ export function ContentThumbnail({
   }, []);
 
   if (!src || hasError) {
+    // 이미지 없거나 로드 실패 시 빈 영역 표시 (placeholder 텍스트 대신 깔끔한 배경)
     return (
       <div
-        className={`${className} flex items-center justify-center bg-navy-50 text-center text-xs font-semibold leading-5 text-navy-400`}
+        className={`${className} flex items-center justify-center bg-gradient-to-br from-navy-50 to-gray-100`}
         aria-label={alt}
-      >
-        <span className="px-3">{fallbackLabel}</span>
-      </div>
+      />
     );
   }
 
