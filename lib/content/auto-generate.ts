@@ -262,9 +262,11 @@ function parseGoogleNewsRss(xml: string, type: SourceType): FeedItem[] {
 }
 
 async function fetchGoogleNewsItems(query: string, date: string, type: SourceType) {
+  const prevDate = addDays(date, -1);
   const nextDate = addDays(date, 1);
-  const searchQuery = `${query} after:${date} before:${nextDate}`;
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(searchQuery)}&hl=ko&gl=KR&ceid=KR:ko`;
+  // 날짜 연산자를 검색에서 제거 (Google News RSS에서 신뢰도 낮음).
+  // 대신 최근 48시간 내 기사만 허용하는 pubDate 필터로 대체.
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
   const response = await fetch(url, {
     headers: {
       "user-agent": "Mozilla/5.0 (compatible; SejulachimBot/1.0; +https://sejulachim.studiobyyou.kr)"
@@ -277,7 +279,10 @@ async function fetchGoogleNewsItems(query: string, date: string, type: SourceTyp
   }
 
   const xml = await response.text();
-  return parseGoogleNewsRss(xml, type).filter((item) => !item.publishedAt || formatKstDate(item.publishedAt) === date);
+  const allowedDates = new Set([prevDate, date, nextDate]);
+  return parseGoogleNewsRss(xml, type).filter(
+    (item) => !item.publishedAt || allowedDates.has(formatKstDate(item.publishedAt))
+  );
 }
 
 async function collectSourceItemsForSubInterest(subInterest: string, date: string) {
