@@ -367,6 +367,7 @@ export async function upsertSubscriberSignup(input: {
   subInterests: Record<string, string>;
   consentedAt: string;
   password?: string;
+  authProvider?: string;
 }) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
@@ -392,6 +393,7 @@ export async function upsertSubscriberSignup(input: {
           nickname: input.email.split("@")[0],
           avatar_key: "sun",
           font_size_preference: "medium",
+          auth_provider: input.authProvider ?? "email",
           updated_at: now
         },
         { onConflict: "email", ignoreDuplicates: false }

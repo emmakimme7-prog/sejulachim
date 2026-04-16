@@ -9,6 +9,7 @@ type UserRow = {
   email: string;
   nickname?: string | null;
   avatar_key?: string | null;
+  auth_provider?: string;
   created_at?: string;
   delivery_time: string;
   is_active: boolean;
@@ -20,7 +21,7 @@ export default async function DashboardUsersPage() {
     ? (
         await createAdminSupabaseClient()
           .from("users")
-          .select("id, email, nickname, created_at, delivery_time, is_active, user_interest_selections(main_interest, sub_interest)")
+          .select("id, email, nickname, auth_provider, created_at, delivery_time, is_active, user_interest_selections(main_interest, sub_interest)")
           .order("created_at", { ascending: false })
           .limit(100)
       ).data

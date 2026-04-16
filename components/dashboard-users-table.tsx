@@ -8,10 +8,18 @@ import { AdminUserStatusButton } from "@/components/admin-user-status-button";
 import { StatusBadge } from "@/components/status-badge";
 import { SelectInput, TextInput } from "@/components/ui/field";
 
+const AUTH_PROVIDER_LABELS: Record<string, { label: string; color: string }> = {
+  email: { label: "이메일", color: "bg-navy-100 text-navy-700" },
+  google: { label: "구글", color: "bg-blue-100 text-blue-700" },
+  kakao: { label: "카카오", color: "bg-yellow-100 text-yellow-800" },
+  naver: { label: "네이버", color: "bg-green-100 text-green-700" },
+};
+
 type UserRow = {
   id: string;
   email: string;
   nickname?: string | null;
+  auth_provider?: string;
   created_at?: string;
   delivery_time: string;
   is_active: boolean;
@@ -121,6 +129,7 @@ export function DashboardUsersTable({ rows }: { rows: UserRow[] }) {
               <tr>
                 <th className="px-4 py-4">이메일</th>
                 <th className="px-4 py-4">이름</th>
+                <th className="px-4 py-4">유형</th>
                 <th className="px-4 py-4">관심사</th>
                 <th className="px-4 py-4">가입일시</th>
                 <th className="px-4 py-4">발송 시간</th>
@@ -137,6 +146,12 @@ export function DashboardUsersTable({ rows }: { rows: UserRow[] }) {
                     </Link>
                   </td>
                   <td className="px-4 py-4 text-navy-700">{user.nickname ?? "-"}</td>
+                  <td className="px-4 py-4">
+                    {(() => {
+                      const info = AUTH_PROVIDER_LABELS[user.auth_provider ?? "email"] ?? AUTH_PROVIDER_LABELS.email;
+                      return <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${info.color}`}>{info.label}</span>;
+                    })()}
+                  </td>
                   <td className="px-4 py-4 text-navy-700">
                     {user.user_interest_selections.map((item) => `${item.main_interest}${item.sub_interest ? ` · ${item.sub_interest}` : ""}`).join(", ")}
                   </td>
@@ -152,7 +167,7 @@ export function DashboardUsersTable({ rows }: { rows: UserRow[] }) {
               ))}
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-navy-500">
+                  <td colSpan={8} className="px-4 py-10 text-center text-navy-500">
                     조건에 맞는 사용자가 없습니다.
                   </td>
                 </tr>

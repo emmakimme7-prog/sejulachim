@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
         interests: verified.interests,
         subInterests: verified.subInterests,
         consentedAt: new Date().toISOString(),
+        authProvider: "naver",
       });
       await createUserSession({ userId: user.id, email: profile.email, rememberMe: true });
       await addSecurityJobLog("auth.naver_signup", "success", `user=${user.id}`);

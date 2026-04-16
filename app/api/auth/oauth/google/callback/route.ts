@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
         interests: verified.interests,
         subInterests: verified.subInterests,
         consentedAt: new Date().toISOString(),
+        authProvider: "google",
       });
       await createUserSession({ userId: user.id, email: profile.email, rememberMe: true });
       await addSecurityJobLog("auth.google_signup", "success", `user=${user.id}`);

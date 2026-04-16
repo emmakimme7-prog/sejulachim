@@ -175,7 +175,7 @@ export function SignupForm({
               </div>
               <p className="rounded-full bg-navy-50 px-4 py-2 text-sm font-semibold text-navy-500">선택 수 {selectedInterests.length}/3</p>
             </div>
-            <div className="grid w-full gap-3 sm:grid-cols-2 md:gap-5">
+            <div className="grid w-full gap-3 sm:grid-cols-2 md:gap-4">
               {mainInterests.map((interest) => {
                 const active = selectedInterests.includes(interest);
                 const Icon = INTEREST_ICON_COMPONENTS[interest as MainInterest] ?? Newspaper;
@@ -184,36 +184,26 @@ export function SignupForm({
                   <div
                     key={interest}
                     className={cn(
-                      "w-full rounded-[20px] border px-4 py-4 text-left transition duration-150 md:rounded-[28px] md:px-6 md:py-6",
+                      "w-full rounded-[20px] border px-4 py-3 text-left transition duration-150 md:rounded-[24px] md:px-5 md:py-4",
                       active
                         ? "border-orange-500 bg-orange-50/60 text-navy-900 shadow-[inset_0_0_0_1px_rgba(229,124,35,0.08)]"
                         : "border-navy-100 bg-white text-navy-800 hover:border-navy-300 hover:bg-navy-50"
                     )}
                   >
-                    <button
-                      type="button"
-                      onClick={() => toggleInterest(interest)}
-                      className="flex w-full items-center justify-between gap-4 text-left focus:outline-none"
-                    >
-                      <div className="flex min-w-0 items-center gap-4">
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/90 text-orange-500 shadow-sm md:h-14 md:w-14">
-                          <Icon className="h-6 w-6 md:h-7 md:w-7" strokeWidth={2.2} aria-hidden="true" />
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleInterest(interest)}
+                        className="flex shrink-0 items-center gap-3 text-left focus:outline-none"
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/90 text-orange-500 shadow-sm md:h-12 md:w-12">
+                          <Icon className="h-5 w-5 md:h-6 md:w-6" strokeWidth={2.2} aria-hidden="true" />
                         </span>
-                        <span className="block text-[26px] font-extrabold tracking-[-0.04em] md:text-[34px]">{interestLabels[interest]}</span>
-                      </div>
-                      <ChevronDown
-                        className={cn(
-                          "h-6 w-6 shrink-0 text-orange-500 transition-transform",
-                          active ? "rotate-180" : "rotate-0"
-                        )}
-                        aria-hidden="true"
-                      />
-                    </button>
+                        <span className="block text-xl font-extrabold tracking-[-0.04em] md:text-2xl">{interestLabels[interest]}</span>
+                      </button>
 
-                    {active ? (
-                      <div className="mt-4 border-t border-orange-100 pt-4 md:mt-5 md:pt-5">
-                        <span className="mb-3 block text-sm font-semibold text-navy-700">{interestLabels[interest]} 세부 관심</span>
-                        <div className="relative">
+                      {active ? (
+                        <div className="relative ml-auto min-w-0 flex-1">
                           <SelectInput
                             value={subInterests[interest] ?? ""}
                             onChange={(event) =>
@@ -222,19 +212,24 @@ export function SignupForm({
                                 [interest]: event.target.value
                               }))
                             }
-                            className="min-h-12 rounded-2xl bg-white pr-14 appearance-none"
+                            className="min-h-10 rounded-xl bg-white pr-10 text-sm appearance-none"
                           >
-                            <option value="">선택 안 함</option>
+                            <option value="">세부 선택</option>
                             {(subInterestOptions[interest] ?? []).map((option) => (
                               <option key={option} value={option}>
                                 {option}
                               </option>
                             ))}
                           </SelectInput>
-                          <ChevronDown className="pointer-events-none absolute right-5 top-1/2 h-5 w-5 -translate-y-1/2 text-navy-500" aria-hidden="true" />
+                          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-navy-400" aria-hidden="true" />
                         </div>
-                      </div>
-                    ) : null}
+                      ) : (
+                        <ChevronDown
+                          className="ml-auto h-5 w-5 shrink-0 text-navy-300"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
                   </div>
                 );
               })}
