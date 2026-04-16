@@ -168,7 +168,7 @@ export function buildKakaoAuthorizationUrl(state: string) {
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", getRedirectUri("kakao"));
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "account_email,profile_nickname");
+  url.searchParams.set("scope", "account_email");
   url.searchParams.set("state", state);
   return url;
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, DollarSign, Heart, House, Mail, Newspaper, Users, X } from "lucide-react";
+import { ChevronDown, DollarSign, Eye, EyeOff, Heart, House, Mail, Newspaper, Users, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldHint, FieldLabel, SelectInput, TextInput } from "@/components/ui/field";
@@ -48,6 +48,8 @@ export function SignupForm({
   const [selectedInterests, setSelectedInterests] = useState<string[]>(initialInterests);
   const [subInterests, setSubInterests] = useState<Record<string, string>>(initialSubInterests);
   const [email, setEmail] = useState(defaultEmail);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [honeypot, setHoneypot] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -117,6 +119,12 @@ export function SignupForm({
       return;
     }
 
+    if (password.length > 0 && password.length < 8) {
+      setToast("비밀번호는 8자 이상이어야 합니다.");
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/signup", {
         method: "POST",
@@ -128,8 +136,8 @@ export function SignupForm({
           subInterests,
           email,
           deliveryTime: "08:00",
-          passwordEnabled: false,
-          password: "",
+          passwordEnabled: password.length > 0,
+          password,
           agreeToTerms: true,
           agreeToPrivacy: true,
           honeypot
@@ -324,6 +332,31 @@ export function SignupForm({
               placeholder="morning@example.com"
               className="mt-2 w-full"
             />
+          </Field>
+
+          <Field>
+            <FieldLabel>비밀번호</FieldLabel>
+            <FieldHint>8자 이상 (선택사항)</FieldHint>
+            <div className="relative mt-2">
+              <TextInput
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setError("");
+                }}
+                placeholder="비밀번호 입력"
+                className="w-full pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-navy-400 hover:text-navy-600"
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" aria-hidden="true" /> : <Eye className="h-5 w-5" aria-hidden="true" />}
+              </button>
+            </div>
           </Field>
 
           <label className="hidden">
