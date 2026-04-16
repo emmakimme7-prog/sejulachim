@@ -181,29 +181,25 @@ export function SignupForm({
                 const Icon = INTEREST_ICON_COMPONENTS[interest as MainInterest] ?? Newspaper;
 
                 return (
-                  <div
+                  <button
                     key={interest}
+                    type="button"
+                    onClick={() => toggleInterest(interest)}
                     className={cn(
-                      "w-full rounded-[20px] border px-4 py-3 text-left transition duration-150 md:rounded-[24px] md:px-5 md:py-4",
+                      "w-full cursor-pointer rounded-[20px] border px-4 py-3 text-left transition duration-150 md:rounded-[24px] md:px-5 md:py-4",
                       active
                         ? "border-orange-500 bg-orange-50/60 text-navy-900 shadow-[inset_0_0_0_1px_rgba(229,124,35,0.08)]"
                         : "border-navy-100 bg-white text-navy-800 hover:border-navy-300 hover:bg-navy-50"
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => toggleInterest(interest)}
-                        className="flex shrink-0 items-center gap-3 text-left focus:outline-none"
-                      >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/90 text-orange-500 shadow-sm md:h-12 md:w-12">
-                          <Icon className="h-5 w-5 md:h-6 md:w-6" strokeWidth={2.2} aria-hidden="true" />
-                        </span>
-                        <span className="block text-xl font-extrabold tracking-[-0.04em] md:text-2xl">{interestLabels[interest]}</span>
-                      </button>
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/90 text-orange-500 shadow-sm md:h-12 md:w-12">
+                        <Icon className="h-5 w-5 md:h-6 md:w-6" strokeWidth={2.2} aria-hidden="true" />
+                      </span>
+                      <span className="block text-xl font-extrabold tracking-[-0.04em] md:text-2xl">{interestLabels[interest]}</span>
 
                       {active ? (
-                        <div className="relative ml-auto min-w-0 flex-1">
+                        <div className="relative ml-auto min-w-0 flex-1" onClick={(e) => e.stopPropagation()}>
                           <SelectInput
                             value={subInterests[interest] ?? ""}
                             onChange={(event) =>
@@ -230,7 +226,7 @@ export function SignupForm({
                         />
                       )}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
