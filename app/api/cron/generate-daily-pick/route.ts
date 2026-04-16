@@ -33,6 +33,7 @@ async function handleCron(request: NextRequest) {
   const supabase = createAdminSupabaseClient();
   const { date } = getKstDateParts();
   const jobName = "generate-daily-pick";
+  const force = request.nextUrl.searchParams.get("force") === "1";
 
   try {
     const { data: existing } = await supabase
@@ -41,7 +42,7 @@ async function handleCron(request: NextRequest) {
       .eq("pick_date", date)
       .maybeSingle();
 
-    if (existing?.status === "ready") {
+    if (!force && existing?.status === "ready") {
       const { count } = await supabase
         .from("daily_pick_items")
         .select("id", { count: "exact", head: true })
