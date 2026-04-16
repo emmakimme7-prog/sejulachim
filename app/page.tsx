@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { ArchiveBrowser } from "@/components/archive-browser";
 import { HomeContent } from "@/components/home-content";
+import { OAuthLinkedNotice } from "@/components/oauth-linked-notice";
 import { getInterestConfig } from "@/lib/content/interest-config";
 import { listPublicContentItems, listTodayPreview } from "@/lib/content/public-content";
 import { fetchPopularProductsForContent } from "@/lib/products/coupang-partners";
@@ -69,6 +70,7 @@ export default async function HomePage({
 
   return (
     <HomeContent previews={todayPreviews}>
+      <Suspense><OAuthLinkedNotice /></Suspense>
       <div className="mx-auto w-full px-[18px] lg:px-[34px] pb-10 md:pb-20" style={{ maxWidth: "min(64rem, 1536px)" }}>
         <h1 className="sr-only">세줄아침 — 매일 아침 세 줄로 읽는 생활 브리핑</h1>
         <Suspense fallback={<div className="min-h-[60vh]" />}>

@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         rememberMe: true,
       });
       await addSecurityJobLog("auth.naver_login", "success", `user=${existingUser.id}`);
-      const response = NextResponse.redirect(new URL("/archive", request.url));
+      const response = NextResponse.redirect(new URL("/?linked=naver", request.url));
       clearStateCookie(response);
       return response;
     }
