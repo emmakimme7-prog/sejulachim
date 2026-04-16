@@ -31,6 +31,13 @@ export async function GET(request: NextRequest) {
     const existingUser = await findUserByEmail(profile.email);
 
     if (existingUser?.is_active || existingUser?.deleted_at) {
+      if (verified.mode === "signup") {
+        const response = NextResponse.redirect(
+          new URL(`/login?error=already-registered&email=${encodeURIComponent(profile.email)}`, request.url),
+        );
+        clearStateCookie(response);
+        return response;
+      }
       if (existingUser.deleted_at) {
         await cancelAccountDeletion(existingUser.id);
         await addSecurityJobLog("account.delete_cancel", "success", `user=${existingUser.id}`);

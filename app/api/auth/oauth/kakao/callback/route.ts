@@ -31,6 +31,14 @@ export async function GET(request: NextRequest) {
     const existingUser = await findUserByEmail(profile.email);
 
     if (existingUser?.is_active || existingUser?.deleted_at) {
+      // 가입 모드에서 이미 존재하는 계정이면 로그인하지 않고 안내
+      if (verified.mode === "signup") {
+        const response = NextResponse.redirect(
+          new URL(`/login?error=already-registered&email=${encodeURIComponent(profile.email)}`, request.url),
+        );
+        clearStateCookie(response);
+        return response;
+      }
       if (existingUser.deleted_at) {
         await cancelAccountDeletion(existingUser.id);
         await addSecurityJobLog("account.delete_cancel", "success", `user=${existingUser.id}`);

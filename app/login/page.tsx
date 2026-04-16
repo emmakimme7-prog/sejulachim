@@ -70,6 +70,9 @@ export default async function LoginPage({ searchParams }: PageProps) {
         {error === "naver" ? (
           <Notice tone="error" className="mt-6">네이버 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.</Notice>
         ) : null}
+        {error === "already-registered" ? (
+          <Notice tone="info" className="mt-6">이미 가입된 계정입니다. 아래에서 로그인해주세요.</Notice>
+        ) : null}
         {verified && session && !session.hasPassword ? (
           <SoftCard className="muted-surface mt-8 space-y-5">
             <div>

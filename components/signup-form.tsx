@@ -54,6 +54,7 @@ export function SignupForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [step, setStep] = useState<Step>(defaultEmail ? "email-form" : "interests");
 
   useEffect(() => {
@@ -255,10 +256,23 @@ export function SignupForm({
             <p className="mt-3 text-base leading-7 text-navy-600">소셜 계정으로 간편하게 시작하거나, 이메일로 가입할 수 있어요.</p>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <label className="flex items-start gap-3 rounded-2xl border border-navy-100 bg-white px-5 py-4 text-sm leading-6 text-navy-700 cursor-pointer hover:bg-navy-50 transition">
+            <input
+              type="checkbox"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="mt-0.5 h-5 w-5 shrink-0 accent-orange-500"
+            />
+            <span>
+              <a href="/terms" target="_blank" className="font-semibold text-orange-500 underline underline-offset-4">이용약관</a> 및{" "}
+              <a href="/terms" target="_blank" className="font-semibold text-orange-500 underline underline-offset-4">개인정보처리방침</a>에 동의합니다.
+            </span>
+          </label>
+
+          <div className={cn("flex flex-col gap-3 transition-opacity", !agreedToTerms && "pointer-events-none opacity-40")}>
             {googleEnabled ? (
               <a
-                href={buildOauthHref("google")}
+                href={agreedToTerms ? buildOauthHref("google") : "#"}
                 className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full border border-navy-200 bg-white px-6 text-lg font-bold text-navy-900 shadow-[0_10px_30px_rgba(15,23,42,0.08)] transition hover:border-navy-300 hover:bg-navy-50"
               >
                 구글로 시작하기
@@ -266,7 +280,7 @@ export function SignupForm({
             ) : null}
             {kakaoEnabled ? (
               <a
-                href={buildOauthHref("kakao")}
+                href={agreedToTerms ? buildOauthHref("kakao") : "#"}
                 className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full bg-[#FEE500] px-6 text-lg font-bold text-[#191600] shadow-[0_10px_30px_rgba(254,229,0,0.28)] transition hover:brightness-[0.98]"
               >
                 카카오로 시작하기
@@ -274,7 +288,7 @@ export function SignupForm({
             ) : null}
             {naverEnabled ? (
               <a
-                href={buildOauthHref("naver")}
+                href={agreedToTerms ? buildOauthHref("naver") : "#"}
                 className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full bg-[#03C75A] px-6 text-lg font-bold text-white shadow-[0_10px_30px_rgba(3,199,90,0.28)] transition hover:brightness-[0.95]"
               >
                 네이버로 시작하기

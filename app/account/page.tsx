@@ -71,6 +71,8 @@ export default async function AccountPage({ searchParams }: PageProps) {
     interestRows.filter((row) => row.sub_interest).map((row) => [row.main_interest, row.sub_interest ?? ""])
   ) as Record<string, string>;
 
+  const authProvider = (profileUser as { auth_provider?: string } | null)?.auth_provider ?? "email";
+  const AUTH_PROVIDER_LABELS: Record<string, string> = { email: "이메일", google: "구글", kakao: "카카오", naver: "네이버" };
   const avatarKey = isAvatarKey(profileUser?.avatar_key) ? profileUser.avatar_key : "sun";
   const nickname = typeof profileUser?.nickname === "string" && profileUser.nickname.trim() ? profileUser.nickname : session.email.split("@")[0];
   const avatarDataUrl = typeof profileUser?.avatar_data_url === "string" ? profileUser.avatar_data_url : undefined;
@@ -116,6 +118,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
                       <div>
                         <h2 className="text-2xl font-bold text-navy-900">내 프로필</h2>
                         <p className="mt-2 text-base leading-7 text-navy-700">{nickname}</p>
+                        <p className="mt-1 text-sm text-navy-500">계정 유형: {AUTH_PROVIDER_LABELS[authProvider] ?? authProvider}</p>
                       </div>
                     </div>
                     <AccountProfileForm initialNickname={nickname} initialAvatarKey={avatarKey} initialFontSize={fontSize} initialAvatarDataUrl={avatarDataUrl} />
