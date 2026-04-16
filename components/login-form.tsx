@@ -11,12 +11,14 @@ export function LoginForm({
   defaultEmail = "",
   defaultRememberMe = false,
   kakaoEnabled = false,
-  googleEnabled = false
+  googleEnabled = false,
+  naverEnabled = false
 }: {
   defaultEmail?: string;
   defaultRememberMe?: boolean;
   kakaoEnabled?: boolean;
   googleEnabled?: boolean;
+  naverEnabled?: boolean;
 }) {
   const [email, setEmail] = useState(defaultEmail);
   const [password, setPassword] = useState("");
@@ -92,6 +94,17 @@ export function LoginForm({
           )}
         >
           카카오로 로그인
+        </Link>
+      ) : null}
+      {naverEnabled ? (
+        <Link
+          href="/api/auth/oauth/naver/start?mode=login"
+          className={cn(
+            "inline-flex min-h-14 w-full items-center justify-center rounded-full px-6 text-lg font-bold transition",
+            "bg-[#03C75A] text-white shadow-[0_10px_30px_rgba(3,199,90,0.28)] hover:brightness-[0.95]"
+          )}
+        >
+          네이버로 로그인
         </Link>
       ) : null}
     </div>

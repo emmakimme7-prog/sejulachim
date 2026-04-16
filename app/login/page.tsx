@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldLabel, TextInput } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { Panel, PanelBody, SectionEyebrow, SoftCard } from "@/components/ui/panel";
-import { isGoogleOauthConfigured, isKakaoOauthConfigured } from "@/lib/auth/kakao-oauth";
+import { isGoogleOauthConfigured, isKakaoOauthConfigured, isNaverOauthConfigured } from "@/lib/auth/kakao-oauth";
 import { getCurrentUserSession } from "@/lib/auth/user-session";
 
 type PageProps = {
@@ -24,6 +24,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
   const { sent, error, reset, verified, email } = await searchParams;
   const kakaoEnabled = isKakaoOauthConfigured();
   const googleEnabled = isGoogleOauthConfigured();
+  const naverEnabled = isNaverOauthConfigured();
 
   if (session && !verified) {
     redirect("/archive");
@@ -66,6 +67,9 @@ export default async function LoginPage({ searchParams }: PageProps) {
         {error === "google" ? (
           <Notice tone="error" className="mt-6">구글 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.</Notice>
         ) : null}
+        {error === "naver" ? (
+          <Notice tone="error" className="mt-6">네이버 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.</Notice>
+        ) : null}
         {verified && session && !session.hasPassword ? (
           <SoftCard className="muted-surface mt-8 space-y-5">
             <div>
@@ -95,6 +99,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
           defaultRememberMe={false}
           kakaoEnabled={kakaoEnabled}
           googleEnabled={googleEnabled}
+          naverEnabled={naverEnabled}
         />
 
         <div className="mt-6 flex flex-wrap gap-4 text-sm font-semibold text-navy-700">

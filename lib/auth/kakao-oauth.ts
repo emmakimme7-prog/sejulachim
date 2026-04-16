@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHmac, randomBytes } from "node:crypto";
 
-export type SupportedOauthProvider = "kakao" | "google";
+export type SupportedOauthProvider = "kakao" | "google" | "naver";
 
 const STATE_TTL_SECONDS = 60 * 10;
 
@@ -34,6 +34,14 @@ function getGoogleClientSecret() {
   return getEnv("GOOGLE_CLIENT_SECRET");
 }
 
+function getNaverClientId() {
+  return getEnv("NAVER_CLIENT_ID");
+}
+
+function getNaverClientSecret() {
+  return getEnv("NAVER_CLIENT_SECRET");
+}
+
 function getOAuthStateSecret() {
   return getEnv("OAUTH_STATE_SECRET") || getEnv("ADMIN_SESSION_SECRET");
 }
@@ -58,12 +66,20 @@ export function isGoogleOauthConfigured() {
   return Boolean(getGoogleClientId() && getGoogleClientSecret());
 }
 
+export function isNaverOauthConfigured() {
+  return Boolean(getNaverClientId() && getNaverClientSecret());
+}
+
 export function getKakaoOauthStartPath(mode: "login" | "signup" = "login") {
   return `/api/auth/oauth/kakao/start?mode=${mode}`;
 }
 
 export function getGoogleOauthStartPath(mode: "login" | "signup" = "login") {
   return `/api/auth/oauth/google/start?mode=${mode}`;
+}
+
+export function getNaverOauthStartPath(mode: "login" | "signup" = "login") {
+  return `/api/auth/oauth/naver/start?mode=${mode}`;
 }
 
 function createOauthState(provider: SupportedOauthProvider, mode: "login" | "signup") {
@@ -89,16 +105,27 @@ export function createGoogleOauthState(mode: "login" | "signup") {
   return createOauthState("google", mode);
 }
 
+export function createNaverOauthState(mode: "login" | "signup") {
+  return createOauthState("naver", mode);
+}
+
+const PROVIDER_LABEL: Record<SupportedOauthProvider, string> = {
+  kakao: "카카오",
+  google: "구글",
+  naver: "네이버",
+};
+
 function verifyOauthState(raw: string | undefined, expectedState: string, provider: SupportedOauthProvider) {
+  const label = PROVIDER_LABEL[provider];
   if (!raw) {
-    throw new Error(`${provider === "kakao" ? "카카오" : "구글"} 로그인 상태가 만료되었습니다. 다시 시도해주세요.`);
+    throw new Error(`${label} 로그인 상태가 만료되었습니다. 다시 시도해주세요.`);
   }
 
   let parsed: { provider?: string; mode?: string; state?: string; signature?: string };
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error(`${provider === "kakao" ? "카카오" : "구글"} 로그인 상태가 올바르지 않습니다.`);
+    throw new Error(`${label} 로그인 상태가 올바르지 않습니다.`);
   }
 
   const mode = parsed.mode === "signup" ? "signup" : "login";
@@ -108,7 +135,7 @@ function verifyOauthState(raw: string | undefined, expectedState: string, provid
     parsed.state !== expectedState ||
     parsed.signature !== signState(payload)
   ) {
-    throw new Error(`${provider === "kakao" ? "카카오" : "구글"} 로그인 요청을 검증하지 못했습니다.`);
+    throw new Error(`${label} 로그인 요청을 검증하지 못했습니다.`);
   }
 
   return mode;
@@ -120,6 +147,10 @@ export function verifyKakaoOauthState(raw: string | undefined, expectedState: st
 
 export function verifyGoogleOauthState(raw: string | undefined, expectedState: string) {
   return verifyOauthState(raw, expectedState, "google");
+}
+
+export function verifyNaverOauthState(raw: string | undefined, expectedState: string) {
+  return verifyOauthState(raw, expectedState, "naver");
 }
 
 function getRedirectUri(provider: SupportedOauthProvider) {
@@ -249,6 +280,65 @@ export async function fetchGoogleOauthProfile(code: string) {
     email,
     nickname: String(payload?.name || "").trim() || email.split("@")[0],
   };
+}
+
+export function buildNaverAuthorizationUrl(state: string) {
+  const clientId = getNaverClientId();
+  const clientSecret = getNaverClientSecret();
+  if (!clientId || !clientSecret) {
+    throw new Error("네이버 로그인 설정이 비어 있습니다.");
+  }
+
+  const url = new URL("https://nid.naver.com/oauth2.0/authorize");
+  url.searchParams.set("client_id", clientId);
+  url.searchParams.set("redirect_uri", getRedirectUri("naver"));
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("state", state);
+  return url;
+}
+
+async function exchangeNaverCode(code: string, state: string) {
+  const clientId = getNaverClientId();
+  const clientSecret = getNaverClientSecret();
+  if (!clientId || !clientSecret) {
+    throw new Error("네이버 로그인 설정이 비어 있습니다.");
+  }
+
+  const url = new URL("https://nid.naver.com/oauth2.0/token");
+  url.searchParams.set("grant_type", "authorization_code");
+  url.searchParams.set("client_id", clientId);
+  url.searchParams.set("client_secret", clientSecret);
+  url.searchParams.set("code", code);
+  url.searchParams.set("state", state);
+
+  const response = await fetch(url, { cache: "no-store" });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.access_token) {
+    throw new Error("네이버 토큰 교환에 실패했습니다.");
+  }
+  return String(payload.access_token);
+}
+
+export async function fetchNaverOauthProfile(code: string, state: string) {
+  const accessToken = await exchangeNaverCode(code, state);
+  const response = await fetch("https://openapi.naver.com/v1/nid/me", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  });
+  const payload = await response.json().catch(() => null);
+  const email = String(payload?.response?.email || "").trim().toLowerCase();
+  if (!response.ok || !email) {
+    throw new Error("네이버 계정에서 이메일 정보를 읽지 못했습니다.");
+  }
+
+  return {
+    email,
+    nickname: String(payload?.response?.nickname || payload?.response?.name || "").trim() || email.split("@")[0],
+  };
+}
+
+export function getNaverStateCookieName() {
+  return getStateCookieName("naver");
 }
 
 export function getKakaoStateCookieName() {

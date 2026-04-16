@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { SignupForm } from "@/components/signup-form";
 import { PageIntro } from "@/components/ui/panel";
-import { isGoogleOauthConfigured, isKakaoOauthConfigured } from "@/lib/auth/kakao-oauth";
+import { isGoogleOauthConfigured, isKakaoOauthConfigured, isNaverOauthConfigured } from "@/lib/auth/kakao-oauth";
 import { getInterestConfig } from "@/lib/content/interest-config";
 import { decodeShareState } from "@/lib/share";
 
@@ -26,6 +26,7 @@ export default async function SignupPage({ searchParams }: PageProps) {
   const defaultEmail = typeof resolvedSearchParams.email === "string" ? resolvedSearchParams.email : "";
   const kakaoEnabled = isKakaoOauthConfigured();
   const googleEnabled = isGoogleOauthConfigured();
+  const naverEnabled = isNaverOauthConfigured();
 
   return (
     <div className="app-shell py-10 md:py-16" style={{ fontSize: "16px" }}>
@@ -41,6 +42,7 @@ export default async function SignupPage({ searchParams }: PageProps) {
         defaultEmail={defaultEmail}
         kakaoEnabled={kakaoEnabled}
         googleEnabled={googleEnabled}
+        naverEnabled={naverEnabled}
         mainInterests={interestConfig.mainInterests}
         subInterestOptions={interestConfig.subInterests}
         interestLabels={interestConfig.labels}

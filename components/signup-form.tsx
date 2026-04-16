@@ -40,6 +40,7 @@ export function SignupForm({
   defaultEmail = "",
   kakaoEnabled = false,
   googleEnabled = false,
+  naverEnabled = false,
   mainInterests = [...MAIN_INTERESTS],
   subInterestOptions = SUB_INTERESTS,
   interestLabels = Object.fromEntries(MAIN_INTERESTS.map((interest) => [interest, interest])) as Record<string, string>
@@ -49,6 +50,7 @@ export function SignupForm({
   defaultEmail?: string;
   kakaoEnabled?: boolean;
   googleEnabled?: boolean;
+  naverEnabled?: boolean;
   mainInterests?: string[];
   subInterestOptions?: Record<string, string[]>;
   interestLabels?: Record<string, string>;
@@ -197,7 +199,7 @@ export function SignupForm({
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-8 md:space-y-12">
-          {googleEnabled || kakaoEnabled ? (
+          {googleEnabled || kakaoEnabled || naverEnabled ? (
             <div className="rounded-[28px] border border-navy-100 bg-navy-50/70 p-5 text-center md:p-6">
               <p className="text-sm font-semibold uppercase tracking-[0.22em] text-navy-500">SOCIAL</p>
               <p className="mt-3 text-base leading-7 text-navy-800">소셜 계정의 이메일을 불러와 더 빠르게 시작할 수 있어요.</p>
@@ -216,6 +218,14 @@ export function SignupForm({
                     className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#FEE500] px-6 text-base font-bold text-[#191600] shadow-[0_10px_30px_rgba(254,229,0,0.28)] transition hover:brightness-[0.98]"
                   >
                     카카오로 이메일 불러오기
+                  </a>
+                ) : null}
+                {naverEnabled ? (
+                  <a
+                    href="/api/auth/oauth/naver/start?mode=signup"
+                    className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#03C75A] px-6 text-base font-bold text-white shadow-[0_10px_30px_rgba(3,199,90,0.28)] transition hover:brightness-[0.95]"
+                  >
+                    네이버로 이메일 불러오기
                   </a>
                 ) : null}
               </div>
