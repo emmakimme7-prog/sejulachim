@@ -72,7 +72,13 @@ export default async function AccountPage({ searchParams }: PageProps) {
   ) as Record<string, string>;
 
   const authProvider = (profileUser as { auth_provider?: string } | null)?.auth_provider ?? "email";
-  const AUTH_PROVIDER_LABELS: Record<string, string> = { email: "이메일", google: "구글", kakao: "카카오", naver: "네이버" };
+  const AUTH_PROVIDER_BADGE: Record<string, { label: string; bg: string; text: string }> = {
+    email: { label: "이메일", bg: "bg-navy-100", text: "text-navy-700" },
+    google: { label: "구글", bg: "bg-blue-100", text: "text-blue-700" },
+    kakao: { label: "카카오", bg: "bg-yellow-100", text: "text-yellow-800" },
+    naver: { label: "네이버", bg: "bg-green-100", text: "text-green-700" },
+  };
+  const providerBadge = AUTH_PROVIDER_BADGE[authProvider] ?? AUTH_PROVIDER_BADGE.email;
   const avatarKey = isAvatarKey(profileUser?.avatar_key) ? profileUser.avatar_key : "sun";
   const nickname = typeof profileUser?.nickname === "string" && profileUser.nickname.trim() ? profileUser.nickname : session.email.split("@")[0];
   const avatarDataUrl = typeof profileUser?.avatar_data_url === "string" ? profileUser.avatar_data_url : undefined;
@@ -118,7 +124,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
                       <div>
                         <h2 className="text-2xl font-bold text-navy-900">내 프로필</h2>
                         <p className="mt-2 text-base leading-7 text-navy-700">{nickname}</p>
-                        <p className="mt-1 text-sm text-navy-500">계정 유형: {AUTH_PROVIDER_LABELS[authProvider] ?? authProvider}</p>
+                        <span className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold ${providerBadge.bg} ${providerBadge.text}`}>{providerBadge.label} 계정</span>
                       </div>
                     </div>
                     <AccountProfileForm initialNickname={nickname} initialAvatarKey={avatarKey} initialFontSize={fontSize} initialAvatarDataUrl={avatarDataUrl} />
