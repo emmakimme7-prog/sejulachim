@@ -3,7 +3,7 @@ import "server-only";
 import OpenAI from "openai";
 import { z } from "zod";
 
-import { createOpenAIClient, selectOpenAIModel } from "@/lib/openai/model-router";
+import { createOpenAIClient } from "@/lib/openai/model-router";
 import { sanitizePlainText } from "@/lib/utils";
 
 export type SummarizedContent = {
@@ -15,9 +15,9 @@ export type SummarizedContent = {
 };
 
 const summaryResponseSchema = z.object({
-  title: z.string().min(7).max(20),
+  title: z.string().min(2).max(40),
   shortSummary: z.string().min(8).max(300),
-  longSummary: z.string().min(500).max(4000),
+  longSummary: z.string().min(100).max(6000),
   actionLine: z.string().min(6).max(160),
   summaryType: z.enum(["MUST", "USEFUL", "ACTION"])
 });
@@ -30,17 +30,12 @@ export async function summarizeContentItem(input: {
 }) {
   const client = createOpenAIClient();
   const trimmedRawText = sanitizePlainText(input.rawText, 4000);
-  const routedModel = await selectOpenAIModel([
-    "한국어 생활 브리핑 원문을 구조화된 JSON으로 요약하는 작업입니다.",
-    "반드시 JSON으로 반환되어야 하고, title/shortSummary/longSummary/actionLine/summaryType를 포함해야 합니다.",
-    "제목 품질과 사실 보존이 중요하고, 사용자-facing 뉴스레터용 고품질 요약 작업입니다."
-  ].join(" "));
-  const resolvedModel = routedModel.model === "gpt-4o-mini" ? "gpt-4o" : routedModel.model;
-  const isNextGen = resolvedModel.startsWith("gpt-5") || resolvedModel.startsWith("o1") || resolvedModel.startsWith("o3");
+  const resolvedModel = "gpt-4o";
   const completion = await client.chat.completions.create({
     model: resolvedModel,
     response_format: { type: "json_object" },
-    ...(isNextGen ? { max_completion_tokens: 3000 } : { temperature: 0.2, max_tokens: 3000 }),
+    temperature: 0.2,
+    max_tokens: 3000,
     messages: [
       {
         role: "system",

@@ -414,7 +414,7 @@ async function generateCategoryArticles(
           row.thumbnail_license = null;
           return row;
         })
-        .catch(() => null)
+        .catch((err) => { console.error("[article-build-error]", category, subInterests[i], err); return null; })
     );
   }
 
