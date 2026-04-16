@@ -1,7 +1,6 @@
 import "server-only";
 
 import { summarizeContentItem } from "@/lib/content/summarize";
-import { findRelatedContentThumbnail } from "@/lib/content/thumbnails";
 import { MAIN_INTERESTS, SUB_INTERESTS, getStoredCategoryForMainInterest } from "@/lib/content/sub-interests";
 import type { SourceType } from "@/lib/content/sources";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
@@ -378,8 +377,7 @@ async function buildRowFromSource(params: {
 async function generateCategoryArticles(
   category: string,
   date: string,
-  globalIndex: number,
-  usedPageUrls: Set<string>
+  globalIndex: number
 ): Promise<Array<Record<string, unknown>>> {
   const subInterests = (SUB_INTERESTS as Record<string, string[]>)[category] ?? [];
 
@@ -406,38 +404,14 @@ async function generateCategoryArticles(
         date,
         index: articleIndex
       })
-        .then(async (built) => {
+        .then((built) => {
           const row: Record<string, unknown> = { ...built };
-          try {
-            const thumbnail = await findRelatedContentThumbnail({
-              title: String(row.title ?? ""),
-              category: String(row.category ?? ""),
-              subInterest: String(row.sub_interest ?? ""),
-              summary: String(row.short_summary ?? ""),
-              excludePageUrls: usedPageUrls
-            });
-
-            if (thumbnail) {
-              row.thumbnail_url = thumbnail.url;
-              row.thumbnail_alt = thumbnail.alt;
-              row.thumbnail_page_url = thumbnail.pageUrl;
-              row.thumbnail_author = thumbnail.author ?? null;
-              row.thumbnail_license = thumbnail.license ?? null;
-              if (thumbnail.pageUrl) usedPageUrls.add(thumbnail.pageUrl);
-            } else {
-              row.thumbnail_url = null;
-              row.thumbnail_alt = null;
-              row.thumbnail_page_url = null;
-              row.thumbnail_author = null;
-              row.thumbnail_license = null;
-            }
-          } catch {
-            row.thumbnail_url = null;
-            row.thumbnail_alt = null;
-            row.thumbnail_page_url = null;
-            row.thumbnail_author = null;
-            row.thumbnail_license = null;
-          }
+          // 썸네일은 별도 repair-thumbnails cron에서 채움 (생성 속도 우선)
+          row.thumbnail_url = null;
+          row.thumbnail_alt = null;
+          row.thumbnail_page_url = null;
+          row.thumbnail_author = null;
+          row.thumbnail_license = null;
           return row;
         })
         .catch(() => null)
@@ -457,12 +431,11 @@ async function generateCategoryArticles(
 
 export async function generateDailyContentForDate(date = getKstDateParts().date) {
   const supabase = createAdminSupabaseClient();
-  const usedPageUrls = new Set<string>();
 
   // 5개 카테고리를 병렬로 처리 (각 5개 서브카테고리 = 총 25개 기사)
   const categoryResults = await Promise.allSettled(
     MAIN_INTERESTS.map((category, catIdx) =>
-      generateCategoryArticles(category, date, catIdx * 5, usedPageUrls)
+      generateCategoryArticles(category, date, catIdx * 5)
     )
   );
 
