@@ -196,35 +196,36 @@ export function SignupForm({
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/90 text-orange-500 shadow-sm md:h-12 md:w-12">
                         <Icon className="h-5 w-5 md:h-6 md:w-6" strokeWidth={2.2} aria-hidden="true" />
                       </span>
-                      <span className="block text-xl font-extrabold tracking-[-0.04em] md:text-2xl">{interestLabels[interest]}</span>
+                      <span className="block min-w-[3em] text-xl font-extrabold tracking-[-0.04em] md:text-2xl">{interestLabels[interest]}</span>
 
-                      {active ? (
-                        <div className="relative ml-auto min-w-0 flex-1" onClick={(e) => e.stopPropagation()}>
-                          <SelectInput
-                            value={subInterests[interest] ?? ""}
-                            onChange={(event) =>
-                              setSubInterests((prev) => ({
-                                ...prev,
-                                [interest]: event.target.value
-                              }))
-                            }
-                            className="min-h-10 rounded-xl bg-white pr-10 text-sm appearance-none"
-                          >
-                            <option value="">세부 선택</option>
-                            {(subInterestOptions[interest] ?? []).map((option) => (
-                              <option key={option} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                          </SelectInput>
-                          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-navy-400" aria-hidden="true" />
-                        </div>
-                      ) : (
-                        <ChevronDown
-                          className="ml-auto h-5 w-5 shrink-0 text-navy-300"
-                          aria-hidden="true"
-                        />
-                      )}
+                      <div className="ml-auto w-[120px] shrink-0 md:w-[140px]">
+                        {active ? (
+                          <div className="relative" onClick={(e) => e.stopPropagation()}>
+                            <SelectInput
+                              value={subInterests[interest] ?? ""}
+                              onChange={(event) =>
+                                setSubInterests((prev) => ({
+                                  ...prev,
+                                  [interest]: event.target.value
+                                }))
+                              }
+                              className="min-h-10 rounded-xl bg-white pr-9 text-xs appearance-none"
+                            >
+                              <option value="">세부 선택</option>
+                              {(subInterestOptions[interest] ?? []).map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </SelectInput>
+                            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-navy-400" aria-hidden="true" />
+                          </div>
+                        ) : (
+                          <div className="flex justify-end">
+                            <ChevronDown className="h-5 w-5 text-navy-300" aria-hidden="true" />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </button>
                 );
