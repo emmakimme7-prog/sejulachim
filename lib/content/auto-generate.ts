@@ -473,39 +473,8 @@ export async function generateDailyContentForDate(date = getKstDateParts().date)
     }
   }
 
-  // 기존 동일 slug 데이터 정리 (충돌 방지)
-  const existingSlugs = rows.map((row) => String(row.slug));
-  if (existingSlugs.length > 0) {
-    const { data: existingRows, error: existingRowsError } = await supabase
-      .from("content_items")
-      .select("id, slug")
-      .in("slug", existingSlugs);
-    if (existingRowsError) {
-      throw existingRowsError;
-    }
-
-    const existingIds = (existingRows ?? []).map((row) => row.id);
-    if (existingIds.length > 0) {
-      const { error: dailyPickItemDeleteError } = await supabase
-        .from("daily_pick_items")
-        .delete()
-        .in("content_item_id", existingIds);
-      if (dailyPickItemDeleteError) {
-        throw dailyPickItemDeleteError;
-      }
-
-      const { error: contentDeleteError } = await supabase
-        .from("content_items")
-        .delete()
-        .in("id", existingIds);
-      if (contentDeleteError) {
-        throw contentDeleteError;
-      }
-    }
-  }
-
   if (rows.length > 0) {
-    const { error } = await supabase.from("content_items").insert(rows);
+    const { error } = await supabase.from("content_items").upsert(rows, { onConflict: "slug" });
     if (error) {
       throw error;
     }
