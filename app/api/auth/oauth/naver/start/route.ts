@@ -6,10 +6,21 @@ import {
   getOauthStateCookieOptions,
 } from "@/lib/auth/kakao-oauth";
 
+function parseSignupData(request: NextRequest) {
+  const raw = request.nextUrl.searchParams.get("interests") || "";
+  const interests = raw.split(",").map(s => s.trim()).filter(Boolean);
+  const subRaw = request.nextUrl.searchParams.get("sub");
+  let subInterests: Record<string, string> = {};
+  if (subRaw) {
+    try { subInterests = JSON.parse(subRaw); } catch { /* ignore */ }
+  }
+  return interests.length ? { interests, subInterests } : undefined;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const mode = request.nextUrl.searchParams.get("mode") === "signup" ? "signup" : "login";
-    const oauthState = createNaverOauthState(mode);
+    const oauthState = createNaverOauthState(mode, mode === "signup" ? parseSignupData(request) : undefined);
     const response = NextResponse.redirect(buildNaverAuthorizationUrl(oauthState.state));
     response.cookies.set(oauthState.cookieName, oauthState.cookieValue, getOauthStateCookieOptions());
     return response;

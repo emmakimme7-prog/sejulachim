@@ -8,6 +8,7 @@ import {
   verifyKakaoOauthState,
 } from "@/lib/auth/kakao-oauth";
 import { addSecurityJobLog, cancelAccountDeletion, findUserByEmail } from "@/lib/mongodb/user-data";
+import { upsertMongoSignup, sendSignupPreviewEmail } from "@/lib/mongodb/signup";
 
 function clearStateCookie(response: NextResponse) {
   response.cookies.set(getKakaoStateCookieName(), "", {
@@ -25,12 +26,11 @@ export async function GET(request: NextRequest) {
       throw new Error("카카오 로그인 승인 코드가 없습니다.");
     }
 
-    const mode = verifyKakaoOauthState(request.cookies.get(getKakaoStateCookieName())?.value, state);
+    const verified = verifyKakaoOauthState(request.cookies.get(getKakaoStateCookieName())?.value, state);
     const profile = await fetchKakaoOauthProfile(code);
     const existingUser = await findUserByEmail(profile.email);
 
     if (existingUser?.is_active || existingUser?.deleted_at) {
-      // 탈퇴 예약 유저가 재로그인하면 탈퇴 취소
       if (existingUser.deleted_at) {
         await cancelAccountDeletion(existingUser.id);
         await addSecurityJobLog("account.delete_cancel", "success", `user=${existingUser.id}`);
@@ -42,6 +42,25 @@ export async function GET(request: NextRequest) {
       });
       await addSecurityJobLog("auth.kakao_login", "success", `user=${existingUser.id}`);
       const response = NextResponse.redirect(new URL("/?linked=kakao", request.url));
+      clearStateCookie(response);
+      return response;
+    }
+
+    // 가입 모드 + 관심사 있으면 자동 가입
+    if (verified.mode === "signup" && verified.interests.length > 0) {
+      const user = await upsertMongoSignup({
+        email: profile.email,
+        deliveryTime: "08:00",
+        interests: verified.interests,
+        subInterests: verified.subInterests,
+        consentedAt: new Date().toISOString(),
+      });
+      await createUserSession({ userId: user.id, email: profile.email, rememberMe: true });
+      await addSecurityJobLog("auth.kakao_signup", "success", `user=${user.id}`);
+      try {
+        await sendSignupPreviewEmail({ email: profile.email, userId: user.id, interests: verified.interests });
+      } catch { /* non-critical */ }
+      const response = NextResponse.redirect(new URL("/complete", request.url));
       clearStateCookie(response);
       return response;
     }

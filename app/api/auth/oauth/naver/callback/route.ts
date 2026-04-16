@@ -8,6 +8,7 @@ import {
   verifyNaverOauthState,
 } from "@/lib/auth/kakao-oauth";
 import { addSecurityJobLog, cancelAccountDeletion, findUserByEmail } from "@/lib/mongodb/user-data";
+import { upsertMongoSignup, sendSignupPreviewEmail } from "@/lib/mongodb/signup";
 
 function clearStateCookie(response: NextResponse) {
   response.cookies.set(getNaverStateCookieName(), "", {
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
       throw new Error("네이버 로그인 승인 코드가 없습니다.");
     }
 
-    verifyNaverOauthState(request.cookies.get(getNaverStateCookieName())?.value, state);
+    const verified = verifyNaverOauthState(request.cookies.get(getNaverStateCookieName())?.value, state);
     const profile = await fetchNaverOauthProfile(code, state);
     const existingUser = await findUserByEmail(profile.email);
 
@@ -41,6 +42,24 @@ export async function GET(request: NextRequest) {
       });
       await addSecurityJobLog("auth.naver_login", "success", `user=${existingUser.id}`);
       const response = NextResponse.redirect(new URL("/?linked=naver", request.url));
+      clearStateCookie(response);
+      return response;
+    }
+
+    if (verified.mode === "signup" && verified.interests.length > 0) {
+      const user = await upsertMongoSignup({
+        email: profile.email,
+        deliveryTime: "08:00",
+        interests: verified.interests,
+        subInterests: verified.subInterests,
+        consentedAt: new Date().toISOString(),
+      });
+      await createUserSession({ userId: user.id, email: profile.email, rememberMe: true });
+      await addSecurityJobLog("auth.naver_signup", "success", `user=${user.id}`);
+      try {
+        await sendSignupPreviewEmail({ email: profile.email, userId: user.id, interests: verified.interests });
+      } catch { /* non-critical */ }
+      const response = NextResponse.redirect(new URL("/complete", request.url));
       clearStateCookie(response);
       return response;
     }
