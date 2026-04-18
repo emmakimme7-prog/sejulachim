@@ -6,7 +6,6 @@ import { LibraryBrowser } from "@/components/library-browser";
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
-import { PageIntro } from "@/components/ui/panel";
 import { getCurrentUserSession } from "@/lib/auth/user-session";
 import { getInterestConfig } from "@/lib/content/interest-config";
 import { hasSupabaseServerEnv } from "@/lib/env";
@@ -66,8 +65,15 @@ export default async function LibraryPage() {
   }));
 
   return (
-    <div className="app-shell section-block">
-      <PageIntro eyebrow="MY LIBRARY" title="내 서점" description="담아둔 소식과 내가 공유한 항목을 한곳에서 볼 수 있습니다." className="mb-8 md:mb-10" />
+    <div style={{ background: "#F0EEE9", minHeight: "100vh", padding: "32px 20px 60px" }}>
+      <div style={{ maxWidth: 820, margin: "0 auto 24px" }}>
+        <h1 style={{ margin: 0, fontSize: 30, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.03em" }}>
+          내 서재
+        </h1>
+        <p style={{ margin: "8px 0 0", fontSize: 15, color: "#7A6F62", fontWeight: 500, lineHeight: 1.6 }}>
+          저장한 소식과 공유한 항목을 한곳에서 다시 볼 수 있어요
+        </p>
+      </div>
       <LibraryBrowser
         favorites={favorites.map((item) => ({
           id: item.id,

@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 
 import { CompleteShareButton } from "@/components/complete-share-button";
 import { ContentThumbnail } from "@/components/content-thumbnail";
@@ -11,13 +10,38 @@ import { ListenButton } from "@/components/speech-controls";
 import { type ContentSource } from "@/lib/content/sources";
 import { formatDate } from "@/lib/utils";
 
-const CATEGORY_STYLE: Record<string, string> = {
-  "실생활": "bg-blue-50 border border-blue-200 text-blue-700",
-  "건강": "bg-green-50 border border-green-200 text-green-700",
-  "돈": "bg-amber-50 border border-amber-200 text-amber-700",
-  "뉴스": "bg-slate-50 border border-slate-200 text-slate-700",
-  "관계": "bg-rose-50 border border-rose-200 text-rose-700",
+const CATEGORY_META: Record<string, { emoji: string; color: string; bg: string }> = {
+  건강: { emoji: "💪", color: "#2E7D3F", bg: "#E8F5EC" },
+  돈: { emoji: "💰", color: "#B26A00", bg: "#FFF4E0" },
+  실생활: { emoji: "🏠", color: "#1565C0", bg: "#E3F1FD" },
+  뉴스: { emoji: "📰", color: "#424242", bg: "#EFEFEF" },
+  관계: { emoji: "💛", color: "#C2185B", bg: "#FDE8EF" },
 };
+
+function CategoryBadge({ category, interestLabels, subInterest }: { category: string; interestLabels: Record<string, string>; subInterest?: string | null }) {
+  const meta = CATEGORY_META[category] ?? { emoji: "📄", color: "#7A6F62", bg: "#F5EEE2" };
+  const label = interestLabels[category] ?? category;
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "4px 12px",
+        borderRadius: 999,
+        background: meta.bg,
+        color: meta.color,
+        fontSize: 13,
+        fontWeight: 800,
+        letterSpacing: "-0.01em",
+      }}
+    >
+      <span style={{ fontSize: 15 }}>{meta.emoji}</span>
+      {label}
+      {subInterest ? ` · ${subInterest}` : ""}
+    </span>
+  );
+}
 
 type FavoriteItem = {
   id: string;
@@ -47,7 +71,7 @@ type SharedItem = {
 export function LibraryBrowser({
   favorites,
   shares,
-  interestLabels
+  interestLabels,
 }: {
   favorites: FavoriteItem[];
   shares: SharedItem[];
@@ -59,7 +83,7 @@ export function LibraryBrowser({
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
 
   function toggleSlug(slug: string) {
-    setSelectedSlugs((current) => current.includes(slug) ? current.filter((s) => s !== slug) : [...current, slug]);
+    setSelectedSlugs((current) => (current.includes(slug) ? current.filter((s) => s !== slug) : [...current, slug]));
   }
 
   const favoriteInterests = useMemo(
@@ -92,7 +116,6 @@ export function LibraryBrowser({
       if (selectedInterest !== "전체" && !record.items.some((item) => item.category === selectedInterest)) {
         return false;
       }
-
       const haystack = record.items
         .flatMap((item) => [item.title, item.category, item.sub_interest])
         .filter(Boolean)
@@ -103,70 +126,145 @@ export function LibraryBrowser({
   }, [query, selectedInterest, shares]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap gap-3">
-        {[
-          { key: "favorites", label: "즐겨찾기" },
-          { key: "shares", label: "공유" }
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key as "favorites" | "shares")}
-            className={`inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-md px-2.5 text-[0.8rem] font-medium transition ${
-              activeTab === tab.key ? "border border-gray-900 bg-gray-900 text-white" : "border border-gray-200 bg-white text-gray-800 hover:border-gray-300 hover:bg-gray-50"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+    <div style={{ maxWidth: 820, margin: "0 auto" }}>
+      {/* 탭 */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {(
+          [
+            { key: "favorites", label: "저장한 소식" },
+            { key: "shares", label: "공유한 소식" },
+          ] as const
+        ).map((tab) => {
+          const on = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              style={{
+                flex: "0 0 auto",
+                minHeight: 48,
+                padding: "0 20px",
+                borderRadius: 12,
+                background: on ? "#1F1A14" : "#fff",
+                color: on ? "#fff" : "#4A4037",
+                border: on ? "none" : "1.5px solid #E8DCC7",
+                fontSize: 15,
+                fontWeight: 800,
+                letterSpacing: "-0.01em",
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="-mx-4 sm:-mx-6 border-b border-gray-200 bg-white">
-        <div className="flex flex-wrap items-center gap-2 px-4 py-2 sm:flex-nowrap sm:px-6">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
-            {favoriteInterests.map((interest) => (
+      {/* 필터 + 검색 */}
+      <div
+        style={{
+          background: "#fff",
+          border: "1.5px solid #F2E6D7",
+          borderRadius: 14,
+          padding: "10px 12px",
+          marginBottom: 16,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          flexWrap: "wrap",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            flex: 1,
+            minWidth: 0,
+            overflowX: "auto",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {favoriteInterests.map((interest) => {
+            const on = selectedInterest === interest;
+            const meta = interest !== "전체" ? CATEGORY_META[interest] : null;
+            return (
               <button
                 key={interest}
                 type="button"
                 onClick={() => setSelectedInterest(interest)}
-                className={`shrink-0 rounded-full px-[14px] py-[7px] text-[14px] font-semibold whitespace-nowrap transition ${
-                  selectedInterest === interest
-                    ? "bg-orange-500 text-white"
-                    : "border border-orange-100 bg-orange-50 text-orange-600 hover:bg-orange-100"
-                }`}
+                style={{
+                  flexShrink: 0,
+                  minHeight: 36,
+                  padding: "0 14px",
+                  borderRadius: 999,
+                  background: on ? "#E57C23" : "#fff",
+                  color: on ? "#fff" : "#4A4037",
+                  border: on ? "none" : "1.5px solid #E8DCC7",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  letterSpacing: "-0.01em",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
               >
+                {meta ? <span>{meta.emoji}</span> : null}
                 {interest === "전체" ? "전체" : interestLabels[interest] ?? interest}
               </button>
-            ))}
-          </div>
-          <div className="flex w-full shrink-0 items-center gap-1.5 sm:w-auto">
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => { if (event.key === "Enter") setQuery(query.trim()); }}
-              placeholder="검색"
-              className="h-8 min-w-0 flex-1 rounded-md border border-gray-200 px-2 text-[0.8rem] text-gray-800 outline-none transition focus:border-orange-300 sm:w-36 sm:flex-none"
-            />
-            <button
-              type="button"
-              onClick={() => setQuery(query.trim())}
-              className="inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-md bg-gray-900 px-2.5 text-[0.8rem] font-medium text-white transition hover:bg-gray-700"
-            >
-              검색
-            </button>
-          </div>
+            );
+          })}
         </div>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") setQuery(query.trim());
+          }}
+          placeholder="검색"
+          style={{
+            height: 36,
+            minWidth: 120,
+            padding: "0 12px",
+            borderRadius: 10,
+            border: "1.5px solid #E8DCC7",
+            background: "#FFFBF5",
+            fontSize: 13,
+            color: "#1F1A14",
+            fontFamily: "inherit",
+            outline: "none",
+          }}
+        />
       </div>
 
+      {/* 선택 액션 바 */}
       {selectedSlugs.length > 0 ? (
-        <div className="fixed bottom-[23px] left-[23px] z-40 flex items-center gap-[12px] rounded-2xl border border-gray-700 bg-gray-900 px-[23px] py-[17px] shadow-[0_8px_40px_rgba(17,32,51,0.4)] sm:bottom-[138px]">
-          <p className="mr-[6px] text-[20px] font-semibold text-white">{selectedSlugs.length}개 선택</p>
+        <div
+          style={{
+            position: "fixed",
+            bottom: 23,
+            left: 23,
+            zIndex: 40,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            borderRadius: 16,
+            background: "#1F1A14",
+            padding: "14px 20px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.28)",
+          }}
+        >
+          <span style={{ fontSize: 17, fontWeight: 800, color: "#fff", letterSpacing: "-0.01em" }}>
+            {selectedSlugs.length}개 선택
+          </span>
           <ListenButton
             text={selectedListenText}
             label="이어듣기"
             mobileIconOnly
-            className="h-[57px] w-[57px] sm:w-auto sm:px-[20px] border-white/20 bg-white/10 text-white hover:bg-white/20"
+            className="h-[52px] w-[52px] sm:w-auto sm:px-[18px] border-white/20 bg-white/10 text-white hover:bg-white/20"
           />
           <CompleteShareButton
             shareSlugs={selectedSlugs}
@@ -174,75 +272,92 @@ export function LibraryBrowser({
             buttonLabel="공유"
             mobileIconOnly
             modalTitle="선택한 소식을 공유해보세요."
-            triggerClassName="h-[57px] w-[57px] sm:w-auto sm:px-[20px] rounded-full !bg-orange-500 !border-0 !text-white hover:!bg-orange-400 text-[20px] font-semibold"
+            triggerClassName="h-[52px] w-[52px] sm:w-auto sm:px-[18px] rounded-full !bg-orange-500 !border-0 !text-white hover:!bg-orange-400 text-[17px] font-bold"
           />
         </div>
       ) : null}
 
+      {/* 즐겨찾기 */}
       {activeTab === "favorites" ? (
-        <div className="grid gap-4 md:gap-5">
+        <div style={{ display: "grid", gap: 14 }}>
           {filteredFavorites.map((item) => (
-            <article key={item.id} className="border-b border-gray-200 pb-[18px] pt-[18px] md:rounded-xl md:border md:border-gray-200 md:bg-white md:p-5 md:shadow-none md:hover:shadow-md">
-              {/* 상단: 카테고리 + 날짜 */}
-              <div className="mb-3 flex items-center gap-2 flex-wrap">
+            <article
+              key={item.id}
+              style={{
+                background: "#fff",
+                borderRadius: 18,
+                border: "1.5px solid #F2E6D7",
+                padding: 18,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+              }}
+            >
+              {/* 상단: 체크박스 + 배지 + 날짜 */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
                 <input
                   type="checkbox"
                   checked={selectedSlugs.includes(item.slug)}
                   onChange={() => toggleSlug(item.slug)}
                   onClick={(e) => e.stopPropagation()}
-                  className="h-4 w-4 shrink-0 rounded border-gray-300 text-orange-500 focus:ring-orange-200"
+                  style={{ width: 18, height: 18, accentColor: "#E57C23", flexShrink: 0 }}
                 />
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[item.category] ?? "bg-orange-50 border border-orange-200 text-orange-700"}`}>
-                  {interestLabels[item.category] ?? item.category}
-                  {item.sub_interest ? ` · ${item.sub_interest}` : ""}
-                </span>
-                <span className="ml-auto text-xs text-gray-500">
+                <CategoryBadge category={item.category} interestLabels={interestLabels} subInterest={item.sub_interest} />
+                <span style={{ marginLeft: "auto", fontSize: 12, color: "#9C907F", fontWeight: 600 }}>
                   {item.published_at ? formatDate(item.published_at) : "발행 전"}
                 </span>
               </div>
 
-              {/* 본문 */}
-              <Link href={`/archive/${item.slug}`} className="group block">
-                <div className="md:flex md:items-stretch md:gap-4">
-                  <div className="min-w-0 flex-1">
-                    {item.thumbnail_url ? (
-                      <ContentThumbnail
-                        src={item.thumbnail_url}
-                        alt={item.title}
-                        className="mb-3 aspect-[16/9] w-full overflow-hidden rounded-md font-size-top-thumb md:hidden"
-                        imgClassName="w-full h-full object-cover"
-                        fallbackLabel="준비 중"
-                      />
-                    ) : null}
-                    <div className="flex items-stretch gap-3">
-                      <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-all text-gray-900 transition group-hover:text-orange-600">
-                        {item.title}
-                      </h2>
-                      {item.thumbnail_url ? (
-                        <ContentThumbnail
-                          src={item.thumbnail_url}
-                          alt={item.title}
-                          className="w-20 min-h-[5rem] shrink-0 overflow-hidden rounded-md font-size-side-thumb md:hidden"
-                          imgClassName="w-full h-full object-cover"
-                          fallbackLabel="준비 중"
-                        />
-                      ) : null}
-                    </div>
-                    <p className="mt-2 text-sm leading-6 break-all text-gray-600">
+              <Link href={`/archive/${item.slug}`} style={{ display: "block", textDecoration: "none", color: "inherit" }}>
+                <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h2
+                      style={{
+                        margin: 0,
+                        fontSize: 19,
+                        fontWeight: 900,
+                        color: "#1F1A14",
+                        letterSpacing: "-0.02em",
+                        lineHeight: 1.35,
+                        marginBottom: 8,
+                      }}
+                    >
+                      {item.title}
+                    </h2>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        lineHeight: 1.6,
+                        color: "#4A4037",
+                        fontWeight: 500,
+                      }}
+                    >
                       {item.short_summary}
                     </p>
                     {item.action_line ? (
-                      <p className="mt-1.5 text-sm font-semibold text-orange-600">
-                        {item.action_line}
-                        <ChevronRight className="ml-[2px] inline h-[14px] w-[14px] align-middle" aria-hidden="true" />
-                      </p>
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          marginTop: 10,
+                          padding: "8px 12px",
+                          borderRadius: 10,
+                          background: "#FFF2E3",
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: "#B2570F",
+                          letterSpacing: "-0.01em",
+                        }}
+                      >
+                        ✓ {item.action_line}
+                      </div>
                     ) : null}
                   </div>
                   {item.thumbnail_url ? (
                     <ContentThumbnail
                       src={item.thumbnail_url}
                       alt={item.title}
-                      className="hidden md:block w-28 min-h-[6rem] shrink-0 overflow-hidden rounded-md"
+                      className="w-24 h-24 shrink-0 overflow-hidden rounded-xl"
                       imgClassName="w-full h-full object-cover"
                       fallbackLabel="준비 중"
                     />
@@ -250,18 +365,28 @@ export function LibraryBrowser({
                 </div>
               </Link>
 
-              {/* 하단: 액션 버튼 */}
-              <div className="mt-3 flex items-center justify-end gap-3 border-t border-gray-100 pt-3">
+              {/* 하단 액션 */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: 14,
+                  marginTop: 14,
+                  paddingTop: 12,
+                  borderTop: "1px solid #F5EEE2",
+                }}
+              >
                 <ListenButton
                   text={[item.title, item.short_summary].filter(Boolean).join(". ")}
-                  className="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[0.82rem] !font-normal !text-gray-500 hover:!text-gray-800 !shadow-none"
+                  className="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[13px] !font-semibold !text-[#7A6F62] hover:!text-[#1F1A14] !shadow-none"
                   label="듣기"
                 />
                 <CompleteShareButton
                   shareSlugs={[item.slug]}
                   interestSummary={item.title}
                   buttonLabel="공유"
-                  triggerClassName="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[0.82rem] !font-normal !text-gray-500 hover:!text-gray-800 !shadow-none"
+                  triggerClassName="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[13px] !font-semibold !text-[#7A6F62] hover:!text-[#1F1A14] !shadow-none"
                   modalTitle="이 소식을 공유해보세요."
                 />
                 <FavoriteToggleButton
@@ -269,40 +394,92 @@ export function LibraryBrowser({
                   contentItemId={item.id}
                   initialFavorite={true}
                   label="저장"
-                  className="inline-flex items-center gap-1 text-[0.82rem] text-gray-500 transition hover:text-gray-800"
+                  className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#7A6F62] hover:text-[#1F1A14] transition"
                 />
               </div>
             </article>
           ))}
-          {filteredFavorites.length === 0 ? <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-gray-600">아직 담아둔 소식이 없습니다.</div> : null}
+          {filteredFavorites.length === 0 ? (
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: 18,
+                border: "2px dashed #E8DCC7",
+                padding: 40,
+                textAlign: "center",
+                fontSize: 15,
+                color: "#7A6F62",
+                fontWeight: 600,
+              }}
+            >
+              아직 담아둔 소식이 없습니다.
+            </div>
+          ) : null}
         </div>
       ) : (
-        <div className="grid gap-4 md:gap-5">
+        <div style={{ display: "grid", gap: 14 }}>
           {filteredShares.map((record) => (
             <a
               key={record.share_key}
               href={`/shared-briefs?share=${record.share_key}`}
               target="_blank"
               rel="noreferrer"
-              className="block border-b border-gray-200 pb-[18px] pt-[18px] transition hover:opacity-80 md:rounded-xl md:border md:border-gray-200 md:bg-white md:p-5 md:shadow-none md:hover:shadow-md md:hover:opacity-100"
+              style={{
+                display: "block",
+                background: "#fff",
+                borderRadius: 18,
+                border: "1.5px solid #F2E6D7",
+                padding: 18,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                textDecoration: "none",
+                color: "inherit",
+              }}
             >
-              <div className="mb-3 flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-semibold text-orange-500">{formatDate(record.created_at)}</span>
-                <span className="ml-auto text-xs text-gray-500">조회 {record.view_count}회 · 댓글 {record.comment_count}개</span>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+                <span style={{ fontSize: 13, fontWeight: 900, color: "#E57C23", letterSpacing: "-0.01em" }}>
+                  {formatDate(record.created_at)}
+                </span>
+                <span style={{ marginLeft: "auto", fontSize: 12, color: "#9C907F", fontWeight: 600 }}>
+                  조회 {record.view_count}회 · 댓글 {record.comment_count}개
+                </span>
               </div>
-              <div className="space-y-2">
+              <div style={{ display: "grid", gap: 8 }}>
                 {record.items.map((item, index) => (
-                  <div key={`${record.share_key}-${index}`} className="flex items-start gap-2">
-                    <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[item.category] ?? "bg-orange-50 border border-orange-200 text-orange-700"}`}>
-                      {interestLabels[item.category] ?? item.category}
-                    </span>
-                    <p className="text-sm font-bold leading-snug text-gray-900">{item.title}</p>
+                  <div key={`${record.share_key}-${index}`} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                    <CategoryBadge category={item.category} interestLabels={interestLabels} />
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: "#1F1A14",
+                        lineHeight: 1.45,
+                        letterSpacing: "-0.01em",
+                      }}
+                    >
+                      {item.title}
+                    </p>
                   </div>
                 ))}
               </div>
             </a>
           ))}
-          {filteredShares.length === 0 ? <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-gray-600">아직 공유한 항목이 없습니다.</div> : null}
+          {filteredShares.length === 0 ? (
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: 18,
+                border: "2px dashed #E8DCC7",
+                padding: 40,
+                textAlign: "center",
+                fontSize: 15,
+                color: "#7A6F62",
+                fontWeight: 600,
+              }}
+            >
+              아직 공유한 항목이 없습니다.
+            </div>
+          ) : null}
         </div>
       )}
     </div>

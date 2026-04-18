@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 
 import { SignupForm } from "@/components/signup-form";
 import { Notice } from "@/components/ui/notice";
-import { PageIntro } from "@/components/ui/panel";
 import { isGoogleOauthConfigured, isKakaoOauthConfigured, isNaverOauthConfigured } from "@/lib/auth/kakao-oauth";
 import { getInterestConfig } from "@/lib/content/interest-config";
 import { decodeShareState } from "@/lib/share";
@@ -32,29 +31,55 @@ export default async function SignupPage({ searchParams }: PageProps) {
   const naverEnabled = isNaverOauthConfigured();
 
   return (
-    <div className="app-shell max-w-3xl py-10 md:py-16" style={{ fontSize: "16px" }}>
-      <PageIntro
-        eyebrow="SIGN UP"
-        title="아침을 가볍게 시작할 준비를 해보세요."
-        description="관심사 세 가지와 이메일, 원하는 시간만 정하면 됩니다. 가입 후에는 매일 아침 세 줄 요약이 도착합니다."
-        className="mb-8 md:mb-12"
-      />
+    <div className="py-10 md:py-14" style={{ background: "#F0EEE9", minHeight: "100vh" }}>
+      <div style={{ textAlign: "center", maxWidth: 560, margin: "0 auto 24px", padding: "0 20px" }}>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 16px",
+            background: "#fff",
+            borderRadius: 999,
+            border: "2px solid #F5DDC2",
+            fontSize: 13,
+            fontWeight: 700,
+            color: "#B2570F",
+            marginBottom: 16,
+          }}
+        >
+          <span style={{ width: 8, height: 8, borderRadius: 999, background: "#E57C23" }} />
+          무료 구독 신청
+        </div>
+        <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.03em" }}>
+          아침을 가볍게 시작할 준비를 해보세요.
+        </h1>
+        <p style={{ margin: 0, fontSize: 15, color: "#4A4037", lineHeight: 1.6, fontWeight: 500 }}>
+          관심사 3개와 이메일만 있으면 됩니다.
+        </p>
+      </div>
+
       {oauthProvider && oauthLabels[oauthProvider] ? (
-        <Notice tone="info" className="mx-auto mb-8 max-w-2xl">
-          {oauthLabels[oauthProvider]} 계정으로 가입되지 않은 이메일입니다. 관심사를 선택하고 가입을 완료해주세요.
-        </Notice>
+        <div style={{ maxWidth: 560, margin: "0 auto 16px", padding: "0 20px" }}>
+          <Notice tone="info">
+            {oauthLabels[oauthProvider]} 계정으로 가입되지 않은 이메일입니다. 관심사를 선택하고 가입을 완료해주세요.
+          </Notice>
+        </div>
       ) : null}
-      <SignupForm
-        initialInterests={shareState.interests}
-        initialSubInterests={shareState.subInterests}
-        defaultEmail={defaultEmail}
-        kakaoEnabled={kakaoEnabled}
-        googleEnabled={googleEnabled}
-        naverEnabled={naverEnabled}
-        mainInterests={interestConfig.mainInterests}
-        subInterestOptions={interestConfig.subInterests}
-        interestLabels={interestConfig.labels}
-      />
+
+      <div style={{ padding: "0 20px" }}>
+        <SignupForm
+          initialInterests={shareState.interests}
+          initialSubInterests={shareState.subInterests}
+          defaultEmail={defaultEmail}
+          kakaoEnabled={kakaoEnabled}
+          googleEnabled={googleEnabled}
+          naverEnabled={naverEnabled}
+          mainInterests={interestConfig.mainInterests}
+          subInterestOptions={interestConfig.subInterests}
+          interestLabels={interestConfig.labels}
+        />
+      </div>
     </div>
   );
 }
