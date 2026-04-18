@@ -3,7 +3,6 @@
 import type { FormEvent, MouseEvent } from "react";
 
 import { Bell, LibraryBig, Search, User } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -178,10 +177,39 @@ export function SiteHeader() {
             <Link
               href={targetHref}
               onClick={handleLogoClick}
-              className="flex items-center gap-[12px]"
+              className="flex items-center gap-[10px]"
               aria-label="세줄아침 홈으로 이동"
             >
-              <Image src="/threeline_morning_logo_v2.png" alt="세줄아침" width={180} height={46} className="h-[32px] w-auto sm:h-[40px]" />
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 11,
+                  background: "#E57C23",
+                  color: "#fff",
+                  fontWeight: 900,
+                  fontSize: 20,
+                  letterSpacing: "-0.02em",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+                aria-hidden="true"
+              >
+                세
+              </div>
+              <div
+                style={{
+                  fontSize: 20,
+                  fontWeight: 900,
+                  color: "#1F1A14",
+                  letterSpacing: "-0.03em",
+                }}
+                className="hidden sm:block"
+              >
+                세줄아침
+              </div>
             </Link>
 
             {/* 데스크탑 탭 */}
@@ -190,7 +218,7 @@ export function SiteHeader() {
                 <button
                   type="button"
                   onClick={() => router.push("/?view=intro")}
-                  className={`relative px-[23px] py-[12px] text-[20px] font-medium transition-colors ${isIntroActive ? "text-orange-500" : "text-gray-600 hover:text-gray-900"}`}
+                  className={`relative px-[23px] py-[12px] text-[17px] font-extrabold tracking-[-0.01em] transition-colors ${isIntroActive ? "text-[#B2570F]" : "text-[#4A4037] hover:text-[#1F1A14]"}`}
                 >
                   소개
                   {isIntroActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
@@ -199,7 +227,7 @@ export function SiteHeader() {
               <button
                 type="button"
                 onClick={() => router.push("/")}
-                className={`relative px-[23px] py-[12px] text-[20px] font-medium transition-colors ${isPopularActive ? "text-orange-500" : "text-gray-600 hover:text-gray-900"}`}
+                className={`relative px-[23px] py-[12px] text-[17px] font-extrabold tracking-[-0.01em] transition-colors ${isPopularActive ? "text-[#B2570F]" : "text-[#4A4037] hover:text-[#1F1A14]"}`}
               >
                 인기뉴스
                 {isPopularActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
@@ -207,7 +235,7 @@ export function SiteHeader() {
               <button
                 type="button"
                 onClick={() => router.push("/?view=today")}
-                className={`relative px-[23px] py-[12px] text-[20px] font-medium transition-colors ${isTodayActive ? "text-orange-500" : "text-gray-600 hover:text-gray-900"}`}
+                className={`relative px-[23px] py-[12px] text-[17px] font-extrabold tracking-[-0.01em] transition-colors ${isTodayActive ? "text-[#B2570F]" : "text-[#4A4037] hover:text-[#1F1A14]"}`}
               >
                 오늘뉴스
                 {isTodayActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
@@ -262,13 +290,14 @@ export function SiteHeader() {
                 <>
                   <Link
                     href="/login"
-                    className="inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full px-[14px] text-[15px] font-semibold text-gray-700 transition hover:bg-gray-100 sm:min-h-[40px] sm:px-[23px] sm:text-[20px]"
+                    className="inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full px-[14px] text-[15px] font-bold text-gray-700 transition hover:bg-gray-100 sm:min-h-[40px] sm:px-[20px] sm:text-[16px]"
                   >
                     로그인
                   </Link>
                   <Link
                     href="/signup"
-                    className="inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-orange-500 px-[14px] text-[15px] font-semibold text-white transition hover:bg-orange-600 sm:min-h-[40px] sm:px-[23px] sm:text-[20px]"
+                    style={{ boxShadow: "0 4px 10px rgba(229,124,35,0.28)" }}
+                    className="inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#E57C23] px-[16px] text-[15px] font-extrabold tracking-[-0.01em] text-white transition hover:bg-[#D16612] sm:min-h-[44px] sm:px-[22px] sm:text-[16px]"
                   >
                     무료신청
                   </Link>
@@ -284,7 +313,7 @@ export function SiteHeader() {
             <button
               type="button"
               onClick={() => router.push("/?view=intro")}
-              className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-medium transition-colors ${isIntroActive ? "text-orange-500" : "text-gray-600"}`}
+              className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-extrabold tracking-[-0.01em] transition-colors ${isIntroActive ? "text-[#B2570F]" : "text-gray-600"}`}
             >
               소개
               {isIntroActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
@@ -293,7 +322,7 @@ export function SiteHeader() {
           <button
             type="button"
             onClick={() => router.push("/")}
-            className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-medium transition-colors ${isPopularActive ? "text-orange-500" : "text-gray-600"}`}
+            className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-extrabold tracking-[-0.01em] transition-colors ${isPopularActive ? "text-[#B2570F]" : "text-gray-600"}`}
           >
             인기뉴스
             {isPopularActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
@@ -301,7 +330,7 @@ export function SiteHeader() {
           <button
             type="button"
             onClick={() => router.push("/?view=today")}
-            className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-medium transition-colors ${isTodayActive ? "text-orange-500" : "text-gray-600"}`}
+            className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-extrabold tracking-[-0.01em] transition-colors ${isTodayActive ? "text-[#B2570F]" : "text-gray-600"}`}
           >
             오늘뉴스
             {isTodayActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
