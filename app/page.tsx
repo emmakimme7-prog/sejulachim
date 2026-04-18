@@ -21,7 +21,9 @@ export default async function HomePage({
   const initialTopic = typeof resolvedSearchParams.category === "string" ? resolvedSearchParams.category.trim() : "";
   const initialMode = typeof resolvedSearchParams.mode === "string" ? resolvedSearchParams.mode.trim() : "";
   const initialView = typeof resolvedSearchParams.view === "string" ? resolvedSearchParams.view.trim() : "";
-  const featuredMode = !initialTitleQuery && !initialTopic && (!initialView || initialView === "intro") && (!initialMode || initialMode === "popular");
+  const isArchiveView = initialView === "archive";
+  const isTodayView = initialView === "today";
+  const featuredMode = !initialTitleQuery && !initialTopic && (!initialView || initialView === "intro") && (!initialMode || initialMode === "popular") && !isArchiveView;
   const interestConfig = await getInterestConfig();
   const todayPreviews = await listTodayPreview();
   const data = (await listPublicContentItems(120)) as Array<{
@@ -100,7 +102,7 @@ export default async function HomePage({
                 interestLabels={interestConfig.labels}
                 subInterestOptions={interestConfig.subInterests}
                 featuredMode={featuredMode}
-                todayMode={initialView === "today"}
+                todayMode={isTodayView}
                 initialSortOrder={featuredMode ? "popular" : "latest"}
                 feedProductMap={feedProductMap}
               />

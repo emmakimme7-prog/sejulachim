@@ -162,7 +162,8 @@ export function SiteHeader() {
   const currentView = localView;
   const isIntroActive = currentView === "intro";
   const isTodayActive = currentView === "today";
-  const isPopularActive = !currentCategory && !currentQuery && !isTodayActive && !isIntroActive;
+  const isArchiveActive = currentView === "archive";
+  const isPopularActive = !currentCategory && !currentQuery && !isTodayActive && !isIntroActive && !isArchiveActive;
   const isLoggedIn = !!payload.session;
   const targetHref = "/";
 
@@ -304,6 +305,25 @@ export function SiteHeader() {
                 }}
               >
                 인기 소식
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/?view=archive")}
+                className="inline-flex items-center whitespace-nowrap"
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 10,
+                  background: isArchiveActive ? "#FFF2E3" : "transparent",
+                  color: isArchiveActive ? "#B2570F" : "#4A4037",
+                  fontSize: 16,
+                  fontWeight: isArchiveActive ? 900 : 800,
+                  letterSpacing: "-0.01em",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                지난 소식
               </button>
               {!isLoggedIn && sessionLoaded ? (
                 <button
@@ -451,6 +471,14 @@ export function SiteHeader() {
           >
             인기 소식
             {isPopularActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#E57C23]" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/?view=archive")}
+            className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-extrabold tracking-[-0.01em] transition-colors ${isArchiveActive ? "text-[#B2570F]" : "text-gray-600"}`}
+          >
+            지난 소식
+            {isArchiveActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#E57C23]" />}
           </button>
           {!isLoggedIn && sessionLoaded ? (
             <button
