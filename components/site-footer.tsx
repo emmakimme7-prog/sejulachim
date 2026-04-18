@@ -30,12 +30,11 @@ export function SiteFooter() {
           </div>
 
           <div className="grid gap-[6px]">
-            <p>상호명: OOO</p>
-            <p>대표자: OOO</p>
-            <p>사업자등록번호: OOO-OO-OOOOO</p>
-            <p>통신판매업신고번호: OOO-OO-OOOO</p>
-            <p>주소: OOO</p>
-            <p>이메일: OOO@OOO.COM</p>
+            <p>상호명: 스튜디오 바이유</p>
+            <p>대표자: 김진래</p>
+            <p>사업자등록번호: 863-05-03650</p>
+            <p>주소: 울산광역시 북구 호계9길 64-1, 303호(호계동)</p>
+            <p>문의: hello@studiobyyou.kr</p>
           </div>
 
           <p className="mt-[12px] opacity-70" style={{ fontSize: "12px", lineHeight: "24px" }}>본 서비스는 공개된 뉴스를 AI가 요약·재가공한 정보를 제공합니다. 정보의 정확성을 보장하지 않으며, 투자·의료·법률 판단의 근거로 사용하지 마시기 바랍니다.</p>

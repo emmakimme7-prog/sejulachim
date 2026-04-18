@@ -27,7 +27,7 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
           margin: "0 auto",
           padding: "40px 20px 48px",
         }}
-        className="md:!px-9 md:!py-[56px] md:!grid md:!grid-cols-[1.1fr_1fr] md:!gap-12 md:!items-center"
+        className="text-center md:text-left md:!px-9 md:!py-[56px] md:!grid md:!grid-cols-[1.1fr_1fr] md:!gap-12 md:!items-center"
       >
         <div>
           <div
@@ -89,7 +89,7 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
             눈이 피곤하면 <b style={{ color: "#E57C23" }}>소리로도 들을 수 있습니다.</b>
           </p>
 
-          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="justify-center md:justify-start" style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
             <Link
               href="/signup"
               style={{
@@ -116,7 +116,7 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
               무료 구독 신청하기
             </Link>
           </div>
-          <div style={{ display: "flex", gap: 18, marginTop: 22, flexWrap: "wrap" }}>
+          <div className="justify-center md:justify-start" style={{ display: "flex", gap: 18, marginTop: 22, flexWrap: "wrap" }}>
             {["매일 아침 7:00", "무료", "1분이면 가입", "언제든 해지"].map((t) => (
               <div key={t} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <div
@@ -283,8 +283,12 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
               style={{
                 background: "#fff",
                 borderRadius: 20,
-                padding: "24px 20px",
+                padding: "20px 18px",
                 border: "2px solid #F2E6D7",
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                textAlign: "left",
               }}
             >
               <div
@@ -297,17 +301,19 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 30,
-                  marginBottom: 14,
+                  flexShrink: 0,
                 }}
                 aria-hidden="true"
               >
                 {it.emoji}
               </div>
-              <div style={{ fontSize: 17, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.02em", marginBottom: 6 }}>
-                {it.t}
-              </div>
-              <div style={{ fontSize: 14, color: "#4A4037", whiteSpace: "pre-line", lineHeight: 1.6, fontWeight: 500 }}>
-                {it.d}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 17, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.02em", marginBottom: 4 }}>
+                  {it.t}
+                </div>
+                <div style={{ fontSize: 14, color: "#4A4037", whiteSpace: "pre-line", lineHeight: 1.6, fontWeight: 500 }}>
+                  {it.d}
+                </div>
               </div>
             </div>
           ))}

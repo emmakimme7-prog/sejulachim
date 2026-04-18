@@ -577,37 +577,6 @@ export function ArchiveBrowser({
               >
                 <Search className="h-[16px] w-[16px]" />
               </button>
-              {/* 정렬 */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowSortMenu((v) => !v)}
-                  className={`inline-flex h-[32px] w-[32px] items-center justify-center rounded-full border transition ${
-                    showSortMenu
-                      ? "border-gray-900 bg-gray-900 text-white"
-                      : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
-                  }`}
-                  aria-label="정렬"
-                >
-                  <SlidersHorizontal className="h-[16px] w-[16px]" />
-                </button>
-                {showSortMenu ? (
-                  <div className="absolute right-0 top-[36px] z-20 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
-                    {(["latest", "oldest", "popular"] as const).map((order) => (
-                      <button
-                        key={order}
-                        type="button"
-                        onClick={() => { setSortOrder(order); setShowSortMenu(false); }}
-                        className={`block w-full whitespace-nowrap rounded-lg px-4 py-2 text-left text-[14px] font-medium transition ${
-                          sortOrder === order ? "bg-orange-50 text-orange-600" : "text-gray-700 hover:bg-gray-50"
-                        }`}
-                      >
-                        {order === "latest" ? "최신순" : order === "oldest" ? "과거순" : "인기순"}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
             </div>
           </div>
           {/* 검색 인풋 (토글) */}
