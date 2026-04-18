@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 
 import { ArchiveBrowser } from "@/components/archive-browser";
+import { FeedCategorySidebar } from "@/components/feed-category-sidebar";
+import { FeedRightSidebar } from "@/components/feed-right-sidebar";
 import { HomeContent } from "@/components/home-content";
 import { OAuthLinkedNotice } from "@/components/oauth-linked-notice";
 import { getInterestConfig } from "@/lib/content/interest-config";
@@ -68,25 +70,46 @@ export default async function HomePage({
       view_count: "view_count" in item ? item.view_count ?? 0 : 0
     }));
 
+  const sidebarItems = archiveItems.slice(0, 20).map((it) => ({
+    title: it.title,
+    short_summary: it.short_summary,
+    action_line: it.action_line,
+  }));
+
   return (
     <HomeContent previews={todayPreviews}>
       <Suspense><OAuthLinkedNotice /></Suspense>
-      <div className="mx-auto w-full px-[18px] lg:px-[34px] pb-10 md:pb-20" style={{ maxWidth: "min(64rem, 1536px)" }}>
+      <div className="mx-auto w-full px-[18px] lg:px-[34px] pb-10 md:pb-20" style={{ maxWidth: "min(80rem, 1536px)" }}>
         <h1 className="sr-only">세줄아침 — 매일 아침 세 줄로 읽는 생활 브리핑</h1>
-        <Suspense fallback={<div className="min-h-[60vh]" />}>
-          <ArchiveBrowser
-            items={archiveItems}
-            initialTitleQuery={initialTitleQuery}
-            initialTopic={initialTopic}
-            mainInterests={interestConfig.mainInterests}
-            interestLabels={interestConfig.labels}
-            subInterestOptions={interestConfig.subInterests}
-            featuredMode={featuredMode}
-            todayMode={initialView === "today"}
-            initialSortOrder={featuredMode ? "popular" : "latest"}
-            feedProductMap={feedProductMap}
-          />
-        </Suspense>
+        <div className="xl:grid xl:grid-cols-[220px_minmax(0,1fr)_280px] xl:gap-8">
+          <aside className="hidden xl:block xl:sticky xl:top-[90px] xl:self-start">
+            <Suspense>
+              <FeedCategorySidebar
+                categories={interestConfig.mainInterests}
+                interestLabels={interestConfig.labels}
+              />
+            </Suspense>
+          </aside>
+          <main className="min-w-0">
+            <Suspense fallback={<div className="min-h-[60vh]" />}>
+              <ArchiveBrowser
+                items={archiveItems}
+                initialTitleQuery={initialTitleQuery}
+                initialTopic={initialTopic}
+                mainInterests={interestConfig.mainInterests}
+                interestLabels={interestConfig.labels}
+                subInterestOptions={interestConfig.subInterests}
+                featuredMode={featuredMode}
+                todayMode={initialView === "today"}
+                initialSortOrder={featuredMode ? "popular" : "latest"}
+                feedProductMap={feedProductMap}
+              />
+            </Suspense>
+          </main>
+          <aside className="hidden xl:block xl:sticky xl:top-[90px] xl:self-start">
+            <FeedRightSidebar items={sidebarItems} />
+          </aside>
+        </div>
       </div>
     </HomeContent>
   );
