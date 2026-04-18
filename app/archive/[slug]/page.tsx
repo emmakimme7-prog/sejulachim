@@ -29,6 +29,42 @@ function getCategoryMeta(cat: string | null | undefined) {
   return CATEGORY_META[cat] ?? { emoji: "📄", color: "#7A6F62", bg: "#F5EEE2" };
 }
 
+function CategoryPlaceholder({
+  cat,
+  size = 96,
+  rounded = 14,
+  aspect = false,
+}: {
+  cat: string | null | undefined;
+  size?: number;
+  rounded?: number;
+  aspect?: boolean;
+}) {
+  const m = getCategoryMeta(cat);
+  const stripe = `repeating-linear-gradient(135deg, ${m.color}14 0 8px, transparent 8px 16px)`;
+  return (
+    <div
+      style={{
+        width: aspect ? "100%" : size,
+        height: aspect ? undefined : size,
+        aspectRatio: aspect ? "16 / 9" : undefined,
+        borderRadius: rounded,
+        background: m.bg,
+        backgroundImage: stripe,
+        border: `1px solid ${m.color}22`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        fontSize: Math.round(size * 0.5),
+      }}
+      aria-hidden="true"
+    >
+      {m.emoji}
+    </div>
+  );
+}
+
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
@@ -262,26 +298,29 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
             </div>
 
             {/* 히어로 썸네일 */}
-            {"thumbnail_url" in data && data.thumbnail_url ? (
-              <div
-                style={{
-                  borderRadius: 20,
-                  overflow: "hidden",
-                  aspectRatio: "16 / 9",
-                  background: "#F5EEE2",
-                  border: "1px solid #F2E6D7",
-                  marginBottom: 24,
-                }}
-              >
-                <ContentThumbnail
-                  src={data.thumbnail_url}
-                  alt={("thumbnail_alt" in data ? data.thumbnail_alt : "") || data.title}
-                  className="h-full w-full"
-                  imgClassName="h-full w-full object-cover"
-                  fallbackLabel="썸네일 준비 중"
-                />
-              </div>
-            ) : null}
+            <div style={{ marginBottom: 24 }}>
+              {"thumbnail_url" in data && data.thumbnail_url ? (
+                <div
+                  style={{
+                    borderRadius: 20,
+                    overflow: "hidden",
+                    aspectRatio: "16 / 9",
+                    background: "#F5EEE2",
+                    border: "1px solid #F2E6D7",
+                  }}
+                >
+                  <ContentThumbnail
+                    src={data.thumbnail_url}
+                    alt={("thumbnail_alt" in data ? data.thumbnail_alt : "") || data.title}
+                    className="h-full w-full"
+                    imgClassName="h-full w-full object-cover"
+                    fallbackLabel="썸네일 준비 중"
+                  />
+                </div>
+              ) : (
+                <CategoryPlaceholder cat={currentCategory} aspect rounded={20} size={320} />
+              )}
+            </div>
 
             {/* 듣기 플레이어 액션 바 */}
             <div
@@ -545,7 +584,9 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                               imgClassName="w-full h-full object-cover"
                               fallbackLabel="준비 중"
                             />
-                          ) : null}
+                          ) : (
+                            <CategoryPlaceholder cat={nextItem.category} size={96} />
+                          )}
                         </div>
                       </>
                     );
@@ -595,7 +636,9 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                             imgClassName="w-full h-full object-cover"
                             fallbackLabel="준비 중"
                           />
-                        ) : null}
+                        ) : (
+                          <CategoryPlaceholder cat={item.category} size={64} rounded={12} />
+                        )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div
                             style={{
@@ -684,7 +727,9 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                               imgClassName="w-full h-full object-cover"
                               fallbackLabel="준비 중"
                             />
-                          ) : null}
+                          ) : (
+                            <CategoryPlaceholder cat={item.category} size={56} rounded={12} />
+                          )}
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <span
                               style={{

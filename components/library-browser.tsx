@@ -5,6 +5,30 @@ import Link from "next/link";
 
 import { CompleteShareButton } from "@/components/complete-share-button";
 import { ContentThumbnail } from "@/components/content-thumbnail";
+function CategoryPlaceholder({ cat, size = 96 }: { cat: string; size?: number }) {
+  const m = CATEGORY_META[cat] ?? { emoji: "📄", color: "#7A6F62", bg: "#F5EEE2" };
+  const stripe = `repeating-linear-gradient(135deg, ${m.color}14 0 8px, transparent 8px 16px)`;
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 14,
+        background: m.bg,
+        backgroundImage: stripe,
+        border: `1px solid ${m.color}22`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        fontSize: Math.round(size * 0.44),
+      }}
+      aria-hidden="true"
+    >
+      {m.emoji}
+    </div>
+  );
+}
 import { FavoriteToggleButton } from "@/components/favorite-toggle-button";
 import { ListenButton } from "@/components/speech-controls";
 import { type ContentSource } from "@/lib/content/sources";
@@ -361,7 +385,9 @@ export function LibraryBrowser({
                       imgClassName="w-full h-full object-cover"
                       fallbackLabel="준비 중"
                     />
-                  ) : null}
+                  ) : (
+                    <CategoryPlaceholder cat={item.category} size={96} />
+                  )}
                 </div>
               </Link>
 
