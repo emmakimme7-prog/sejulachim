@@ -334,7 +334,13 @@ export function ListenButton({
 
 // ─── SpeechPlayer (floating mini-player) ─────────────────────────────────────
 
-const RATES = [0.75, 1, 1.25, 1.5, 2] as const;
+const RATES = [0.75, 1, 1.25] as const;
+
+function rateLabel(rate: number): string {
+  if (rate < 0.95) return "느리게";
+  if (rate > 1.05) return "빠르게";
+  return "보통";
+}
 
 export function SpeechPlayer() {
   const [snap, setSnap] = useState<SpeechSnapshot>(() => getSpeechSnapshot());
@@ -527,7 +533,7 @@ export function SpeechPlayer() {
             <button
               type="button"
               onClick={cycleRate}
-              aria-label={`재생 속도 (현재 ${snap.rate}배속)`}
+              aria-label={`재생 속도 (현재 ${rateLabel(snap.rate)})`}
               style={{
                 minHeight: 40,
                 padding: "0 14px",
@@ -546,7 +552,7 @@ export function SpeechPlayer() {
                 whiteSpace: "nowrap",
               }}
             >
-              🐢 {snap.rate}×
+              🐢 {rateLabel(snap.rate)}
             </button>
             <button
               type="button"
@@ -829,7 +835,7 @@ export function SpeechPlayer() {
                   gap: 6,
                 }}
               >
-                🐢 속도 {snap.rate}×
+                🐢 속도 {rateLabel(snap.rate)}
               </button>
               <button
                 type="button"
