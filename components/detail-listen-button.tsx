@@ -11,6 +11,7 @@ type NextItemInfo = {
 };
 
 type DetailListenButtonProps = {
+  iconOnly?: boolean;
   text: string;
   title: string;
   nextItems: NextItemInfo[];
@@ -39,7 +40,7 @@ function registerChain(items: NextItemInfo[], idx: number) {
   });
 }
 
-export function DetailListenButton({ text, title, nextItems, className }: DetailListenButtonProps) {
+export function DetailListenButton({ text, title, nextItems, className, iconOnly = false }: DetailListenButtonProps) {
   function handlePlay() {
     const first = nextItems[0] ?? null;
     setSpeechPlaylist(
@@ -54,7 +55,7 @@ export function DetailListenButton({ text, title, nextItems, className }: Detail
       text={text}
       speechTitle={title}
       className={className}
-      label="듣기"
+      label={iconOnly ? "" : "듣기"}
       onPlay={handlePlay}
     />
   );

@@ -322,7 +322,6 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
               )}
             </div>
 
-            {/* 듣기 플레이어 액션 바 */}
             {/* 큰 듣기 플레이어 */}
             <div
               style={{
@@ -333,7 +332,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                 borderRadius: 18,
                 background: "#fff",
                 border: "2px solid #FFD1A3",
-                marginBottom: 20,
+                marginBottom: 16,
                 boxShadow: "0 2px 8px rgba(229, 124, 35, 0.08)",
               }}
             >
@@ -341,6 +340,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                 <DetailListenButton
                   text={listenText}
                   title={data.title}
+                  iconOnly
                   nextItems={relatedItems.map((item) => ({
                     title: item.title,
                     short_summary: "short_summary" in item ? item.short_summary : null,
@@ -348,7 +348,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                     action_line: "action_line" in item ? item.action_line : null,
                     slug: item.slug,
                   }))}
-                  className="!w-[60px] !h-[60px] !min-h-0 !p-0 !rounded-full !bg-[#E57C23] hover:!bg-[#D16612] !border-0 !text-white !shadow-[0_6px_16px_rgba(229,124,35,0.35)] flex items-center justify-center [&_span.sr-only]:hidden [&>span:last-child]:hidden"
+                  className="!w-[60px] !h-[60px] !min-h-0 !p-0 !rounded-full !bg-[#E57C23] hover:!bg-[#D16612] !border-0 !text-white !shadow-[0_6px_16px_rgba(229,124,35,0.35)] flex items-center justify-center"
                 />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -387,21 +387,10 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                   <div style={{ width: "0%", height: "100%", background: "#E57C23", transition: "width 0.2s" }} />
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 6, flexShrink: 0 }} className="hidden md:flex">
-                <DetailActionBar shareSlug={slug} shareTitle={data.title} />
-              </div>
             </div>
 
-            {/* 모바일용 액션 바 */}
-            <div
-              className="md:hidden"
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 8,
-                marginBottom: 20,
-              }}
-            >
+            {/* 좋아요 / 공유 */}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 20 }}>
               <DetailActionBar shareSlug={slug} shareTitle={data.title} />
             </div>
 
