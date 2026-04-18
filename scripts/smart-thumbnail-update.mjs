@@ -175,6 +175,16 @@ const SLUG_QUERIES = {
   "brief-2026-04-11-relation-office-1":       ["office worker stress workplace bullying unfair", "corporate workplace employee stress frustration"],
   "brief-2026-04-11-relation-hobby-1":        ["friends group meeting cafe table happy", "community gathering people hobby cooking class"],
   "brief-2026-04-11-relation-friend-1":       ["lonely man alone solitude friendship crisis", "male friendship loneliness isolation social"],
+
+  // 2026-04-15
+  "real-2026-04-15-뉴스-사회-1": ["medical syringe hospital supplies", "hospital medical supply storage"],
+  "real-2026-04-15-뉴스-경제-1": ["inflation grocery prices supermarket", "rising prices shopping basket"],
+  "real-2026-04-15-뉴스-해외-1": ["fake news smartphone alert", "online misinformation warning phone"],
+  "real-2026-04-15-실생활-꿀팁-1": ["home organization life hacks", "household tips notebook desk"],
+  "real-2026-04-15-뉴스-정책-1": ["city crosswalk pedestrian road", "urban transport intersection crosswalk"],
+  "real-2026-04-15-관계-가족-1": ["family outing park together", "family cultural activity museum"],
+  "real-2026-04-15-관계-취미-1": ["community hobby workshop adults", "creative hobby class people"],
+  "real-2026-04-15-뉴스-주요-뉴스-1": ["newspaper headlines desk world news", "breaking news newspaper economy"],
 };
 
 const STORAGE_BUCKET = "thumbnails";

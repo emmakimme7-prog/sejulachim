@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, DollarSign, Eye, EyeOff, Heart, House, Mail, Newspaper, Users, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Field, FieldHint, FieldLabel, SelectInput, TextInput } from "@/components/ui/field";
+import { CustomSelect } from "@/components/ui/custom-select";
+import { Field, FieldHint, FieldLabel, TextInput } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { SectionEyebrow } from "@/components/ui/panel";
 import { Toast } from "@/components/ui/toast";
@@ -54,7 +55,7 @@ export function SignupForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState<string | null>(null);
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
+
   const [step, setStep] = useState<Step>(defaultEmail ? "email-form" : "interests");
 
   useEffect(() => {
@@ -120,7 +121,7 @@ export function SignupForm({
       return;
     }
 
-    if (password.length > 0 && password.length < 8) {
+    if (password.length < 8) {
       setToast("비밀번호는 8자 이상이어야 합니다.");
       setSubmitting(false);
       return;
@@ -137,7 +138,7 @@ export function SignupForm({
           subInterests,
           email,
           deliveryTime: "08:00",
-          passwordEnabled: password.length > 0,
+          passwordEnabled: true,
           password,
           agreeToTerms: true,
           agreeToPrivacy: true,
@@ -172,9 +173,9 @@ export function SignupForm({
             <div className="flex items-end justify-between gap-4">
               <div>
                 <SectionEyebrow>관심사 선택</SectionEyebrow>
-                <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-navy-900 md:text-[42px]">딱 3가지를 골라주세요.</h2>
+                <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-gray-900 md:text-[40px]">딱 3가지를 골라주세요.</h2>
               </div>
-              <p className="rounded-full bg-navy-50 px-4 py-2 text-sm font-semibold text-navy-500">선택 수 {selectedInterests.length}/3</p>
+              <p className="rounded-full bg-gray-100 px-3.5 py-1.5 text-sm font-semibold text-gray-600">선택 수 {selectedInterests.length}/3</p>
             </div>
             <div className="grid w-full gap-3 sm:grid-cols-2 md:gap-4">
               {mainInterests.map((interest) => {
@@ -187,43 +188,42 @@ export function SignupForm({
                     type="button"
                     onClick={() => toggleInterest(interest)}
                     className={cn(
-                      "w-full cursor-pointer rounded-[20px] border px-4 py-3 text-left transition duration-150 md:rounded-[24px] md:px-5 md:py-4",
+                      "w-full cursor-pointer rounded-2xl border px-4 py-3 text-left transition duration-150 md:px-5 md:py-4",
                       active
-                        ? "border-orange-500 bg-orange-50/60 text-navy-900 shadow-[inset_0_0_0_1px_rgba(229,124,35,0.08)]"
-                        : "border-navy-100 bg-white text-navy-800 hover:border-navy-300 hover:bg-navy-50"
+                        ? "border-orange-500 bg-orange-50/50 text-gray-900"
+                        : "border-gray-200 bg-white text-gray-800 hover:border-gray-300 hover:bg-gray-50"
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/90 text-orange-500 shadow-sm md:h-12 md:w-12">
+                      <span className={cn(
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl md:h-12 md:w-12",
+                        active ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"
+                      )}>
                         <Icon className="h-5 w-5 md:h-6 md:w-6" strokeWidth={2.2} aria-hidden="true" />
                       </span>
                       <span className="block min-w-[3em] text-xl font-extrabold tracking-[-0.04em] md:text-2xl">{interestLabels[interest]}</span>
 
                       <div className="ml-auto w-[120px] shrink-0 md:w-[140px]">
                         {active ? (
-                          <div className="relative" onClick={(e) => e.stopPropagation()}>
-                            <SelectInput
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <CustomSelect
                               value={subInterests[interest] ?? ""}
-                              onChange={(event) =>
+                              onChange={(val) =>
                                 setSubInterests((prev) => ({
                                   ...prev,
-                                  [interest]: event.target.value
+                                  [interest]: val
                                 }))
                               }
-                              className="min-h-10 rounded-xl bg-white pr-9 text-xs appearance-none"
-                            >
-                              <option value="">세부 선택</option>
-                              {(subInterestOptions[interest] ?? []).map((option) => (
-                                <option key={option} value={option}>
-                                  {option}
-                                </option>
-                              ))}
-                            </SelectInput>
-                            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-navy-400" aria-hidden="true" />
+                              placeholder="세부 선택"
+                              options={(subInterestOptions[interest] ?? []).map((option) => ({
+                                value: option,
+                                label: option
+                              }))}
+                            />
                           </div>
                         ) : (
                           <div className="flex justify-end">
-                            <ChevronDown className="h-5 w-5 text-navy-300" aria-hidden="true" />
+                            <ChevronDown className="h-5 w-5 text-gray-300" aria-hidden="true" />
                           </div>
                         )}
                       </div>
@@ -252,44 +252,31 @@ export function SignupForm({
         <div className="space-y-6">
           <div className="text-center">
             <SectionEyebrow>가입 방법 선택</SectionEyebrow>
-            <h2 className="mt-3 text-2xl font-bold tracking-[-0.03em] text-navy-900 md:text-[36px]">어떻게 시작할까요?</h2>
-            <p className="mt-3 text-base leading-7 text-navy-600">소셜 계정으로 간편하게 시작하거나, 이메일로 가입할 수 있어요.</p>
+            <h2 className="mt-3 text-2xl font-bold tracking-[-0.03em] text-gray-900 md:text-[34px]">어떻게 시작할까요?</h2>
+            <p className="mt-3 text-base leading-7 text-gray-600">소셜 계정으로 간편하게 시작하거나, 이메일로 가입할 수 있어요.</p>
           </div>
 
-          <label className="flex items-start gap-3 rounded-2xl border border-navy-100 bg-white px-5 py-4 text-sm leading-6 text-navy-700 cursor-pointer hover:bg-navy-50 transition">
-            <input
-              type="checkbox"
-              checked={agreedToTerms}
-              onChange={(e) => setAgreedToTerms(e.target.checked)}
-              className="mt-0.5 h-5 w-5 shrink-0 accent-orange-500"
-            />
-            <span>
-              <a href="/terms" target="_blank" className="font-semibold text-orange-500 underline underline-offset-4">이용약관</a> 및{" "}
-              <a href="/terms" target="_blank" className="font-semibold text-orange-500 underline underline-offset-4">개인정보처리방침</a>에 동의합니다.
-            </span>
-          </label>
-
-          <div className={cn("flex flex-col gap-3 transition-opacity", !agreedToTerms && "pointer-events-none opacity-40")}>
+          <div className="flex flex-col gap-3">
             {googleEnabled ? (
               <a
-                href={agreedToTerms ? buildOauthHref("google") : "#"}
-                className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full border border-navy-200 bg-white px-6 text-lg font-bold text-navy-900 shadow-[0_10px_30px_rgba(15,23,42,0.08)] transition hover:border-navy-300 hover:bg-navy-50"
+                href={buildOauthHref("google")}
+                className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full border border-gray-200 bg-white px-6 text-lg font-bold text-gray-900 transition hover:border-gray-300 hover:bg-gray-50"
               >
                 구글로 시작하기
               </a>
             ) : null}
             {kakaoEnabled ? (
               <a
-                href={agreedToTerms ? buildOauthHref("kakao") : "#"}
-                className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full bg-[#FEE500] px-6 text-lg font-bold text-[#191600] shadow-[0_10px_30px_rgba(254,229,0,0.28)] transition hover:brightness-[0.98]"
+                href={buildOauthHref("kakao")}
+                className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full bg-[#FEE500] px-6 text-lg font-bold text-[#191600] transition hover:brightness-[0.96]"
               >
                 카카오로 시작하기
               </a>
             ) : null}
             {naverEnabled ? (
               <a
-                href={agreedToTerms ? buildOauthHref("naver") : "#"}
-                className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full bg-[#03C75A] px-6 text-lg font-bold text-white shadow-[0_10px_30px_rgba(3,199,90,0.28)] transition hover:brightness-[0.95]"
+                href={buildOauthHref("naver")}
+                className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full bg-[#03C75A] px-6 text-lg font-bold text-white transition hover:brightness-[0.96]"
               >
                 네이버로 시작하기
               </a>
@@ -297,7 +284,7 @@ export function SignupForm({
             <button
               type="button"
               onClick={() => setStep("email-form")}
-              className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full border border-navy-200 bg-white px-6 text-lg font-bold text-navy-700 transition hover:border-navy-300 hover:bg-navy-50"
+              className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full border border-gray-200 bg-white px-6 text-lg font-bold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
             >
               <Mail className="h-5 w-5" aria-hidden="true" />
               이메일로 시작하기
@@ -307,7 +294,7 @@ export function SignupForm({
           <button
             type="button"
             onClick={() => setStep("interests")}
-            className="mx-auto block text-sm font-semibold text-navy-500 underline underline-offset-4 hover:text-navy-700"
+            className="mx-auto block text-sm font-semibold text-gray-500 underline underline-offset-4 hover:text-gray-700"
           >
             관심사 다시 선택하기
           </button>
@@ -319,8 +306,8 @@ export function SignupForm({
         <form onSubmit={handleEmailSubmit} className="space-y-6">
           <div className="text-center">
             <SectionEyebrow>이메일 가입</SectionEyebrow>
-            <h2 className="mt-3 text-2xl font-bold tracking-[-0.03em] text-navy-900 md:text-[36px]">이메일을 입력해주세요.</h2>
-            <p className="mt-3 text-base leading-7 text-navy-600">매일 아침 세 줄 브리핑을 받으실 이메일을 알려주세요.</p>
+            <h2 className="mt-3 text-2xl font-bold tracking-[-0.03em] text-gray-900 md:text-[34px]">이메일을 입력해주세요.</h2>
+            <p className="mt-3 text-base leading-7 text-gray-600">매일 아침 세 줄 브리핑을 받으실 이메일을 알려주세요.</p>
           </div>
 
           <Field>
@@ -342,11 +329,13 @@ export function SignupForm({
 
           <Field>
             <FieldLabel>비밀번호</FieldLabel>
-            <FieldHint>8자 이상 (선택사항)</FieldHint>
+            <FieldHint>8자 이상</FieldHint>
             <div className="relative mt-2">
               <TextInput
+                required
                 type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
+                minLength={8}
                 value={password}
                 onChange={(event) => {
                   setPassword(event.target.value);
@@ -358,7 +347,7 @@ export function SignupForm({
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-navy-400 hover:text-navy-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 {showPassword ? <EyeOff className="h-5 w-5" aria-hidden="true" /> : <Eye className="h-5 w-5" aria-hidden="true" />}
               </button>
@@ -376,6 +365,18 @@ export function SignupForm({
             />
           </label>
 
+          <label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm leading-6 text-gray-700 cursor-pointer hover:bg-gray-50 transition">
+            <input
+              type="checkbox"
+              required
+              className="mt-0.5 h-5 w-5 shrink-0 accent-orange-500"
+            />
+            <span>
+              <a href="/terms" target="_blank" className="font-semibold text-orange-500 underline underline-offset-4">이용약관</a> 및{" "}
+              <a href="/terms" target="_blank" className="font-semibold text-orange-500 underline underline-offset-4">개인정보처리방침</a>에 동의합니다.
+            </span>
+          </label>
+
           {error ? <Notice tone="error">{error}</Notice> : null}
 
           <Button
@@ -391,7 +392,7 @@ export function SignupForm({
           <button
             type="button"
             onClick={() => setStep("auth-method")}
-            className="mx-auto block text-sm font-semibold text-navy-500 underline underline-offset-4 hover:text-navy-700"
+            className="mx-auto block text-sm font-semibold text-gray-500 underline underline-offset-4 hover:text-gray-700"
           >
             다른 방법으로 가입하기
           </button>

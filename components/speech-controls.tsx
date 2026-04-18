@@ -315,7 +315,7 @@ export function ListenButton({
         handlePlay();
       }}
       disabled={disabled}
-      className={`pointer-events-auto inline-flex h-10 flex-nowrap touch-manipulation items-center justify-center rounded-full border border-navy-200 bg-white text-sm font-semibold text-navy-800 ${showLabel ? "gap-2 px-3.5" : "w-10 px-0"} ${className}`}
+      className={`pointer-events-auto inline-flex h-10 flex-nowrap touch-manipulation items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-semibold text-gray-800 ${showLabel ? "gap-2 px-3.5" : "w-10 px-0"} ${className}`}
       aria-label={label}
       title={label}
     >
@@ -386,7 +386,7 @@ export function SpeechPlayer() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 sm:left-1/2 sm:right-auto sm:w-[440px] sm:-translate-x-1/2">
-      <div className="rounded-2xl border border-white/10 bg-navy-900/90 px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md">
+      <div className="rounded-2xl border border-white/10 bg-gray-900/90 px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md">
 
         {/* 타이틀 + 닫기(X = 완전 종료) */}
         <div className="mb-2 flex items-start justify-between gap-3">
@@ -628,7 +628,7 @@ export function SpeechSearchButton({ onTranscript, className = "" }: SpeechSearc
       type="button"
       onClick={handleClick}
       disabled={!supported || transcribing}
-      className={`inline-flex min-h-14 min-w-14 items-center justify-center rounded-3xl border border-navy-200 bg-white text-navy-800 transition hover:bg-navy-50 disabled:cursor-not-allowed disabled:bg-navy-50 disabled:text-navy-300 ${className}`}
+      className={`inline-flex min-h-14 min-w-14 items-center justify-center rounded-3xl border border-gray-300 bg-white text-gray-800 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 ${className}`}
       aria-label={listening ? "음성 검색 중지" : transcribing ? "음성 변환 중" : "음성으로 검색"}
       title={supported ? "음성으로 검색" : "이 브라우저에서는 음성 검색을 지원하지 않습니다."}
     >

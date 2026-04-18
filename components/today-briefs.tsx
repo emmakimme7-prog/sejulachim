@@ -62,12 +62,12 @@ export function TodayBriefs({
   }
 
   return (
-    <div className="border-t border-navy-100 pt-10 md:pt-16">
+    <div className="border-t border-gray-200 pt-10 md:pt-16">
       <div className="max-w-3xl">
-        <h2 className="text-2xl font-extrabold tracking-[-0.04em] text-navy-900 md:text-4xl">
+        <h2 className="text-2xl font-extrabold tracking-[-0.04em] text-gray-900 md:text-4xl">
           {settings?.sectionTitle?.trim() || "오늘의 소식"}
         </h2>
-        <p className="mt-3 whitespace-pre-line text-sm leading-6 text-navy-600 md:text-base md:leading-7">
+        <p className="mt-3 whitespace-pre-line text-sm leading-6 text-gray-600 md:text-base md:leading-7">
           {settings?.sectionDescription?.trim() || "오늘 올라온 소식 중 생활에 바로 닿는 세 가지를 골라 보여드립니다."}
         </p>
       </div>
@@ -81,7 +81,7 @@ export function TodayBriefs({
               variant={activeTab === tab ? "primary" : "outline"}
               size="sm"
               onClick={() => setActiveTab(tab)}
-              className={activeTab === tab ? undefined : "text-navy-700"}
+              className={activeTab === tab ? undefined : "text-gray-700"}
             >
               {interestLabels[tab] ?? tab}
             </Button>
@@ -97,14 +97,14 @@ export function TodayBriefs({
 
       <div className="mt-6 grid gap-3">
         {visibleItems.map((item) => (
-          <article key={item.id} className="rounded-xl border border-navy-100 bg-white p-4 transition-shadow hover:shadow-md md:p-5">
+          <article key={item.id} className="rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md md:p-5">
             {/* 상단: 카테고리 + 날짜 */}
             <div className="mb-3 flex items-center gap-2 flex-wrap">
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[item.main_interest] ?? "bg-orange-50 border border-orange-200 text-orange-700"}`}>
                 {interestLabels[item.main_interest] ?? item.main_interest}
                 {item.sub_interest ? ` · ${item.sub_interest}` : ""}
               </span>
-              <span className="ml-auto text-xs text-navy-400">
+              <span className="ml-auto text-xs text-gray-500">
                 {item.published_at ? formatDate(item.published_at) : "오늘"}
               </span>
             </div>
@@ -114,7 +114,7 @@ export function TodayBriefs({
               <div className="md:flex md:items-stretch md:gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-stretch gap-3">
-                    <h3 className="flex-1 md:flex-none text-[1.22rem] font-bold leading-snug break-all text-navy-900 transition group-hover:text-orange-600">
+                    <h3 className="flex-1 md:flex-none text-[1.22rem] font-bold leading-snug break-all text-gray-900 transition group-hover:text-orange-600">
                       {item.title}
                     </h3>
                     {item.thumbnail_url ? (
@@ -127,7 +127,7 @@ export function TodayBriefs({
                       />
                     ) : null}
                   </div>
-                  <p className="mt-2 text-sm leading-6 break-all text-navy-600">
+                  <p className="mt-2 text-sm leading-6 break-all text-gray-600">
                     {item.short_summary}
                   </p>
                   {item.action_line ? (
@@ -150,7 +150,7 @@ export function TodayBriefs({
             </Link>
 
             {/* 하단: 듣기 버튼 */}
-            <div className="mt-3 border-t border-navy-50 pt-3">
+            <div className="mt-3 border-t border-gray-50 pt-3">
               <ListenButton
                 text={[item.title, item.short_summary, item.action_line].filter(Boolean).join(". ")}
                 speechTitle={item.title}

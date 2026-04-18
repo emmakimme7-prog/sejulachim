@@ -13,7 +13,7 @@ export function AppChrome({ slot }: { slot: "top" | "bottom" }) {
   const pathname = usePathname();
   const [footerLift, setFooterLift] = useState(0);
   const [speechActive, setSpeechActive] = useState(false);
-  const isAdminRoute = pathname.startsWith("/dashboard");
+  const isAdminRoute = pathname.startsWith("/dashboard") || pathname.startsWith("/senior");
 
   useEffect(() => {
     const unsub = subscribeSpeechState(() => setSpeechActive(getSpeechSnapshot().active));

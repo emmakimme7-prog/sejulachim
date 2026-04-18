@@ -99,14 +99,14 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
   let allProducts: Awaited<ReturnType<typeof fetchPopularProductsForContent>> = [];
   try {
     allProducts = await Promise.race([
-      fetchPopularProductsForContent(currentCategory, currentSubInterest, 6, data.title),
+      fetchPopularProductsForContent(currentCategory, currentSubInterest, 8, data.title, true),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("product fetch timeout")), 5000)),
     ]);
   } catch {
     // 상품 로딩 실패/타임아웃 시 빈 배열로 진행
   }
   const relatedProducts = allProducts.slice(0, 3);
-  const bottomProducts = allProducts.slice(3, 6);
+  const bottomProducts = allProducts.slice(3, 8);
 
   const detailParagraphs = buildDetailParagraphs(
     data.short_summary,
@@ -210,7 +210,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
 
           {/* 요약 (리스트와 동일한 short_summary) */}
           {data.short_summary ? (
-            <p className="mt-4 text-[0.95rem] leading-7 text-navy-700">{data.short_summary}</p>
+            <p className="mt-4 text-[0.95rem] leading-7 text-gray-700">{data.short_summary}</p>
           ) : null}
 
           {/* 액션라인 박스 */}
@@ -252,7 +252,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
 
           {detailParagraphs.length > 0 ? (
             <section className="mt-8 pt-2">
-              <div className="article-body-text space-y-5 text-navy-700">
+              <div className="article-body-text space-y-5 text-gray-700">
                 {detailParagraphs.map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
                 ))}
@@ -260,10 +260,10 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
             </section>
           ) : null}
 
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-navy-100 pt-6">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 pt-6">
             <SourceDisplay sources={normalizeSources(data)} />
             {["건강", "돈"].includes(currentCategory) ? (
-              <p className="shrink-0 text-sm leading-7 text-navy-400 text-right">
+              <p className="shrink-0 text-sm leading-7 text-gray-500 text-right">
                 ※ 본 내용은 참고용이며 전문가 상담을 권장합니다.
               </p>
             ) : null}
@@ -277,23 +277,23 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
           ) : null}
 
           {nextItem ? (
-            <div className="mt-6 border-t border-navy-100 pt-6">
+            <div className="mt-6 border-t border-gray-200 pt-6">
               <p className="text-sm font-semibold tracking-[0.16em] text-gray-400">다음 글</p>
               <Link href={`/archive/${nextItem.slug}`} className="group mt-4 block">
-                <div className="rounded-xl border border-navy-100 bg-white p-[18px] transition-shadow hover:shadow-md md:p-5">
+                <div className="rounded-xl border border-gray-200 bg-white p-[18px] transition-shadow hover:shadow-md md:p-5">
                   <div className="mb-3 flex items-center gap-2 flex-wrap">
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[nextItem.category ?? ""] ?? "bg-orange-50 border border-orange-200 text-orange-700"}`}>
                       {nextItem.category}
                       {"sub_interest" in nextItem && nextItem.sub_interest ? ` · ${nextItem.sub_interest}` : ""}
                     </span>
-                    <span className="ml-auto text-xs text-navy-400">
+                    <span className="ml-auto text-xs text-gray-500">
                       {nextItem.published_at ? formatDate(nextItem.published_at) : "발행 전"}
                     </span>
                   </div>
                   <div className="md:flex md:items-stretch md:gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start gap-3">
-                        <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-all text-navy-900 transition group-hover:text-orange-600">
+                        <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-all text-gray-900 transition group-hover:text-orange-600">
                           {nextItem.title}
                         </h2>
                         {"thumbnail_url" in nextItem && nextItem.thumbnail_url ? (
@@ -306,7 +306,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                           />
                         ) : null}
                       </div>
-                      <p className="mt-2 text-sm leading-6 break-all text-navy-600">
+                      <p className="mt-2 text-sm leading-6 break-all text-gray-600">
                         {nextItem.short_summary}
                       </p>
                       {"action_line" in nextItem && nextItem.action_line ? (
@@ -331,7 +331,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
             </div>
           ) : null}
 
-          <div className={relatedItems.length > 0 ? "mt-6 border-t border-navy-100 pt-6 xl:hidden" : "hidden"}>
+          <div className={relatedItems.length > 0 ? "mt-6 border-t border-gray-200 pt-6 xl:hidden" : "hidden"}>
             <p className="text-sm font-semibold tracking-[0.16em] text-gray-400">관련 콘텐츠</p>
             <div className="mt-4 space-y-3">
               {relatedItems.length > 0 ? (
@@ -339,7 +339,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                   <Link
                     key={item.slug}
                     href={`/archive/${item.slug}`}
-                    className="block border-b border-navy-100 py-4 first:pt-0 last:border-b-0 last:pb-0 transition hover:opacity-80"
+                    className="block border-b border-gray-200 py-4 first:pt-0 last:border-b-0 last:pb-0 transition hover:opacity-80"
                   >
                     <div className="flex items-start gap-3">
                       <div className="min-w-0 flex-1">
@@ -347,7 +347,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                           {item.category}
                           {"sub_interest" in item && item.sub_interest ? ` · ${item.sub_interest}` : ""}
                         </p>
-                        <p className="mt-1 text-sm font-bold leading-5 text-navy-900">{item.title}</p>
+                        <p className="mt-1 text-sm font-bold leading-5 text-gray-900">{item.title}</p>
                       </div>
                       {"thumbnail_url" in item && item.thumbnail_url ? (
                         <ContentThumbnail
@@ -359,11 +359,11 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                         />
                       ) : null}
                     </div>
-                    <p className="mt-1 text-sm leading-5 text-navy-600">{item.short_summary}</p>
+                    <p className="mt-1 text-sm leading-5 text-gray-600">{item.short_summary}</p>
                   </Link>
                 ))
               ) : (
-                <p className="text-sm leading-7 text-navy-600">같은 관심사에서 이어서 볼 만한 콘텐츠를 준비 중입니다.</p>
+                <p className="text-sm leading-7 text-gray-600">같은 관심사에서 이어서 볼 만한 콘텐츠를 준비 중입니다.</p>
               )}
             </div>
           </div>
@@ -380,7 +380,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                   <Link
                     key={item.slug}
                     href={`/archive/${item.slug}`}
-                    className="block border-b border-navy-100 py-4 first:pt-0 last:border-b-0 last:pb-0 transition hover:opacity-80"
+                    className="block border-b border-gray-200 py-4 first:pt-0 last:border-b-0 last:pb-0 transition hover:opacity-80"
                   >
                     <div className="flex items-start gap-3">
                       <div className="min-w-0 flex-1">
@@ -388,7 +388,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                           {item.category}
                           {"sub_interest" in item && item.sub_interest ? ` · ${item.sub_interest}` : ""}
                         </p>
-                        <p className="mt-1 text-sm font-bold leading-5 text-navy-900">{item.title}</p>
+                        <p className="mt-1 text-sm font-bold leading-5 text-gray-900">{item.title}</p>
                       </div>
                       {"thumbnail_url" in item && item.thumbnail_url ? (
                         <ContentThumbnail
@@ -400,11 +400,11 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                         />
                       ) : null}
                     </div>
-                    <p className="mt-1 text-sm leading-5 text-navy-600">{item.short_summary}</p>
+                    <p className="mt-1 text-sm leading-5 text-gray-600">{item.short_summary}</p>
                   </Link>
                 ))
               ) : (
-                <p className="text-sm leading-7 text-navy-600">같은 관심사에서 이어서 볼 만한 콘텐츠를 준비 중입니다.</p>
+                <p className="text-sm leading-7 text-gray-600">같은 관심사에서 이어서 볼 만한 콘텐츠를 준비 중입니다.</p>
               )}
             </div>
           </div>

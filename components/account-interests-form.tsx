@@ -104,10 +104,10 @@ export function AccountInterestsForm({
     <form onSubmit={handleSubmit} className="grid gap-6">
       <div className="space-y-3">
         <div>
-          <h3 className="text-2xl font-bold tracking-[-0.03em] text-navy-900 md:text-[36px]">딱 3가지를 골라주세요.</h3>
-          <p className="mt-3 text-base leading-7 text-navy-700">신청 페이지와 같은 방식으로 지금 받고 있는 주제를 다시 고를 수 있습니다.</p>
+          <h3 className="text-2xl font-bold tracking-[-0.03em] text-gray-900 md:text-[36px]">딱 3가지를 골라주세요.</h3>
+          <p className="mt-3 text-base leading-7 text-gray-700">신청 페이지와 같은 방식으로 지금 받고 있는 주제를 다시 고를 수 있습니다.</p>
         </div>
-        <p className="inline-block rounded-full bg-navy-50 px-4 py-2 text-sm font-semibold text-navy-500">선택 수 {selectedInterests.length}/3</p>
+        <p className="inline-block rounded-full bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-600">선택 수 {selectedInterests.length}/3</p>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
@@ -121,8 +121,8 @@ export function AccountInterestsForm({
               className={cn(
                 "w-full rounded-[28px] border px-6 py-6 text-left transition duration-150",
                 active
-                  ? "border-orange-500 bg-orange-50/60 text-navy-900 shadow-[inset_0_0_0_1px_rgba(229,124,35,0.08)]"
-                  : "border-navy-100 bg-white text-navy-800 hover:border-navy-300 hover:bg-navy-50"
+                  ? "border-orange-500 bg-orange-50/60 text-gray-900 shadow-[inset_0_0_0_1px_rgba(229,124,35,0.08)]"
+                  : "border-gray-200 bg-white text-gray-800 hover:border-gray-400 hover:bg-gray-50"
               )}
             >
               <button
@@ -144,7 +144,7 @@ export function AccountInterestsForm({
 
               {active ? (
                 <div className="mt-5 border-t border-orange-100 pt-5">
-                  <span className="mb-3 block text-sm font-semibold text-navy-700">{interestLabels[interest]} 세부 관심</span>
+                  <span className="mb-3 block text-sm font-semibold text-gray-700">{interestLabels[interest]} 세부 관심</span>
                   <div className="relative">
                     <SelectInput
                       value={subInterests[interest] ?? ""}
@@ -163,7 +163,7 @@ export function AccountInterestsForm({
                         </option>
                       ))}
                     </SelectInput>
-                    <ChevronDown className="pointer-events-none absolute right-5 top-1/2 h-5 w-5 -translate-y-1/2 text-navy-500" aria-hidden="true" />
+                    <ChevronDown className="pointer-events-none absolute right-5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-600" aria-hidden="true" />
                   </div>
                 </div>
               ) : null}
@@ -187,8 +187,8 @@ export function AccountInterestsForm({
                 className={cn(
                   "min-h-14 rounded-3xl border px-5 py-4 text-left text-lg font-bold transition",
                   active
-                    ? "border-orange-500 bg-orange-50 text-navy-900 shadow-[inset_0_0_0_1px_rgba(229,124,35,0.08)]"
-                    : "border-navy-100 bg-white text-navy-800 hover:border-navy-300 hover:bg-navy-50"
+                    ? "border-orange-500 bg-orange-50 text-gray-900 shadow-[inset_0_0_0_1px_rgba(229,124,35,0.08)]"
+                    : "border-gray-200 bg-white text-gray-800 hover:border-gray-400 hover:bg-gray-50"
                 )}
               >
                 오전 {time}

@@ -114,7 +114,7 @@ export function LibraryBrowser({
             type="button"
             onClick={() => setActiveTab(tab.key as "favorites" | "shares")}
             className={`inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-md px-2.5 text-[0.8rem] font-medium transition ${
-              activeTab === tab.key ? "border border-navy-900 bg-navy-900 text-white" : "border border-gray-200 bg-white text-navy-800 hover:border-gray-300 hover:bg-gray-50"
+              activeTab === tab.key ? "border border-gray-900 bg-gray-900 text-white" : "border border-gray-200 bg-white text-gray-800 hover:border-gray-300 hover:bg-gray-50"
             }`}
           >
             {tab.label}
@@ -151,7 +151,7 @@ export function LibraryBrowser({
             <button
               type="button"
               onClick={() => setQuery(query.trim())}
-              className="inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-md bg-navy-900 px-2.5 text-[0.8rem] font-medium text-white transition hover:bg-navy-700"
+              className="inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-md bg-gray-900 px-2.5 text-[0.8rem] font-medium text-white transition hover:bg-gray-700"
             >
               검색
             </button>
@@ -160,7 +160,7 @@ export function LibraryBrowser({
       </div>
 
       {selectedSlugs.length > 0 ? (
-        <div className="fixed bottom-[23px] left-[23px] z-40 flex items-center gap-[12px] rounded-2xl border border-navy-700 bg-navy-900 px-[23px] py-[17px] shadow-[0_8px_40px_rgba(17,32,51,0.4)] sm:bottom-[138px]">
+        <div className="fixed bottom-[23px] left-[23px] z-40 flex items-center gap-[12px] rounded-2xl border border-gray-700 bg-gray-900 px-[23px] py-[17px] shadow-[0_8px_40px_rgba(17,32,51,0.4)] sm:bottom-[138px]">
           <p className="mr-[6px] text-[20px] font-semibold text-white">{selectedSlugs.length}개 선택</p>
           <ListenButton
             text={selectedListenText}
@@ -182,7 +182,7 @@ export function LibraryBrowser({
       {activeTab === "favorites" ? (
         <div className="grid gap-4 md:gap-5">
           {filteredFavorites.map((item) => (
-            <article key={item.id} className="border-b border-navy-100 pb-[18px] pt-[18px] md:rounded-xl md:border md:border-navy-100 md:bg-white md:p-5 md:shadow-none md:hover:shadow-md">
+            <article key={item.id} className="border-b border-gray-200 pb-[18px] pt-[18px] md:rounded-xl md:border md:border-gray-200 md:bg-white md:p-5 md:shadow-none md:hover:shadow-md">
               {/* 상단: 카테고리 + 날짜 */}
               <div className="mb-3 flex items-center gap-2 flex-wrap">
                 <input
@@ -190,13 +190,13 @@ export function LibraryBrowser({
                   checked={selectedSlugs.includes(item.slug)}
                   onChange={() => toggleSlug(item.slug)}
                   onClick={(e) => e.stopPropagation()}
-                  className="h-4 w-4 shrink-0 rounded border-navy-200 text-orange-500 focus:ring-orange-200"
+                  className="h-4 w-4 shrink-0 rounded border-gray-300 text-orange-500 focus:ring-orange-200"
                 />
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[item.category] ?? "bg-orange-50 border border-orange-200 text-orange-700"}`}>
                   {interestLabels[item.category] ?? item.category}
                   {item.sub_interest ? ` · ${item.sub_interest}` : ""}
                 </span>
-                <span className="ml-auto text-xs text-navy-400">
+                <span className="ml-auto text-xs text-gray-500">
                   {item.published_at ? formatDate(item.published_at) : "발행 전"}
                 </span>
               </div>
@@ -215,7 +215,7 @@ export function LibraryBrowser({
                       />
                     ) : null}
                     <div className="flex items-stretch gap-3">
-                      <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-all text-navy-900 transition group-hover:text-orange-600">
+                      <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-all text-gray-900 transition group-hover:text-orange-600">
                         {item.title}
                       </h2>
                       {item.thumbnail_url ? (
@@ -228,7 +228,7 @@ export function LibraryBrowser({
                         />
                       ) : null}
                     </div>
-                    <p className="mt-2 text-sm leading-6 break-all text-navy-600">
+                    <p className="mt-2 text-sm leading-6 break-all text-gray-600">
                       {item.short_summary}
                     </p>
                     {item.action_line ? (
@@ -274,7 +274,7 @@ export function LibraryBrowser({
               </div>
             </article>
           ))}
-          {filteredFavorites.length === 0 ? <div className="rounded-xl border border-dashed border-navy-200 bg-white p-6 text-navy-600">아직 담아둔 소식이 없습니다.</div> : null}
+          {filteredFavorites.length === 0 ? <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-gray-600">아직 담아둔 소식이 없습니다.</div> : null}
         </div>
       ) : (
         <div className="grid gap-4 md:gap-5">
@@ -284,11 +284,11 @@ export function LibraryBrowser({
               href={`/shared-briefs?share=${record.share_key}`}
               target="_blank"
               rel="noreferrer"
-              className="block border-b border-navy-100 pb-[18px] pt-[18px] transition hover:opacity-80 md:rounded-xl md:border md:border-navy-100 md:bg-white md:p-5 md:shadow-none md:hover:shadow-md md:hover:opacity-100"
+              className="block border-b border-gray-200 pb-[18px] pt-[18px] transition hover:opacity-80 md:rounded-xl md:border md:border-gray-200 md:bg-white md:p-5 md:shadow-none md:hover:shadow-md md:hover:opacity-100"
             >
               <div className="mb-3 flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-semibold text-orange-500">{formatDate(record.created_at)}</span>
-                <span className="ml-auto text-xs text-navy-400">조회 {record.view_count}회 · 댓글 {record.comment_count}개</span>
+                <span className="ml-auto text-xs text-gray-500">조회 {record.view_count}회 · 댓글 {record.comment_count}개</span>
               </div>
               <div className="space-y-2">
                 {record.items.map((item, index) => (
@@ -296,13 +296,13 @@ export function LibraryBrowser({
                     <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[item.category] ?? "bg-orange-50 border border-orange-200 text-orange-700"}`}>
                       {interestLabels[item.category] ?? item.category}
                     </span>
-                    <p className="text-sm font-bold leading-snug text-navy-900">{item.title}</p>
+                    <p className="text-sm font-bold leading-snug text-gray-900">{item.title}</p>
                   </div>
                 ))}
               </div>
             </a>
           ))}
-          {filteredShares.length === 0 ? <div className="rounded-xl border border-dashed border-navy-200 bg-white p-6 text-navy-600">아직 공유한 항목이 없습니다.</div> : null}
+          {filteredShares.length === 0 ? <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-gray-600">아직 공유한 항목이 없습니다.</div> : null}
         </div>
       )}
     </div>

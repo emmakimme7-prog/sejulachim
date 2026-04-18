@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 
 import { ProductBrowser } from "@/components/product-browser";
 import { PageIntro } from "@/components/ui/panel";
 import { getInterestConfig } from "@/lib/content/interest-config";
 import { PRODUCT_CATALOG } from "@/lib/products/catalog";
 import { attachAffiliateLinks } from "@/lib/products/coupang-partners";
+
+const getCachedAffiliateProducts = unstable_cache(
+  async () => attachAffiliateLinks(PRODUCT_CATALOG),
+  ["affiliate-product-catalog"],
+  { revalidate: 60 * 60 * 24 }
+);
 
 export const metadata: Metadata = {
   title: "상품",
@@ -23,7 +30,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const [{ category, subInterest, q }, interestConfig, affiliateProducts] = await Promise.all([
     searchParams,
     getInterestConfig(),
-    attachAffiliateLinks(PRODUCT_CATALOG)
+    getCachedAffiliateProducts()
   ]);
 
   return (

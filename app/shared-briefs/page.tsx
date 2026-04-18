@@ -72,12 +72,12 @@ export default async function SharedBriefsPage({ searchParams }: PageProps) {
         <div className="space-y-6">
           <div className="space-y-4">
             {nickname ? (
-              <div className="flex items-center gap-3 rounded-xl bg-navy-50 p-4">
+              <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-2xl shadow-sm">{avatar.emoji}</div>
                 <div>
                   <p className="text-xs font-semibold text-orange-500">공유해준 사람</p>
-                  <p className="mt-0.5 text-base font-bold text-navy-900">{nickname}</p>
-                  {sharedRecord?.message ? <p className="mt-1 text-sm leading-6 text-navy-700">{sharedRecord.message}</p> : null}
+                  <p className="mt-0.5 text-base font-bold text-gray-900">{nickname}</p>
+                  {sharedRecord?.message ? <p className="mt-1 text-sm leading-6 text-gray-700">{sharedRecord.message}</p> : null}
                 </div>
               </div>
             ) : null}
@@ -102,7 +102,7 @@ export default async function SharedBriefsPage({ searchParams }: PageProps) {
                 />
               ))}
               {items.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-navy-200 bg-white p-[18px] text-sm leading-6 text-navy-600">
+                <div className="rounded-xl border border-dashed border-gray-300 bg-white p-[18px] text-sm leading-6 text-gray-600">
                   아직 공유된 지난 소식을 불러오지 못했습니다. 지난 소식에서 다시 선택해 공유해보세요.
                 </div>
               ) : null}
@@ -134,7 +134,7 @@ export default async function SharedBriefsPage({ searchParams }: PageProps) {
 
         <aside className="xl:sticky xl:top-24 xl:self-start">
           <div className="flex flex-row gap-3 xl:flex-col">
-            <Link href="/" className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl border border-navy-200 bg-white px-5 py-3 text-base font-semibold text-navy-900 shadow-sm">
+            <Link href="/" className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl border border-gray-300 bg-white px-5 py-3 text-base font-semibold text-gray-900 shadow-sm">
               소식 더보기
             </Link>
             <Link href="/signup" className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl bg-orange-500 px-5 py-3 text-base font-semibold text-white shadow-sm">

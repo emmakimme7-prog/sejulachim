@@ -22,7 +22,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
       <Panel>
         <PanelBody>
         <SectionEyebrow>RESET PASSWORD</SectionEyebrow>
-        <h1 className="mt-3 text-4xl font-extrabold leading-[1.3] text-navy-900">비밀번호 재설정</h1>
+        <h1 className="mt-3 text-4xl font-extrabold leading-[1.3] text-gray-900">비밀번호 재설정</h1>
 
         {sent ? (
           <Notice tone="success" className="mt-6">입력하신 이메일로 안내를 보냈습니다</Notice>

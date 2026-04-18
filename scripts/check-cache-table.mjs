@@ -38,7 +38,18 @@ if (error) {
   products JSONB NOT NULL DEFAULT '[]',
   cached_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS coupang_deeplink_cache (
+  original_url TEXT PRIMARY KEY,
+  shorten_url TEXT NOT NULL,
+  cached_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL
 );`);
 } else {
-  console.log(`테이블 있음, 현재 캐시: ${count}개`);
+  const { count: deeplinkCount } = await supabase
+    .from("coupang_deeplink_cache")
+    .select("original_url", { count: "exact", head: true })
+    .catch(() => ({ count: 0 }));
+  console.log(`테이블 있음, 상품 캐시: ${count}개, 딥링크 캐시: ${deeplinkCount ?? 0}개`);
 }

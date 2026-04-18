@@ -73,10 +73,10 @@ export function ProductBrowser({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[28px] border border-navy-100 bg-white p-5 md:p-6">
+      <div className="rounded-[28px] border border-gray-200 bg-white p-5 md:p-6">
         <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
           <div>
-            <p className="text-sm font-semibold text-navy-500">카테고리</p>
+            <p className="text-sm font-semibold text-gray-600">카테고리</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {availableCategories.map((category) => (
                 <button
@@ -89,8 +89,8 @@ export function ProductBrowser({
                   className={cn(
                     "rounded-full px-4 py-2 text-sm font-semibold transition",
                     selectedCategory === category
-                      ? "bg-navy-900 text-white"
-                      : "border border-navy-200 bg-white text-navy-800"
+                      ? "bg-gray-900 text-white"
+                      : "border border-gray-300 bg-white text-gray-800"
                   )}
                 >
                   {category === "전체" ? "전체" : interestLabels[category] ?? category}
@@ -100,7 +100,7 @@ export function ProductBrowser({
 
             {selectedCategory !== "전체" ? (
               <>
-                <p className="mt-5 text-sm font-semibold text-navy-500">세부 카테고리</p>
+                <p className="mt-5 text-sm font-semibold text-gray-600">세부 카테고리</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {availableSubInterests.map((subInterest) => (
                     <button
@@ -123,12 +123,12 @@ export function ProductBrowser({
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-navy-500">상품 검색</p>
+            <p className="text-sm font-semibold text-gray-600">상품 검색</p>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="상품명, 설명, 키워드로 찾아보세요"
-              className="mt-3 min-h-14 w-full rounded-[24px] border border-navy-200 px-5 text-base text-navy-900 outline-none transition focus:border-orange-300"
+              className="mt-3 min-h-14 w-full rounded-[24px] border border-gray-300 px-5 text-base text-gray-900 outline-none transition focus:border-orange-300"
             />
             <p className="text-[10px] text-gray-400 text-center bg-gray-50 py-[4px] px-[10px] mt-[8px]" style={{ lineHeight: '14px' }}>{PRODUCT_DISCLOSURE}</p>
           </div>
@@ -137,28 +137,28 @@ export function ProductBrowser({
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filteredProducts.map((item) => (
-          <article key={item.id} className="rounded-[28px] border border-navy-100 bg-white p-6 shadow-[0_20px_44px_rgba(17,32,51,0.06)]">
+          <article key={item.id} className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-[0_20px_44px_rgba(17,32,51,0.06)]">
             <div className="flex flex-wrap gap-2">
               <span className="rounded-full bg-orange-50 px-3 py-1 text-sm font-semibold text-orange-600">
                 {interestLabels[item.category] ?? item.category}
               </span>
               {item.subInterest ? (
-                <span className="rounded-full bg-navy-50 px-3 py-1 text-sm font-semibold text-navy-600">{item.subInterest}</span>
+                <span className="rounded-full bg-gray-50 px-3 py-1 text-sm font-semibold text-gray-600">{item.subInterest}</span>
               ) : null}
-              <span className="rounded-full bg-sand px-3 py-1 text-sm font-semibold text-navy-600">{item.badge}</span>
+              <span className="rounded-full bg-sand px-3 py-1 text-sm font-semibold text-gray-600">{item.badge}</span>
             </div>
 
-            <h2 className="mt-4 text-2xl font-bold leading-8 text-navy-900">{item.title}</h2>
-            <p className="mt-3 text-base leading-7 text-navy-700">{item.description}</p>
-            <p className="mt-4 rounded-[20px] bg-navy-50 px-4 py-3 text-sm leading-6 text-navy-700">{item.reason}</p>
+            <h2 className="mt-4 text-2xl font-bold leading-8 text-gray-900">{item.title}</h2>
+            <p className="mt-3 text-base leading-7 text-gray-700">{item.description}</p>
+            <p className="mt-4 rounded-[20px] bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-700">{item.reason}</p>
 
             <div className="mt-5 flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-navy-500">추천 키워드 · {item.searchKeyword}</p>
+              <p className="text-sm font-semibold text-gray-600">추천 키워드 · {item.searchKeyword}</p>
               <Link
                 href={item.linkUrl}
                 target="_blank"
                 rel="noreferrer sponsored"
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-navy-900 px-5 text-sm font-semibold text-white transition hover:bg-navy-700"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-gray-900 px-5 text-sm font-semibold text-white transition hover:bg-gray-700"
               >
                 상품 보기
               </Link>
@@ -168,7 +168,7 @@ export function ProductBrowser({
       </div>
 
       {filteredProducts.length === 0 ? (
-        <div className="rounded-[24px] border border-dashed border-navy-200 bg-white p-6 text-base leading-7 text-navy-600">
+        <div className="rounded-[24px] border border-dashed border-gray-300 bg-white p-6 text-base leading-7 text-gray-600">
           조건에 맞는 상품이 아직 없습니다. 검색어를 바꾸거나 다른 카테고리를 선택해보세요.
         </div>
       ) : null}

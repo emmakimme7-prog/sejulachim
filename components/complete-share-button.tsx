@@ -269,8 +269,8 @@ export function CompleteShareButton({
         aria-label={buttonLabel || "공유하기"}
         className={`inline-flex flex-nowrap items-center justify-center rounded-2xl transition ${
           iconOnly
-            ? "h-10 w-10 rounded-full border border-navy-200 bg-white px-0 py-0 text-navy-700 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
-            : "h-10 gap-2 rounded-full border border-navy-200 bg-white px-3.5 text-sm font-semibold text-navy-800 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+            ? "h-10 w-10 rounded-full border border-gray-300 bg-white px-0 py-0 text-gray-700 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+            : "h-10 gap-2 rounded-full border border-gray-300 bg-white px-3.5 text-sm font-semibold text-gray-800 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
         } ${triggerClassName}`.trim()}
       >
         {iconOnly ? (
@@ -288,18 +288,18 @@ export function CompleteShareButton({
       </button>
 
       {isOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/45 px-5 py-8" onClick={() => setIsOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/45 px-5 py-8" onClick={() => setIsOpen(false)}>
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="share-modal-title"
-            className="w-full max-w-lg rounded-[32px] bg-white p-6 shadow-2xl ring-1 ring-navy-100 md:p-8"
+            className="w-full max-w-lg rounded-[32px] bg-white p-6 shadow-2xl ring-1 ring-gray-200 md:p-8"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold tracking-[0.18em] text-orange-500">공유</p>
-                <h2 id="share-modal-title" className="mt-1 text-base font-bold text-navy-900 sm:text-lg">
+                <h2 id="share-modal-title" className="mt-1 text-base font-bold text-gray-900 sm:text-lg">
                   {modalTitle}
                 </h2>
               </div>
@@ -307,7 +307,7 @@ export function CompleteShareButton({
                 type="button"
                 aria-label="공유 모달 닫기"
                 onClick={() => setIsOpen(false)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-navy-100 bg-white text-navy-700 transition hover:border-navy-200 hover:bg-navy-50"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -315,19 +315,19 @@ export function CompleteShareButton({
 
             <div className="mt-6 space-y-5">
               {!hideMessage && isLoggedIn ? (
-                <div className="rounded-[28px] bg-navy-50 p-5">
+                <div className="rounded-[28px] bg-gray-50 p-5">
                   <FieldLabel>선택 사항으로 함께 전달할 메세지를 작성해주세요</FieldLabel>
                   <textarea
                     value={shareMessage}
                     onChange={(event) => setShareMessage(event.target.value.slice(0, 50))}
                     placeholder="함께 전하고 싶은 말을 50자 안에서 남겨보세요"
-                    className="mt-3 min-h-24 w-full rounded-[24px] border border-navy-100 bg-white px-5 py-4 text-base text-navy-900 outline-none transition placeholder:text-navy-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                    className="mt-3 min-h-24 w-full rounded-[24px] border border-gray-200 bg-white px-5 py-4 text-base text-gray-900 outline-none transition placeholder:text-gray-500 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                   />
                   <FieldHint className="mt-2 text-right">{shareMessage.length}/50</FieldHint>
                 </div>
               ) : null}
 
-              <div className="rounded-[28px] bg-navy-50 p-5">
+              <div className="rounded-[28px] bg-gray-50 p-5">
                 <div className="grid grid-cols-3 gap-3">
                   <button
                     type="button"
@@ -336,7 +336,7 @@ export function CompleteShareButton({
                       void logShareEvent("copy_link", currentShareUrl);
                       await copyText(currentShareUrl, "공유 링크를 복사했습니다.");
                     }}
-                    className="flex min-h-16 flex-col items-center justify-center rounded-[24px] border border-navy-100 bg-white px-3 py-4 text-sm font-bold text-navy-900 transition hover:border-orange-200 hover:bg-orange-50"
+                    className="flex min-h-16 flex-col items-center justify-center rounded-[24px] border border-gray-200 bg-white px-3 py-4 text-sm font-bold text-gray-900 transition hover:border-orange-200 hover:bg-orange-50"
                   >
                     <Copy className="mb-2 h-5 w-5 text-orange-500" />
                     <span>URL</span>
@@ -351,7 +351,7 @@ export function CompleteShareButton({
                         setToast("공유 링크를 만들지 못했습니다.");
                       }
                     }}
-                    className="flex min-h-16 flex-col items-center justify-center rounded-[24px] border border-navy-100 bg-white px-3 py-4 text-sm font-bold text-navy-900 transition hover:border-orange-200 hover:bg-orange-50"
+                    className="flex min-h-16 flex-col items-center justify-center rounded-[24px] border border-gray-200 bg-white px-3 py-4 text-sm font-bold text-gray-900 transition hover:border-orange-200 hover:bg-orange-50"
                   >
                     <QrCode className="mb-2 h-5 w-5 text-orange-500" />
                     <span>QR</span>
@@ -372,31 +372,31 @@ export function CompleteShareButton({
       ) : null}
 
       {isQrOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-900/45 px-5 py-8" onClick={() => setIsQrOpen(false)}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/45 px-5 py-8" onClick={() => setIsQrOpen(false)}>
           <div
             role="dialog"
             aria-modal="true"
             aria-label="QR 코드 보기"
-            className="w-full max-w-sm rounded-[32px] bg-white p-6 shadow-2xl ring-1 ring-navy-100"
+            className="w-full max-w-sm rounded-[32px] bg-white p-6 shadow-2xl ring-1 ring-gray-200"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-4">
-              <h3 className="text-2xl font-bold text-navy-900">QR 코드</h3>
+              <h3 className="text-2xl font-bold text-gray-900">QR 코드</h3>
               <button
                 type="button"
                 aria-label="QR 모달 닫기"
                 onClick={() => setIsQrOpen(false)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-navy-100 bg-white text-navy-700 transition hover:border-navy-200 hover:bg-navy-50"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="mt-5 rounded-[28px] border border-navy-100 bg-navy-50 p-5">
+            <div className="mt-5 rounded-[28px] border border-gray-200 bg-gray-50 p-5">
               <div className="flex justify-center rounded-[24px] bg-white p-4">
                 {resolvedShareUrl ? (
                   <Image src={qrImageUrl} alt="세줄아침 공유 QR 코드" width={220} height={220} unoptimized className="h-[220px] w-[220px]" />
                 ) : (
-                  <div className="flex h-[220px] w-[220px] items-center justify-center text-sm font-semibold text-navy-500">
+                  <div className="flex h-[220px] w-[220px] items-center justify-center text-sm font-semibold text-gray-600">
                     {isCreatingLink ? "링크를 준비하고 있습니다." : "공유 링크를 준비하고 있습니다."}
                   </div>
                 )}

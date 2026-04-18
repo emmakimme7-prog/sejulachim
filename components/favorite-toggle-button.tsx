@@ -65,7 +65,7 @@ export function FavoriteToggleButton({
         className={className ?? `inline-flex h-11 w-11 items-center justify-center rounded-full border transition ${
           isFavorite
             ? "border-orange-200 bg-orange-50 text-orange-500"
-            : "border-navy-200 bg-white text-navy-500 hover:bg-navy-50"
+            : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
         }`}
       >
         <Heart className={className ? `h-4 w-4 ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"}` : `h-5 w-5 ${isFavorite ? "fill-current" : ""}`} />

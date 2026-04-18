@@ -260,11 +260,14 @@ function parseGoogleNewsRss(xml: string, type: SourceType): FeedItem[] {
     .filter((item): item is FeedItem => Boolean(item));
 }
 
-async function fetchGoogleNewsItems(query: string, date: string, type: SourceType) {
+async function fetchGoogleNewsItems(query: string, date: string, type: SourceType): Promise<{ items: FeedItem[]; allItems: FeedItem[] }> {
+  const prevDate2 = addDays(date, -2);
   const prevDate = addDays(date, -1);
   const nextDate = addDays(date, 1);
+  const nextDate2 = addDays(date, 2);
   // 날짜 연산자를 검색에서 제거 (Google News RSS에서 신뢰도 낮음).
-  // 대신 최근 48시간 내 기사만 허용하는 pubDate 필터로 대체.
+  // 대신 최근 ±2일 내 기사만 허용하는 pubDate 필터로 대체.
+  // 날짜 필터 0건 시 allItems(날짜 무관)로 폴백 가능하도록 함께 반환.
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
   const response = await fetch(url, {
     headers: {
@@ -278,16 +281,20 @@ async function fetchGoogleNewsItems(query: string, date: string, type: SourceTyp
   }
 
   const xml = await response.text();
-  const allowedDates = new Set([prevDate, date, nextDate]);
-  return parseGoogleNewsRss(xml, type).filter(
+  const allItems = parseGoogleNewsRss(xml, type);
+  const allowedDates = new Set([prevDate2, prevDate, date, nextDate, nextDate2]);
+  const items = allItems.filter(
     (item) => !item.publishedAt || allowedDates.has(formatKstDate(item.publishedAt))
   );
+  return { items, allItems };
 }
 
 async function collectSourceItemsForSubInterest(subInterest: string, date: string) {
   const queries = SUB_INTEREST_SOURCE_QUERIES[subInterest] ?? [{ query: subInterest, type: "news" as const }];
   const seen = new Set<string>();
   const collected: FeedItem[] = [];
+  // 날짜 필터 0건 시 폴백으로 쓸 날짜 무관 아이템 목록
+  const fallbackPool: FeedItem[] = [];
 
   const settled = await Promise.allSettled(
     queries.map((entry) => fetchGoogleNewsItems(entry.query, date, entry.type))
@@ -298,17 +305,31 @@ async function collectSourceItemsForSubInterest(subInterest: string, date: strin
       continue;
     }
 
-    for (const item of result.value) {
+    // 날짜 필터 통과 아이템 우선 수집
+    for (const item of result.value.items) {
       const key = `${item.title}|${item.link}`;
-      if (seen.has(key)) {
-        continue;
-      }
+      if (seen.has(key)) continue;
       seen.add(key);
       collected.push(item);
-      if (collected.length >= 3) {
-        return collected;
+      if (collected.length >= 3) return collected;
+    }
+
+    // 폴백 풀에 날짜 무관 아이템 적재 (중복 제외)
+    for (const item of result.value.allItems) {
+      const key = `${item.title}|${item.link}`;
+      if (!seen.has(key)) {
+        fallbackPool.push(item);
       }
     }
+  }
+
+  // 날짜 필터 결과가 부족하면 폴백 풀로 채움
+  for (const item of fallbackPool) {
+    const key = `${item.title}|${item.link}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    collected.push(item);
+    if (collected.length >= 3) return collected;
   }
 
   return collected;
@@ -370,9 +391,61 @@ async function buildRowFromSource(params: {
 }
 
 /**
+ * AI 요약 실패 시 원문 기반 최소 폴백 row 생성.
+ * 요약은 비어있지만 slug/category/sub_interest는 보장되어 25개 카운트가 유지됨.
+ */
+function buildFallbackRow(params: {
+  category: string;
+  subInterest: string;
+  item: FeedItem;
+  date: string;
+  index: number;
+}): Record<string, unknown> {
+  const { category, subInterest, item, date, index } = params;
+  const summaryType = SUMMARY_TYPE_ORDER[index % SUMMARY_TYPE_ORDER.length];
+  const categorySlug = CATEGORY_SLUG_MAP[category] ?? "brief";
+  const subInterestSlug = SUB_INTEREST_SLUG_MAP[subInterest] ?? `sub-${index + 1}`;
+  const slug = `brief-${date}-${categorySlug}-${subInterestSlug}-${index + 1}`;
+  const rawText = [
+    `원문 제목: ${item.title}`,
+    item.description ? `원문 요약: ${item.description}` : "",
+    `출처: ${item.sourceName}`,
+    item.publishedAt ? `발행 시각: ${item.publishedAt}` : ""
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return {
+    title: sanitizePlainText(item.title, 20),
+    category: getStoredCategoryForMainInterest(category),
+    sub_interest: subInterest,
+    source_name: sanitizePlainText(item.sourceName, 120),
+    source_url: item.link,
+    sources: [{ name: sanitizePlainText(item.sourceName, 120), url: item.link, type: item.type }],
+    raw_text: sanitizePlainText(rawText, 4000),
+    short_summary: sanitizePlainText(item.description ?? item.title, 300),
+    long_summary: sanitizePlainText(rawText, 4000),
+    action_line: "",
+    summary_type: summaryType,
+    approval_status: "approved",
+    ai_status: "fallback",
+    summary_status: "done",
+    published_at: item.publishedAt ?? buildPublishedAtFallback(date, index * 2),
+    slug,
+    thumbnail_url: null,
+    thumbnail_alt: null,
+    thumbnail_page_url: null,
+    thumbnail_author: null,
+    thumbnail_license: null,
+    updated_at: new Date().toISOString()
+  };
+}
+
+/**
  * 카테고리 1개에 대해 서브카테고리 전체(5개)를 병렬 처리.
  * 서브카테고리당 1개 기사 = 카테고리당 5개 기사.
  * summary_type은 서브카테고리 인덱스 기반으로 MUST/USEFUL/ACTION 순환 배정.
+ * RSS 0건이거나 AI 요약 실패 시에도 폴백 row를 생성하여 항상 5개 보장.
  */
 async function generateCategoryArticles(
   category: string,
@@ -387,23 +460,24 @@ async function generateCategoryArticles(
   );
 
   // 각 서브카테고리에서 1개 기사를 선택하고 빌드 (병렬)
+  // RSS 0건인 경우에도 buildTask를 건너뛰지 않고, 해당 케이스는 나중에 처리
   const buildTasks: Array<Promise<Record<string, unknown> | null>> = [];
 
   for (let i = 0; i < subInterests.length; i++) {
     const result = sourceResults[i];
-    if (result.status !== "fulfilled" || result.value.length === 0) continue;
+    const articleIndex = globalIndex + i;
+    const subInterest = subInterests[i];
+
+    // RSS 수집 자체 실패 → 스킵 (소스 없음)
+    if (result.status !== "fulfilled" || result.value.length === 0) {
+      console.warn("[rss-empty]", category, subInterest, "→ 수집된 기사 없음, 스킵");
+      continue;
+    }
 
     const item = result.value[0];
-    const articleIndex = globalIndex + i;
 
     buildTasks.push(
-      buildRowFromSource({
-        category,
-        subInterest: subInterests[i],
-        item,
-        date,
-        index: articleIndex
-      })
+      buildRowFromSource({ category, subInterest, item, date, index: articleIndex })
         .then((built) => {
           const row: Record<string, unknown> = { ...built };
           // 썸네일은 별도 repair-thumbnails cron에서 채움 (생성 속도 우선)
@@ -414,7 +488,11 @@ async function generateCategoryArticles(
           row.thumbnail_license = null;
           return row;
         })
-        .catch((err) => { console.error("[article-build-error]", category, subInterests[i], err); return null; })
+        .catch((err) => {
+          // AI 요약 실패 → 원문 기반 폴백 row로 대체 (null 반환 대신)
+          console.error("[article-build-error] AI 요약 실패, 폴백 row 사용:", category, subInterest, err);
+          return buildFallbackRow({ category, subInterest, item, date, index: articleIndex });
+        })
     );
   }
 

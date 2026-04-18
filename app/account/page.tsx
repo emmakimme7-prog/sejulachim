@@ -73,7 +73,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
 
   const authProvider = (profileUser as { auth_provider?: string } | null)?.auth_provider ?? "email";
   const AUTH_PROVIDER_BADGE: Record<string, { label: string; bg: string; text: string }> = {
-    email: { label: "이메일", bg: "bg-navy-100", text: "text-navy-700" },
+    email: { label: "이메일", bg: "bg-gray-100", text: "text-gray-700" },
     google: { label: "구글", bg: "bg-blue-100", text: "text-blue-700" },
     kakao: { label: "카카오", bg: "bg-yellow-100", text: "text-yellow-800" },
     naver: { label: "네이버", bg: "bg-green-100", text: "text-green-700" },
@@ -112,9 +112,9 @@ export default async function AccountPage({ searchParams }: PageProps) {
                 key: "profile",
                 label: "프로필",
                 content: (
-                  <SoftCard className="muted-surface space-y-5">
+                  <SoftCard className="space-y-5">
                     <div className="flex items-center gap-4">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl shadow-sm">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-50 text-3xl">
                         {avatarDataUrl ? (
                           <Image src={avatarDataUrl} alt="프로필 사진" width={64} height={64} className="h-16 w-16 rounded-full object-cover" unoptimized />
                         ) : (
@@ -122,13 +122,13 @@ export default async function AccountPage({ searchParams }: PageProps) {
                         )}
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold text-navy-900">내 프로필</h2>
-                        <p className="mt-2 text-base leading-7 text-navy-700">{nickname}</p>
+                        <h2 className="text-2xl font-bold text-gray-900">내 프로필</h2>
+                        <p className="mt-2 text-base leading-7 text-gray-600">{nickname}</p>
                         <span className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold ${providerBadge.bg} ${providerBadge.text}`}>{providerBadge.label} 계정</span>
                       </div>
                     </div>
                     <AccountProfileForm initialNickname={nickname} initialAvatarKey={avatarKey} initialFontSize={fontSize} initialAvatarDataUrl={avatarDataUrl} />
-                    <div className="flex justify-end border-t border-navy-100 pt-4">
+                    <div className="flex justify-end border-t border-gray-200 pt-4">
                       <form method="post" action="/api/auth/logout">
                         <Button type="submit" variant="outline" size="sm">로그아웃</Button>
                       </form>
@@ -140,10 +140,10 @@ export default async function AccountPage({ searchParams }: PageProps) {
                 key: "interests",
                 label: "관심사",
                 content: (
-                  <SoftCard className="muted-surface space-y-5">
+                  <SoftCard className="space-y-5">
                     <div>
-                      <h2 className="text-2xl font-bold text-navy-900">관심주제 설정</h2>
-                      <p className="mt-3 text-base leading-7 text-navy-700">지금 받고 있는 주제와 시간을 바꿀 수 있습니다.</p>
+                      <h2 className="text-2xl font-bold text-gray-900">관심주제 설정</h2>
+                      <p className="mt-3 text-base leading-7 text-gray-600">지금 받고 있는 주제와 시간을 바꿀 수 있습니다.</p>
                     </div>
                     <AccountInterestsForm
                       initialInterests={selectedInterests}
@@ -161,22 +161,22 @@ export default async function AccountPage({ searchParams }: PageProps) {
                 label: "비밀번호",
                 content: !user?.has_password ? (
                   status === "password-set" ? (
-                    <SoftCard className="muted-surface space-y-5">
+                    <SoftCard className="space-y-5">
                       <div>
-                        <h2 className="text-2xl font-bold text-navy-900">비밀번호 설정이 완료되었습니다.</h2>
-                        <p className="mt-3 text-base leading-7 text-navy-700">이제부터는 이메일 확인 없이 더 빠르게 로그인하실 수 있습니다.</p>
+                        <h2 className="text-2xl font-bold text-gray-900">비밀번호 설정이 완료되었습니다.</h2>
+                        <p className="mt-3 text-base leading-7 text-gray-600">이제부터는 이메일 확인 없이 더 빠르게 로그인하실 수 있습니다.</p>
                       </div>
                       <div className="flex flex-wrap gap-3">
-                        <Link href="/account" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-navy-900 px-5 py-3 text-base font-semibold text-white transition hover:bg-navy-700">
+                        <Link href="/account" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-base font-semibold text-white transition hover:bg-gray-800">
                           내 프로필 가기
                         </Link>
                       </div>
                     </SoftCard>
                   ) : (
-                    <SoftCard className="muted-surface space-y-5">
+                    <SoftCard className="space-y-5">
                       <div>
-                        <h2 className="text-2xl font-bold text-navy-900">다음부터 이메일 확인 없이 로그인하시겠어요?</h2>
-                        <p className="mt-3 text-base leading-7 text-navy-700">비밀번호를 설정하면 더 빠르게 로그인하실 수 있습니다.</p>
+                        <h2 className="text-2xl font-bold text-gray-900">다음부터 이메일 확인 없이 로그인하시겠어요?</h2>
+                        <p className="mt-3 text-base leading-7 text-gray-600">비밀번호를 설정하면 더 빠르게 로그인하실 수 있습니다.</p>
                       </div>
                       <form method="post" action="/api/auth/password/set" className="grid gap-4">
                         <Field>
@@ -188,10 +188,10 @@ export default async function AccountPage({ searchParams }: PageProps) {
                     </SoftCard>
                   )
                 ) : (
-                  <SoftCard className="muted-surface space-y-5">
+                  <SoftCard className="space-y-5">
                     <div>
-                      <h2 className="text-2xl font-bold text-navy-900">비밀번호 변경</h2>
-                      <p className="mt-3 text-base leading-7 text-navy-700">현재 비밀번호를 입력해주세요</p>
+                      <h2 className="text-2xl font-bold text-gray-900">비밀번호 변경</h2>
+                      <p className="mt-3 text-base leading-7 text-gray-600">현재 비밀번호를 입력해주세요</p>
                     </div>
                     <form method="post" action="/api/auth/password/change" className="grid gap-4">
                       <Field>
@@ -218,12 +218,12 @@ export default async function AccountPage({ searchParams }: PageProps) {
                           key: "service-terms",
                           label: "이용약관",
                           content: (
-                            <div className="max-h-[420px] overflow-y-auto rounded-[24px] border border-navy-100 bg-navy-50/60 p-5">
+                            <div className="max-h-[420px] overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-5">
                               <section className="space-y-3">
-                                <h3 className="text-xl font-bold text-navy-900">{TERMS_SECTIONS[0].title}</h3>
+                                <h3 className="text-xl font-bold text-gray-900">{TERMS_SECTIONS[0].title}</h3>
                                 <div className="space-y-2">
                                   {TERMS_SECTIONS[0].body.map((paragraph) => (
-                                    <p key={paragraph} className="text-base leading-7 text-navy-700">
+                                    <p key={paragraph} className="text-base leading-7 text-gray-600">
                                       {paragraph}
                                     </p>
                                   ))}
@@ -236,12 +236,12 @@ export default async function AccountPage({ searchParams }: PageProps) {
                           key: "privacy-policy",
                           label: "개인정보처리방침",
                           content: (
-                            <div className="max-h-[420px] overflow-y-auto rounded-[24px] border border-navy-100 bg-navy-50/60 p-5">
+                            <div className="max-h-[420px] overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-5">
                               <section className="space-y-3">
-                                <h3 className="text-xl font-bold text-navy-900">{TERMS_SECTIONS[1].title}</h3>
+                                <h3 className="text-xl font-bold text-gray-900">{TERMS_SECTIONS[1].title}</h3>
                                 <div className="space-y-2">
                                   {TERMS_SECTIONS[1].body.map((paragraph) => (
-                                    <p key={paragraph} className="text-base leading-7 text-navy-700">
+                                    <p key={paragraph} className="text-base leading-7 text-gray-600">
                                       {paragraph}
                                     </p>
                                   ))}

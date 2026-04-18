@@ -22,7 +22,7 @@ export function FeedProductCard({ product }: { product: ResolvedAffiliateProduct
             <div className="w-20 h-20 rounded-lg bg-white flex items-center justify-center text-xs text-gray-300 shrink-0">상품</div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm line-clamp-2 text-navy-900">{product.title}</p>
+            <p className="font-semibold text-sm line-clamp-2 text-gray-900">{product.title}</p>
             {price ? (
               <p className="font-bold text-base mt-1 text-orange-600">{price}원</p>
             ) : null}

@@ -125,17 +125,17 @@ export function AccountProfileForm({
               onClick={() => setAvatarKey(option.key)}
               className={cn(
                 "rounded-[24px] border px-4 py-4 text-center transition",
-                avatarKey === option.key ? "border-orange-500 bg-orange-50" : "border-navy-100 bg-white"
+                avatarKey === option.key ? "border-orange-500 bg-orange-50" : "border-gray-200 bg-white"
               )}
             >
               <div className="text-3xl">{option.emoji}</div>
-              <p className="mt-2 text-sm font-semibold text-navy-800">{option.label}</p>
+              <p className="mt-2 text-sm font-semibold text-gray-800">{option.label}</p>
             </button>
           ))}
           <label
             className={cn(
               "rounded-[24px] border px-4 py-4 text-center transition cursor-pointer",
-              avatarKey === "custom" ? "border-orange-500 bg-orange-50" : "border-navy-100 bg-white"
+              avatarKey === "custom" ? "border-orange-500 bg-orange-50" : "border-gray-200 bg-white"
             )}
           >
             <input
@@ -165,7 +165,7 @@ export function AccountProfileForm({
                 <span>📷</span>
               )}
             </div>
-            <p className="mt-2 text-sm font-semibold text-navy-800">사진 업로드</p>
+            <p className="mt-2 text-sm font-semibold text-gray-800">사진 업로드</p>
           </label>
         </div>
       </div>
@@ -183,7 +183,7 @@ export function AccountProfileForm({
               }}
               className={cn(
                 "min-h-14 rounded-3xl border px-5 py-4 text-left text-lg font-bold transition",
-                fontSize === option.value ? "border-orange-500 bg-orange-50 text-navy-900" : "border-navy-100 bg-white text-navy-800"
+                fontSize === option.value ? "border-orange-500 bg-orange-50 text-gray-900" : "border-gray-200 bg-white text-gray-800"
               )}
             >
               {option.label}
@@ -193,7 +193,7 @@ export function AccountProfileForm({
       </div>
 
       {status ? <Notice tone={status.includes("저장") && !status.includes("못") ? "success" : "error"}>{status}</Notice> : null}
-      <p className="text-sm leading-7 text-navy-500">공유 시, 내 프로필 정보가 노출됩니다.</p>
+      <p className="text-sm leading-7 text-gray-600">공유 시, 내 프로필 정보가 노출됩니다.</p>
 
       <Button type="submit" size="lg" fullWidth disabled={submitting}>
         {submitting ? "저장 중입니다..." : "내 프로필 저장하기"}

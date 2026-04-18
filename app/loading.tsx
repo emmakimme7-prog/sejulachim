@@ -5,7 +5,7 @@ export default function Loading() {
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="animate-pulse border-b border-navy-100 pb-[18px] pt-[18px] md:rounded-xl md:border md:border-navy-100 md:bg-white md:p-5"
+            className="animate-pulse border-b border-gray-200 pb-[18px] pt-[18px] md:rounded-xl md:border md:border-gray-200 md:bg-white md:p-5"
           >
             <div className="mb-3 flex items-center gap-2">
               <div className="h-4 w-4 rounded bg-gray-200" />

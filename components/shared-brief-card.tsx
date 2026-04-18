@@ -35,7 +35,7 @@ export function SharedBriefCard({ item }: { item: SharedBriefItem }) {
   const category = item.main_interest ?? "";
 
   return (
-    <div className="rounded-xl border border-navy-100 bg-white p-[18px] md:p-5">
+    <div className="rounded-xl border border-gray-200 bg-white p-[18px] md:p-5">
       <div className="mb-3 flex items-center gap-2 flex-wrap">
         {category ? (
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[category] ?? "bg-orange-50 border border-orange-200 text-orange-700"}`}>
@@ -43,17 +43,17 @@ export function SharedBriefCard({ item }: { item: SharedBriefItem }) {
             {item.sub_interest ? ` · ${item.sub_interest}` : ""}
           </span>
         ) : null}
-        <span className="ml-auto text-xs text-navy-400">
+        <span className="ml-auto text-xs text-gray-500">
           {item.published_at ? formatDate(item.published_at) : "발행 전"}
         </span>
       </div>
 
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="text-[1.45rem] font-bold leading-snug break-all text-navy-900">
+          <h2 className="text-[1.45rem] font-bold leading-snug break-all text-gray-900">
             {item.title}
           </h2>
-          <p className="mt-2 text-sm leading-6 break-all text-navy-600">
+          <p className="mt-2 text-sm leading-6 break-all text-gray-600">
             {item.short_summary}
           </p>
           {item.action_line ? (
@@ -79,15 +79,15 @@ export function SharedBriefCard({ item }: { item: SharedBriefItem }) {
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-navy-500 transition hover:text-navy-700"
+            className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-gray-600 transition hover:text-gray-700"
           >
             {expanded ? "접기" : "상세 보기"}
             <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
           </button>
           {expanded ? (
-            <div className="mt-3 space-y-3 border-t border-navy-100 pt-3">
+            <div className="mt-3 space-y-3 border-t border-gray-200 pt-3">
               {item.long_summary.split(/\n\n+/).map((paragraph, i) => (
-                <p key={i} className="text-sm leading-6 text-navy-700">{paragraph}</p>
+                <p key={i} className="text-sm leading-6 text-gray-700">{paragraph}</p>
               ))}
               <SourceDisplay sources={item.sources} />
             </div>

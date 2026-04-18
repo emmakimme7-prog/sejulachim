@@ -311,7 +311,7 @@ export function SiteHeader() {
       </div>
 
       {showSearch ? (
-        <div data-search-panel className="relative z-40 border-t border-navy-100 bg-white px-[16px] pb-[10px] pt-[10px] sm:px-[24px]">
+        <div data-search-panel className="relative z-40 border-t border-gray-100 bg-white px-[16px] pb-[10px] pt-[10px] sm:px-[24px]">
           <form onSubmit={handleHeaderSearchSubmit} className="mx-auto flex max-w-[1536px] items-center gap-[8px]">
             <div className="relative min-w-0 flex-1">
               <input
@@ -319,16 +319,16 @@ export function SiteHeader() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="지난 소식 검색"
-                className="h-[40px] w-full rounded-full border border-navy-200 pl-[16px] pr-[50px] text-[14px] text-navy-800 outline-none transition focus:border-orange-300"
+                className="h-[40px] w-full rounded-full border border-gray-200 pl-[16px] pr-[50px] text-[14px] text-gray-800 outline-none transition focus:border-orange-400"
               />
               <SpeechSearchButton
                 onTranscript={(transcript) => setSearchQuery(transcript)}
-                className="absolute right-[4px] top-1/2 min-h-[32px] min-w-[32px] -translate-y-1/2 rounded-full border-0 bg-transparent text-navy-700 hover:bg-navy-50"
+                className="absolute right-[4px] top-1/2 min-h-[32px] min-w-[32px] -translate-y-1/2 rounded-full border-0 bg-transparent text-gray-600 hover:bg-gray-100"
               />
             </div>
             <button
               type="submit"
-              className="inline-flex h-[40px] shrink-0 items-center justify-center rounded-full bg-navy-900 px-[16px] text-[14px] font-semibold text-white transition hover:bg-navy-700"
+              className="inline-flex h-[40px] shrink-0 items-center justify-center rounded-full bg-gray-900 px-[16px] text-[14px] font-semibold text-white transition hover:bg-gray-800"
             >
               검색
             </button>

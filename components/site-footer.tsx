@@ -24,8 +24,8 @@ export function SiteFooter() {
               className="h-[32px] w-[32px] shrink-0"
             />
             <div>
-              <p className="font-bold text-navy-900">세줄아침</p>
-              <p className="text-navy-500" style={{ fontSize: "12px" }}>매일 아침 3줄로 읽는 핵심 뉴스</p>
+              <p className="font-bold text-gray-900">세줄아침</p>
+              <p className="text-gray-600" style={{ fontSize: "12px" }}>매일 아침 3줄로 읽는 핵심 뉴스</p>
             </div>
           </div>
 

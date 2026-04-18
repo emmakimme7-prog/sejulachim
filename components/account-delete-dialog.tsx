@@ -35,23 +35,23 @@ export function AccountDeleteDialog({ hasPassword }: { hasPassword: boolean }) {
 
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/45 px-5 py-8"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/45 px-5 py-8"
           onClick={(event) => {
             if (event.target === event.currentTarget) {
               setOpen(false);
             }
           }}
         >
-          <div ref={dialogRef} className="w-full max-w-lg rounded-[32px] bg-white p-6 shadow-2xl ring-1 ring-navy-100 md:p-8">
-            <h3 className="text-xl font-bold text-navy-900">정말 탈퇴하시겠어요?</h3>
-            <div className="mt-3 space-y-2 text-base leading-7 text-navy-700">
+          <div ref={dialogRef} className="w-full max-w-lg rounded-[32px] bg-white p-6 shadow-2xl ring-1 ring-gray-200 md:p-8">
+            <h3 className="text-xl font-bold text-gray-900">정말 탈퇴하시겠어요?</h3>
+            <div className="mt-3 space-y-2 text-base leading-7 text-gray-700">
               <p>탈퇴를 신청하면 <strong className="text-red-600">30일 후</strong> 모든 데이터가 영구 삭제됩니다.</p>
-              <ul className="ml-1 list-disc space-y-1 pl-5 text-sm text-navy-600">
+              <ul className="ml-1 list-disc space-y-1 pl-5 text-sm text-gray-600">
                 <li>이메일, 비밀번호, 별명, 프로필 사진</li>
                 <li>관심 주제 설정, 즐겨찾기, 공유 링크</li>
                 <li>삭제된 데이터는 복구할 수 없습니다</li>
               </ul>
-              <p className="text-sm text-navy-500">30일 이내에 다시 로그인하면 탈퇴가 자동으로 취소됩니다.</p>
+              <p className="text-sm text-gray-600">30일 이내에 다시 로그인하면 탈퇴가 자동으로 취소됩니다.</p>
             </div>
 
             <form method="post" action="/api/account/delete" className="mt-5 grid gap-4">

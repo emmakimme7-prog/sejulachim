@@ -31,12 +31,12 @@ export default async function LoginPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="app-shell max-w-3xl py-8 md:section-block">
-      <Panel className="rounded-none border-0 bg-transparent shadow-none md:rounded-[32px] md:border md:border-navy-100/90 md:bg-white md:shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+    <div className="app-shell max-w-xl py-10 md:py-16">
+      <Panel className="rounded-none border-0 bg-transparent md:rounded-2xl md:border md:border-gray-200 md:bg-white">
         <PanelBody className="px-0 py-4 md:p-10">
         <SectionEyebrow>LOGIN</SectionEyebrow>
-        <h1 className="mt-3 text-4xl font-extrabold leading-[1.3] text-navy-900">로그인</h1>
-        <p className="mt-4 text-lg leading-8 text-navy-700">
+        <h1 className="mt-3 text-3xl font-extrabold leading-[1.25] tracking-[-0.03em] text-gray-900 md:text-[40px]">로그인</h1>
+        <p className="mt-4 text-base leading-7 text-gray-600">
           이메일만 입력하면 로그인 링크를 보내드립니다. 비밀번호를 설정해두셨다면 이메일과 비밀번호로 바로 로그인하실 수 있습니다.
         </p>
 
@@ -74,10 +74,10 @@ export default async function LoginPage({ searchParams }: PageProps) {
           <Notice tone="info" className="mt-6">이미 가입된 계정입니다. 아래에서 로그인해주세요.</Notice>
         ) : null}
         {verified && session && !session.hasPassword ? (
-          <SoftCard className="muted-surface mt-8 space-y-5">
+          <SoftCard className="mt-8 space-y-5">
             <div>
-              <h2 className="text-2xl font-bold text-navy-900">이메일 확인이 완료되었습니다.</h2>
-              <p className="mt-3 text-base leading-7 text-navy-700">다음부터 이메일 확인 없이 로그인하시겠어요?</p>
+              <h2 className="text-xl font-bold text-gray-900">이메일 확인이 완료되었습니다.</h2>
+              <p className="mt-3 text-sm leading-6 text-gray-600">다음부터 이메일 확인 없이 로그인하시겠어요?</p>
             </div>
             <form method="post" action="/api/auth/password/set" className="grid gap-4">
               <Field>
@@ -88,7 +88,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
                 <Button type="submit" size="lg">비밀번호 설정하기</Button>
                 <Link
                   href="/"
-                  className="inline-flex min-h-14 items-center justify-center rounded-full border border-navy-200 bg-white px-6 text-base font-bold text-navy-900 transition hover:border-navy-300 hover:bg-navy-50"
+                  className="inline-flex min-h-14 items-center justify-center rounded-full border border-gray-200 bg-white px-6 text-base font-bold text-gray-900 transition hover:border-gray-300 hover:bg-gray-50"
                 >
                   다음에 설정하기
                 </Link>
@@ -105,11 +105,11 @@ export default async function LoginPage({ searchParams }: PageProps) {
           naverEnabled={naverEnabled}
         />
 
-        <div className="mt-6 flex flex-wrap gap-4 text-sm font-semibold text-navy-700">
-          <Link href="/reset-password" className="underline underline-offset-4">
+        <div className="mt-6 flex flex-wrap gap-4 text-sm font-semibold text-gray-600">
+          <Link href="/reset-password" className="underline underline-offset-4 hover:text-gray-900">
             비밀번호 재설정
           </Link>
-          <Link href="/signup" className="underline underline-offset-4">
+          <Link href="/signup" className="underline underline-offset-4 hover:text-gray-900">
             아직 가입하지 않으셨나요?
           </Link>
         </div>

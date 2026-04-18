@@ -115,10 +115,10 @@ export function SharedComments({
   }
 
   return (
-    <div className="space-y-5 rounded-[28px] border border-navy-100 bg-white p-6">
+    <div className="space-y-5 rounded-[28px] border border-gray-200 bg-white p-6">
       <div>
         <p className="text-sm font-semibold tracking-[0.18em] text-orange-500">COMMENT</p>
-        <h2 className="mt-2 text-2xl font-extrabold tracking-[-0.04em] text-navy-900">댓글 남기기</h2>
+        <h2 className="mt-2 text-2xl font-extrabold tracking-[-0.04em] text-gray-900">댓글 남기기</h2>
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit}>
@@ -130,7 +130,7 @@ export function SharedComments({
         ) : (
           <div>
             <FieldLabel>이름</FieldLabel>
-            <div className="rounded-[24px] border border-navy-100 bg-navy-50 px-5 py-4 text-base font-semibold text-navy-900">{currentDisplayName}</div>
+            <div className="rounded-[24px] border border-gray-200 bg-gray-50 px-5 py-4 text-base font-semibold text-gray-900">{currentDisplayName}</div>
           </div>
         )}
 
@@ -140,7 +140,7 @@ export function SharedComments({
             value={content}
             onChange={(event) => setContent(event.target.value.slice(0, 50))}
             placeholder="댓글을 남겨주세요"
-            className="mt-3 min-h-28 w-full rounded-[24px] border border-navy-100 bg-white px-5 py-4 text-base text-navy-900 outline-none transition placeholder:text-navy-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+            className="mt-3 min-h-28 w-full rounded-[24px] border border-gray-200 bg-white px-5 py-4 text-base text-gray-900 outline-none transition placeholder:text-gray-500 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
           />
           <FieldHint className="mt-2 text-right">{content.length}/50</FieldHint>
         </div>
@@ -152,7 +152,7 @@ export function SharedComments({
 
       <div className="space-y-3">
         {orderedComments.map((comment) => (
-          <div key={comment.id} className="w-full rounded-[20px] bg-navy-50 p-4">
+          <div key={comment.id} className="w-full rounded-[20px] bg-gray-50 p-4">
             <div className="grid grid-cols-[minmax(0,1fr)_220px] items-start gap-4">
               <div
                 className="min-w-0"
@@ -160,12 +160,12 @@ export function SharedComments({
                   marginLeft: Math.max(0, comment.depth - 1) * 28
                 }}
               >
-                <div className={comment.depth > 1 ? "border-l border-navy-100 pl-4" : ""}>
-                  <p className="min-w-0 text-sm font-semibold text-navy-900">
+                <div className={comment.depth > 1 ? "border-l border-gray-200 pl-4" : ""}>
+                  <p className="min-w-0 text-sm font-semibold text-gray-900">
                     {comment.name}
-                    <span className="ml-2 text-[11px] font-normal text-navy-400">({comment.user_id ?? comment.id})</span>
+                    <span className="ml-2 text-[11px] font-normal text-gray-500">({comment.user_id ?? comment.id})</span>
                   </p>
-                  <p className="mt-2 text-base leading-7 text-navy-700">{comment.content}</p>
+                  <p className="mt-2 text-base leading-7 text-gray-700">{comment.content}</p>
                   {comment.depth < 3 ? (
                     <div className="mt-3">
                       <button
@@ -184,13 +184,13 @@ export function SharedComments({
                   ) : null}
                 </div>
               </div>
-              <p className="w-[220px] self-start text-right text-xs tabular-nums text-navy-500">
+              <p className="w-[220px] self-start text-right text-xs tabular-nums text-gray-600">
                 {new Date(comment.created_at).toLocaleString("ko-KR")}
               </p>
             </div>
             {replyingTo === comment.id ? (
               <form
-                className="mt-4 space-y-3 rounded-[18px] bg-white p-4 ring-1 ring-navy-100"
+                className="mt-4 space-y-3 rounded-[18px] bg-white p-4 ring-1 ring-gray-200"
                 style={{
                   marginLeft: Math.max(0, comment.depth - 1) * 28
                 }}
@@ -205,13 +205,13 @@ export function SharedComments({
                 {!currentDisplayName ? (
                   <TextInput value={replyName} onChange={(event) => setReplyName(event.target.value.slice(0, 30))} placeholder="이름을 입력해주세요" />
                 ) : (
-                  <div className="rounded-[18px] border border-navy-100 bg-navy-50 px-4 py-3 text-sm font-semibold text-navy-900">{currentDisplayName}</div>
+                  <div className="rounded-[18px] border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-900">{currentDisplayName}</div>
                 )}
                 <textarea
                   value={replyContent}
                   onChange={(event) => setReplyContent(event.target.value.slice(0, 50))}
                   placeholder="답글을 남겨주세요"
-                  className="min-h-24 w-full rounded-[18px] border border-navy-100 bg-white px-4 py-3 text-base text-navy-900 outline-none transition placeholder:text-navy-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                  className="min-h-24 w-full rounded-[18px] border border-gray-200 bg-white px-4 py-3 text-base text-gray-900 outline-none transition placeholder:text-gray-500 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                 />
                 <div className="flex items-center justify-between gap-3">
                   <FieldHint>{replyContent.length}/50</FieldHint>
@@ -228,7 +228,7 @@ export function SharedComments({
             ) : null}
           </div>
         ))}
-        {comments.length === 0 ? <div className="rounded-[20px] border border-dashed border-navy-200 bg-white p-4 text-sm text-navy-500">아직 댓글이 없습니다. 첫 댓글을 남겨보세요.</div> : null}
+        {comments.length === 0 ? <div className="rounded-[20px] border border-dashed border-gray-300 bg-white p-4 text-sm text-gray-600">아직 댓글이 없습니다. 첫 댓글을 남겨보세요.</div> : null}
       </div>
 
       {toast ? <Toast message={toast} /> : null}

@@ -5,11 +5,15 @@ import { cn } from "@/lib/utils";
 type NoticeTone = "success" | "error" | "info";
 
 const toneStyles: Record<NoticeTone, string> = {
-  success: "bg-emerald-50 text-emerald-700",
-  error: "bg-rose-50 text-rose-700",
-  info: "bg-navy-50 text-navy-700"
+  success: "bg-emerald-50 border-emerald-100 text-emerald-700",
+  error: "bg-rose-50 border-rose-100 text-rose-700",
+  info: "bg-gray-50 border-gray-200 text-gray-700"
 };
 
 export function Notice({ children, tone = "info", className }: { children: ReactNode; tone?: NoticeTone; className?: string }) {
-  return <p className={cn("rounded-2xl px-5 py-4 text-base leading-7", toneStyles[tone], className)}>{children}</p>;
+  return (
+    <p className={cn("rounded-xl border px-4 py-3 text-sm leading-6", toneStyles[tone], className)}>
+      {children}
+    </p>
+  );
 }

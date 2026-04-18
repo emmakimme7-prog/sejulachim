@@ -474,28 +474,6 @@ function mapRow(item) {
   };
 }
 
-async function clearExistingContentData() {
-  const { data: contentItems } = await supabase.from("content_items").select("id, slug");
-  const contentIds = (contentItems ?? []).map((row) => row.id);
-  const contentSlugs = (contentItems ?? []).map((row) => row.slug).filter(Boolean);
-
-  if (contentIds.length > 0) {
-    await supabase.from("favorites").delete().in("content_item_id", contentIds);
-  }
-  if (contentSlugs.length > 0) {
-    await supabase.from("favorites").delete().in("content_slug", contentSlugs);
-  }
-
-  await supabase.from("shared_comments").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  await supabase.from("shared_links").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  await supabase.from("notifications").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  await supabase.from("email_logs").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  await supabase.from("daily_pick_items").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  await supabase.from("daily_picks").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  await supabase.from("job_logs").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  await supabase.from("content_items").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-}
-
 async function seedSettings() {
   const now = new Date().toISOString();
   const settingsRows = [
@@ -526,7 +504,7 @@ async function seedSettings() {
 
 async function seedContent() {
   const rows = items.map(mapRow);
-  const { error } = await supabase.from("content_items").insert(rows);
+  const { error } = await supabase.from("content_items").upsert(rows, { onConflict: "slug" });
   if (error) throw error;
 
   const latestByType = {
@@ -551,6 +529,9 @@ async function seedContent() {
 
   if (dailyPickError) throw dailyPickError;
 
+  const { error: pickDeleteError } = await supabase.from("daily_pick_items").delete().eq("daily_pick_id", dailyPick.id);
+  if (pickDeleteError) throw pickDeleteError;
+
   const { error: dailyPickItemsError } = await supabase.from("daily_pick_items").insert([
     { daily_pick_id: dailyPick.id, content_item_id: latestByType.MUST.id, position: 1 },
     { daily_pick_id: dailyPick.id, content_item_id: latestByType.USEFUL.id, position: 2 },
@@ -561,7 +542,6 @@ async function seedContent() {
 }
 
 async function main() {
-  await clearExistingContentData();
   await seedSettings();
   await seedContent();
 

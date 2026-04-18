@@ -40,13 +40,13 @@ export function SourceDisplay({
 
     return (
       <div className={className}>
-        <p className="text-sm leading-6 text-navy-400">
+        <p className="text-sm leading-6 text-gray-500">
           출처:{" "}
           <a
             href={source.url}
             target="_blank"
             rel="noreferrer"
-            className="text-navy-400 underline underline-offset-2 hover:text-navy-600"
+            className="text-gray-500 underline underline-offset-2 hover:text-gray-600"
           >
             {source.name}
           </a>
@@ -57,7 +57,7 @@ export function SourceDisplay({
 
   return (
     <div className={cn("space-y-3", className)}>
-      <p className="text-sm font-semibold text-navy-500">출처</p>
+      <p className="text-sm font-semibold text-gray-600">출처</p>
 
       {!singleGroup ? (
         <div className="flex flex-wrap gap-2">
@@ -69,8 +69,8 @@ export function SourceDisplay({
               className={cn(
                 "rounded-full border px-4 py-2 text-sm font-semibold transition",
                 activeTab === tab
-                  ? "border-navy-900 bg-navy-900 text-white"
-                  : "border-navy-200 bg-white text-navy-700 hover:border-navy-300 hover:bg-navy-50"
+                  ? "border-gray-900 bg-gray-900 text-white"
+                  : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50"
               )}
             >
               {SOURCE_TYPE_LABELS[tab]}
@@ -89,7 +89,7 @@ export function SourceDisplay({
             href={source.url}
             target="_blank"
             rel="noreferrer"
-            className="block rounded-2xl border border-navy-100 bg-white px-4 py-3 text-base font-semibold text-navy-800 transition hover:border-navy-300 hover:bg-navy-50"
+            className="block rounded-2xl border border-gray-200 bg-white px-4 py-3 text-base font-semibold text-gray-800 transition hover:border-gray-400 hover:bg-gray-50"
           >
             {source.name}
           </a>

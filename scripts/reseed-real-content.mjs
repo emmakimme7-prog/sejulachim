@@ -58,7 +58,15 @@ function addDays(dateString, days) {
 }
 
 const TODAY_KST = process.env.CONTENT_SEED_DATE?.trim() || getKstDateString(new Date());
-const START_KST = addDays(TODAY_KST, -6);
+const START_KST = addDays(TODAY_KST, -1);
+const END_KST = addDays(TODAY_KST, 1);
+const PER_SUB_LIMIT = Math.max(1, Number.parseInt(process.env.CONTENT_PER_SUB_LIMIT ?? "3", 10) || 3);
+const REFRESH_ONLY_SUBS = new Set(
+  (process.env.CONTENT_REFRESH_SUBS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+);
 
 const STORED_CATEGORY_BY_MAIN_INTEREST = {
   건강: "건강",
@@ -136,7 +144,9 @@ const BLOCKED_SOURCE_NAMES = new Set([
   "브랜드경제신문",
   "디멘시아뉴스",
   "뉴스클립",
-  "뉴스초대석"
+  "뉴스초대석",
+  "cosmopolitan.co.kr",
+  "v.daum.net"
 ]);
 
 const MATCH_KEYWORDS = {
@@ -205,15 +215,84 @@ const TITLE_FALLBACKS = {
   친구: "친구 관계 정보"
 };
 
+const LOW_QUALITY_TITLE_PATTERNS = [
+  /어울림마당|업무협약|협약 체결|협력 체계 구축|발대식|설명회|개강|모집|공모|캠퍼스|평생교육원/u,
+  /교육 실시|행사 개최|간담회|대표단|미래포럼|세미나|기념식|체결/u,
+  /흡수합병|합병 결정|육성사업|숙박비|재단|공략 드라이브|베트남 경제|군민안전보험/u,
+  /닌텐도 스위치|트럼프|치아교정|연금보험/u,
+  /^\[.*\]$/,
+  /^\S+\s+\d+\s+종\s+출시$/u
+];
+
+const GENERIC_DISPLAY_PATTERNS = [
+  /정보$|정리$|핵심$|변화$|루틴$|점검$|지원$|생활$|기사입니다$/u,
+  /^제\s*\d+\s*회/u,
+  /^\d{4}\s*년/u
+];
+
+const REQUIRED_SIGNALS = {
+  혈압: [/혈압|고혈압|저혈압|혈관|심뇌혈관/u],
+  병원: [/병원|진료|의료|응급|환자|외래|응급실/u],
+  회사: [/직장|회사|근무|업무|노동|노조|직원|출근|재택/u],
+  가족: [/가족|부모|자녀|돌봄|양육|보호자/u],
+  부부: [/부부|배우자|남편|아내|결혼|혼인|이혼|가사/u],
+  친구: [/친구|우정|대인관계|인간관계/u],
+  취미: [/취미|여가|문화|전시|공연|여행|독서|사진|운동/u],
+  경제: [/물가|금리|환율|증시|주가|실적|고용|수출|내수|관세|유가|소비|무역/u],
+  정책: [/정책|제도|시행|개편|지원|발표|추진|행정/u],
+  사회: [/사회|안전|사건|사고|교육|복지|환경|노동|치안|재난/u],
+  해외: [/국제|미국|중국|일본|유럽|글로벌|세계|외신|중동|러시아|우크라이나|백악관|EU|G7/u],
+  "주요 뉴스": [/정부|국회|대통령|물가|금리|환율|수출|안전|재난|외교|선거|예산/u],
+  꿀팁: [/팁|꿀팁|요령|정리|보관|관리|활용|절약/u],
+  가전: [/가전|전자제품|냉장고|세탁기|청소기|에어컨|TV|건조기/u]
+};
+
+const BLOCKED_SIGNALS = {
+  혈압: [/협약|캠페인|교육 실시|행사|어울림|자가관리교실|교실 운영/u],
+  병원: [/AI 진료 강화|협약|세미나|포럼|출범/u],
+  회사: [/자회사|전량 양수|흡수합병|합병 결정|지분 취득|경영권/u],
+  가족: [/가족관계등록신고|리플릿|홍보물|캠페인|설명회|연예|스타|아이돌|고백|화보/u],
+  부부: [/드라마|예능|연예|스타|커플 화보|홍보/u],
+  친구: [/여자친구|남자친구|열애|결별|아이돌/u],
+  취미: [/업무협약|박람회 개막|설명회|사업 공모|라이프스타일로/u],
+  경제: [/연구소 부자|부자 보고서|자산가 설문|경제자유구역|원스톱 기업지원|투자유치/u],
+  정책: [/대중교통 정책 발표$/u, /업무협약|비전 선포|기념식/u],
+  사회: [/민관 협력 강화$/u, /업무협약|발대식|캠페인/u],
+  해외: [/경찰청장 직무대행|해외$|해외 진출|수출 지원/u, /국내 정치|국회|행안부/u],
+  "주요 뉴스": [/휴전협상.*등$|상승 등$|하락 등$/u, /브리핑|한눈에|요약 모음/u],
+  꿀팁: [/초여름 더위|오늘 날씨|주말 날씨|기온 상승/u],
+  가전: [/스타 앞세운|모델 발탁|팝업스토어|캠페인/u]
+};
+
+const MIN_QUALITY_BY_SUBINTEREST = {
+  혈압: 8,
+  병원: 7,
+  꿀팁: 7,
+  "주요 뉴스": 8,
+  경제: 8,
+  해외: 8,
+  가족: 8,
+  부부: 7,
+  회사: 7,
+  취미: 7,
+  친구: 7
+};
+
+const REQUIRE_TITLE_SIGNAL_SUBINTERESTS = new Set(["혈압", "병원", "꿀팁", "주요 뉴스", "경제", "정책", "해외", "가족", "부부", "회사", "취미", "친구"]);
+const REQUIRE_SPECIFIC_DISPLAY_TITLE = new Set(["혈압", "병원", "꿀팁", "주요 뉴스", "경제", "정책", "해외", "가족", "부부", "회사", "취미", "친구"]);
+
 function decodeHtml(value) {
   return String(value ?? "")
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number.parseInt(code, 10)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&nbsp;/g, " ")
+    .replace(/&middot;/g, "·")
     .replace(/&#x27;/g, "'");
 }
 
@@ -252,7 +331,7 @@ function parseItems(xml) {
 
       const publishedAt = new Date(pubDate).toISOString();
       const kstDate = formatKstDate(publishedAt);
-      if (kstDate < START_KST || kstDate > TODAY_KST) {
+      if (kstDate !== TODAY_KST) {
         return null;
       }
 
@@ -281,7 +360,7 @@ function normalizeNewsTitle(title, sourceName = "") {
     .replace(/\([^)]*\d+일[^)]*\)/g, " ")
     .replace(/\[[^\]]+\]/g, " ")
     .replace(/(뉴스1|네이트|뉴시스|연합뉴스|이데일리|머니투데이|아시아경제|매일경제|한국경제|조선일보|중앙일보|동아일보)\s*$/g, " ")
-    .replace(/[“”"'`]/g, "")
+    .replace(/[“”"'`‘’｢｣]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -297,6 +376,28 @@ function hasRelevantKeyword(item) {
   return keywords.some((keyword) => haystack.includes(keyword.toLowerCase()));
 }
 
+function matchesRequiredSignals(item, subInterest) {
+  const rules = REQUIRED_SIGNALS[subInterest] ?? [];
+  if (rules.length === 0) return true;
+  const haystack = normalizeSummarySource(`${item.title} ${item.description} ${item.sourceName}`);
+  return rules.some((pattern) => pattern.test(haystack));
+}
+
+function matchesRequiredTitleSignals(item, subInterest) {
+  if (!REQUIRE_TITLE_SIGNAL_SUBINTERESTS.has(subInterest)) return true;
+  const rules = REQUIRED_SIGNALS[subInterest] ?? [];
+  if (rules.length === 0) return true;
+  const title = normalizeSummarySource(item.title, item.sourceName);
+  return rules.some((pattern) => pattern.test(title));
+}
+
+function hasBlockedSignals(item, subInterest) {
+  const rules = BLOCKED_SIGNALS[subInterest] ?? [];
+  if (rules.length === 0) return false;
+  const haystack = normalizeSummarySource(`${item.title} ${item.description} ${item.sourceName}`);
+  return rules.some((pattern) => pattern.test(haystack));
+}
+
 function isUsableNewsItem(item) {
   const cleanedTitle = normalizeNewsTitle(item.title, item.sourceName);
   const cleanedDescription = normalizeSummarySource(item.description, item.sourceName);
@@ -305,7 +406,7 @@ function isUsableNewsItem(item) {
     return false;
   }
 
-  if (/nate|view\.nate|x\.com|brunch|aving|thekorea|twig24|russia-asean|frame-less|sisa-news|cj-ilbo|e-patentnews/i.test(item.sourceName)) {
+  if (/nate|view\.nate|x\.com|brunch|aving|thekorea|twig24|russia-asean|frame-less|sisa-news|cj-ilbo|e-patentnews|daum/i.test(item.sourceName)) {
     return false;
   }
 
@@ -365,7 +466,7 @@ function isUsableNewsItem(item) {
 }
 
 async function fetchGoogleNews(query) {
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(`${query} after:${START_KST} before:2026-04-08`)}&hl=ko&gl=KR&ceid=KR:ko`;
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(`${query} after:${START_KST} before:${END_KST}`)}&hl=ko&gl=KR&ceid=KR:ko`;
   const xml = execFileSync(
     "curl",
     ["-sL", "-A", "Mozilla/5.0 (compatible; SejulachimBot/1.0; +https://sejulachim.studiobyyou.kr)", url],
@@ -417,8 +518,53 @@ function isMeaningfullyDifferent(left, right) {
   return Boolean(a && b && a !== b);
 }
 
-function buildDisplayTitle(title, subInterest) {
-  const cleaned = normalizeSummarySource(title);
+function hasBalancedDelimiters(text) {
+  const pairs = [
+    ["(", ")"],
+    ["[", "]"],
+    ["“", "”"],
+    ["‘", "’"],
+    ['"', '"']
+  ];
+  return pairs.every(([open, close]) => {
+    const openCount = [...text].filter((ch) => ch === open).length;
+    const closeCount = [...text].filter((ch) => ch === close).length;
+    return open === close ? openCount % 2 === 0 : openCount === closeCount;
+  });
+}
+
+function isLowQualityTitle(text) {
+  const cleaned = normalizeSummarySource(text);
+  if (!cleaned) return true;
+  if (!hasBalancedDelimiters(cleaned)) return true;
+  if (cleaned.length < 8 || cleaned.length > 34) return true;
+  if (LOW_QUALITY_TITLE_PATTERNS.some((pattern) => pattern.test(cleaned))) return true;
+  if (/[·|]/u.test(cleaned) && cleaned.length < 16) return true;
+  if (/^[A-Za-z0-9\s]+$/.test(cleaned)) return true;
+  if (/^[^\p{L}\p{N}]+/u.test(cleaned)) return true;
+  if (/등$|인가$|위해$|위한$|해외$|고백$|발표$|강화$|지원$/u.test(cleaned)) return true;
+  return false;
+}
+
+function pickBestTitleCandidate(...values) {
+  for (const value of values) {
+    const clauses = normalizeSummarySource(value)
+      .split(/[:\-–—]|,\s*|…|\.\.\./)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    for (const clause of clauses) {
+      if (!isLowQualityTitle(clause)) {
+        return clause;
+      }
+    }
+  }
+
+  return "";
+}
+
+function buildDisplayTitle(title, description, subInterest, sourceName = "") {
+  const cleaned = normalizeSummarySource(title, sourceName);
   if (subInterest === "혜택" && /국민연금공단|보험료 지원|청년/u.test(cleaned)) {
     return "청년 보험료 지원";
   }
@@ -431,21 +577,18 @@ function buildDisplayTitle(title, subInterest) {
   if (subInterest === "연금" && /묵돈\s*6억|6억/u.test(cleaned)) {
     return "국민연금 수급";
   }
-  const clauses = cleaned
-    .split(/[:\-–—]|,\s*|…|\.\.\./)
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const preferred =
-    clauses.find((part) => part.length >= 9 && part.length <= 18 && !/오늘의|한눈에 보는/.test(part)) ??
-    clauses.find((part) => part.length >= 9 && part.length <= 22) ??
-    clauses[0] ??
-    cleaned;
+  const preferred = pickBestTitleCandidate(
+    normalizeSummarySource(title, sourceName),
+    normalizeSummarySource(description, sourceName),
+    cleaned
+  );
 
   if (
     preferred.length >= 8 &&
-    preferred.length <= 18 &&
+    preferred.length <= 24 &&
     !/이것|무조건|잡아라|뭐길래|이거/u.test(preferred) &&
-    !/^\d+\s*(주|조|개|분|원)\b/u.test(preferred)
+    !/^\d+\s*(주|조|개|분|원)\b/u.test(preferred) &&
+    !GENERIC_DISPLAY_PATTERNS.some((pattern) => pattern.test(preferred))
   ) {
     return preferred;
   }
@@ -464,6 +607,31 @@ function buildDisplayTitle(title, subInterest) {
   }
 
   return TITLE_FALLBACKS[subInterest] ?? sanitize(`${subInterest} 핵심 정리`, 24);
+}
+
+function scoreCandidateQuality(item, category, subInterest) {
+  let score = 0;
+  const cleanedTitle = normalizeSummarySource(item.title, item.sourceName);
+  const cleanedDescription = normalizeSummarySource(item.description, item.sourceName);
+  const titleKeywordHit = (MATCH_KEYWORDS[category]?.[subInterest] ?? []).some((keyword) => cleanedTitle.includes(keyword));
+  const descKeywordHit = (MATCH_KEYWORDS[category]?.[subInterest] ?? []).some((keyword) => cleanedDescription.includes(keyword));
+  const requiredSignalHit = matchesRequiredSignals({ ...item, title: cleanedTitle, description: cleanedDescription }, subInterest);
+  const blockedSignalHit = hasBlockedSignals({ ...item, title: cleanedTitle, description: cleanedDescription }, subInterest);
+
+  if (!isLowQualityTitle(cleanedTitle)) score += 5;
+  if (cleanedDescription.length >= 18) score += 2;
+  if (hasRelevantKeyword({ ...item, category, subInterest, title: cleanedTitle, description: cleanedDescription })) score += 4;
+  if (titleKeywordHit) score += 5;
+  if (!titleKeywordHit && descKeywordHit) score += 1;
+  if (requiredSignalHit) score += 4;
+  if (LOW_QUALITY_TITLE_PATTERNS.some((pattern) => pattern.test(cleanedTitle))) score -= 6;
+  if (/지역|시청|구청|군청|센터|교육청|지원청|캠퍼스|미래평생교육원/u.test(cleanedTitle)) score -= 3;
+  if (/개최|실시|체결|협약|발대식|모집/u.test(cleanedTitle)) score -= 3;
+  if (!titleKeywordHit && ["건강", "돈", "뉴스", "관계"].includes(category)) score -= 4;
+  if (!requiredSignalHit) score -= 7;
+  if (blockedSignalHit) score -= 8;
+
+  return score;
 }
 
 function getShortSummary(title, description, category, subInterest) {
@@ -499,7 +667,7 @@ function getShortSummary(title, description, category, subInterest) {
   }
 
   if (/어깨 통증|찌릿찌릿/u.test(cleanedTitle) && subInterest === "관절") {
-    return ensureSentence("어깨 통증을 단순 근육통으로 넘기지 말고 신호와 점검 기준을 살펴보자는 내용입니다");
+    return ensureSentence("어깨 통증의 원인과 증상 신호, 진료 판단 기준을 함께 다루는 내용입니다");
   }
 
   if (/연금/u.test(cleanedTitle) && /지원|혜택|보험료/u.test(cleanedTitle)) {
@@ -520,24 +688,24 @@ function getShortSummary(title, description, category, subInterest) {
 function getLongSummary(title, shortSummary, category, subInterest, summaryType) {
   const cleanedTitle = normalizeSummarySource(title);
   const categoryLineMap = {
-    건강: `${subInterest} 주제는 증상, 검사, 생활 습관 중 무엇을 먼저 점검해야 하는지가 중요합니다.`,
-    돈: `${subInterest} 주제는 금액, 시기, 대상, 서류처럼 실제 손익에 닿는 기준을 같이 봐야 합니다.`,
-    실생활: `${subInterest} 주제는 오늘 바로 적용할 수 있는 행동 변화가 있는지 중심으로 읽는 편이 좋습니다.`,
-    뉴스: `${subInterest} 주제는 큰 이슈보다 일정과 비용, 행정 변화처럼 생활 판단에 닿는 지점을 먼저 보는 편이 낫습니다.`,
-    관계: `${subInterest} 주제는 제도보다 실제 대화와 준비, 역할 변화로 옮겨 생각해보면 더 이해가 쉽습니다.`
+    건강: `${subInterest} 주제의 핵심은 증상, 검사, 생활 습관 중 기사에서 직접 언급한 변화입니다.`,
+    돈: `${subInterest} 주제의 핵심은 금액, 시기, 대상, 서류처럼 실제 손익에 닿는 기준입니다.`,
+    실생활: `${subInterest} 주제의 핵심은 기사에 나온 생활 변화와 바로 적용 가능한 방법입니다.`,
+    뉴스: `${subInterest} 주제의 핵심은 일정, 비용, 행정 변화처럼 생활 판단에 닿는 지점입니다.`,
+    관계: `${subInterest} 주제의 핵심은 실제 대화, 준비, 역할 변화로 이어지는 부분입니다.`
   };
 
   const lines = [
     shortSummary,
-    ensureSentence(`${cleanedTitle}를 단순 제목으로 넘기지 말고 실제로 무엇이 달라지는지 중심으로 읽어볼 필요가 있습니다`),
+    ensureSentence(`${cleanedTitle} 기사에서 다루는 핵심은 실제로 무엇이 달라지는지와 누구에게 영향이 가는지입니다`),
     ensureSentence(
       summaryType === "MUST"
-        ? "당장 확인해야 할 대상과 시기, 준비 항목이 무엇인지 먼저 짚어두는 편이 좋습니다"
-        : "생활 속에서 바로 바뀌는 행동과 준비 포인트가 무엇인지 나눠 보는 편이 좋습니다"
+        ? "본문은 대상, 시기, 준비 항목처럼 바로 판단에 필요한 정보를 중심으로 전합니다"
+        : "본문은 생활 속에서 바뀌는 행동과 준비 포인트를 나눠 전합니다"
     ),
     ensureSentence(categoryLineMap[category] ?? "누가 무엇을 바꾸거나 발표했는지와 내 생활에 어떤 영향이 있는지를 같이 봐야 합니다"),
-    ensureSentence("해당 소식이 내 상황과 직접 닿는다면 적용 시기와 대상, 준비할 부분을 같이 체크해두는 편이 좋습니다."),
-    ensureSentence("제목보다 실제 기준과 생활 변화, 준비할 부분을 함께 보는 데 의미가 있습니다.")
+    ensureSentence("요약은 제목 반복보다 적용 시기, 대상, 금액, 수치, 생활 변화처럼 기사 안의 구체 정보를 우선합니다."),
+    ensureSentence("따라서 이 글은 제목의 분위기보다 실제 기준과 변화 내용을 빠르게 파악하는 데 초점을 둡니다.")
   ];
 
   return sanitize(lines.join(" "), 1800);
@@ -550,11 +718,11 @@ function getActionLine(category, subInterest) {
       관절: "무릎이나 손목이 불편한 시간대를 먼저 체크해보세요.",
       음식: "한 끼만이라도 양과 시간을 같이 적어보세요.",
       상식: "바뀐 건강 정보가 내 생활에 바로 닿는지만 먼저 보세요.",
-      병원: "방문 전 준비물과 예약 시간을 한 번 더 확인해보세요."
+      병원: "준비물과 예약 시간처럼 방문 전 필요한 정보가 핵심입니다."
     },
     돈: {
       연금: "수급 시기와 준비 서류를 같이 메모해두세요.",
-      세금: "마감일과 제출 서류 한 가지만 먼저 확인해보세요.",
+      세금: "마감일과 제출 서류가 실제 신고 판단의 핵심입니다.",
       보험: "보장 범위와 빠지는 항목을 같이 비교해보세요.",
       주의: "오늘은 의심 문자나 전화 한 건만 더 조심해보세요.",
       혜택: "신청 조건과 기간을 먼저 체크해두세요."
@@ -564,12 +732,12 @@ function getActionLine(category, subInterest) {
       가전: "교체보다 관리로 해결되는 부분부터 먼저 보세요.",
       청소: "하루에 한 구역만 정리해도 충분합니다.",
       요리: "재료 하나만 바꿔도 생활이 편해질 수 있습니다.",
-      교통: "출발 전에 시간표나 우회 정보부터 확인해보세요."
+      교통: "시간표와 우회 정보가 이동 판단의 핵심입니다."
     },
     뉴스: {
       "주요 뉴스": "핵심 숫자나 일정 하나만 먼저 기억해두세요.",
       경제: "오늘은 물가나 금리처럼 생활비에 닿는 수치부터 보세요.",
-      정책: "누가 대상인지와 언제 바뀌는지만 먼저 확인해보세요.",
+      정책: "대상과 시행 시점이 정책 변화의 핵심입니다.",
       사회: "생활 동선에 직접 영향 있는지부터 체크해보세요.",
       해외: "국제 뉴스는 환율·유가처럼 생활에 닿는 부분부터 보세요."
     },
@@ -582,7 +750,7 @@ function getActionLine(category, subInterest) {
     }
   };
 
-  return table[category]?.[subInterest] ?? "오늘 내 생활에 바로 닿는 한 가지부터 확인해보세요.";
+  return table[category]?.[subInterest] ?? "오늘 생활에 직접 닿는 변화가 핵심입니다.";
 }
 
 function summarizeFromSource({ title, description, sourceName, category, subInterest, summaryType }) {
@@ -596,7 +764,7 @@ function summarizeFromSource({ title, description, sourceName, category, subInte
     3000
   );
 
-  const shortTitle = buildDisplayTitle(title, subInterest);
+  const shortTitle = buildDisplayTitle(title, description, subInterest, sourceName);
   const shortSummary = getShortSummary(title, description, category, subInterest);
   const longSummary = getLongSummary(title, shortSummary, category, subInterest, summaryType);
 
@@ -615,6 +783,10 @@ async function main() {
 
   for (const [category, subMap] of Object.entries(TAXONOMY)) {
     for (const [subInterest, queries] of Object.entries(subMap)) {
+      if (REFRESH_ONLY_SUBS.size > 0 && !REFRESH_ONLY_SUBS.has(subInterest)) {
+        continue;
+      }
+
       const seen = new Set();
       const candidates = [];
 
@@ -627,20 +799,25 @@ async function main() {
             seen.add(key);
             if (!isUsableNewsItem(item)) continue;
             if (!hasRelevantKeyword({ ...item, category, subInterest })) continue;
-            candidates.push(item);
+            if (!matchesRequiredSignals(item, subInterest)) continue;
+            if (!matchesRequiredTitleSignals(item, subInterest)) continue;
+            if (hasBlockedSignals(item, subInterest)) continue;
+            const qualityScore = scoreCandidateQuality(item, category, subInterest);
+            if (qualityScore < (MIN_QUALITY_BY_SUBINTEREST[subInterest] ?? 3)) continue;
+            candidates.push({ ...item, qualityScore });
           }
         } catch (error) {
           console.error(`[rss] ${category}/${subInterest}/${query}`, error instanceof Error ? error.message : error);
         }
 
-        if (candidates.length >= 3) {
+        if (candidates.length >= PER_SUB_LIMIT) {
           break;
         }
       }
 
       for (const [index, item] of candidates
-        .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-        .slice(0, 3)
+        .sort((a, b) => (b.qualityScore ?? 0) - (a.qualityScore ?? 0) || new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+        .slice(0, PER_SUB_LIMIT)
         .entries()) {
         const summaryType = summaryTypes[index % summaryTypes.length];
         const summarized = summarizeFromSource({
@@ -651,6 +828,13 @@ async function main() {
           subInterest,
           summaryType
         });
+
+        if (
+          REQUIRE_SPECIFIC_DISPLAY_TITLE.has(subInterest) &&
+          (summarized.title === TITLE_FALLBACKS[subInterest] || isLowQualityTitle(summarized.title))
+        ) {
+          continue;
+        }
 
         rows.push({
           slug: createSlug(category, subInterest, index),
@@ -687,54 +871,90 @@ async function main() {
     }
   }
 
-  const { error: pickItemsError } = await supabase.from("daily_pick_items").delete().not("id", "is", null);
-  if (pickItemsError) throw pickItemsError;
+  if (REFRESH_ONLY_SUBS.size > 0) {
+    const foundSubs = Array.from(new Set(rows.map((row) => row.sub_interest)));
+    const targetSubs = foundSubs;
+    const skippedSubs = Array.from(REFRESH_ONLY_SUBS).filter((sub) => !foundSubs.includes(sub));
 
-  const { error: picksError } = await supabase.from("daily_picks").delete().not("id", "is", null);
-  if (picksError) throw picksError;
+    if (targetSubs.length === 0) {
+      console.log(
+        JSON.stringify(
+          {
+            ok: true,
+            count: 0,
+            countByCategory: {},
+            todayCount: 0,
+            refreshedSubInterests: [],
+            skippedSubInterests: skippedSubs,
+            samples: []
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
 
-  const { error: contentError } = await supabase.from("content_items").delete().not("id", "is", null);
-  if (contentError) throw contentError;
-
-  if (rows.length > 0) {
-    const { error: insertError } = await supabase.from("content_items").insert(rows);
-    if (insertError) throw insertError;
   }
 
-  const todayRows = rows.filter((row) => formatKstDate(row.published_at) === TODAY_KST);
-  const groupedToday = {
-    MUST: todayRows.find((item) => item.summary_type === "MUST") ?? null,
-    USEFUL: todayRows.find((item) => item.summary_type === "USEFUL") ?? null,
-    ACTION: todayRows.find((item) => item.summary_type === "ACTION") ?? null
-  };
+  if (rows.length > 0) {
+    const { error: upsertError } = await supabase.from("content_items").upsert(rows, { onConflict: "slug" });
+    if (upsertError) throw upsertError;
+  }
 
-  const picked = Object.values(groupedToday).filter(Boolean);
-  if (picked.length > 0) {
-    const dailyPickId = crypto.randomUUID();
-    const { error: pickError } = await supabase.from("daily_picks").insert({
-      id: dailyPickId,
-      pick_date: TODAY_KST,
-      status: "ready",
-      created_at: new Date().toISOString(),
-      generated_at: new Date().toISOString()
-    });
-    if (pickError) throw pickError;
+  if (REFRESH_ONLY_SUBS.size === 0) {
+    const todayRows = rows.filter((row) => formatKstDate(row.published_at) === TODAY_KST);
+    const groupedToday = {
+      MUST: todayRows.find((item) => item.summary_type === "MUST") ?? null,
+      USEFUL: todayRows.find((item) => item.summary_type === "USEFUL") ?? null,
+      ACTION: todayRows.find((item) => item.summary_type === "ACTION") ?? null
+    };
 
-    const { data: insertedRows, error: insertedRowsError } = await supabase
-      .from("content_items")
-      .select("id, slug")
-      .in("slug", picked.map((item) => item.slug));
-    if (insertedRowsError) throw insertedRowsError;
+    const picked = Object.values(groupedToday).filter(Boolean);
+    if (picked.length > 0) {
+      const { data: existingPick, error: existingPickError } = await supabase
+        .from("daily_picks")
+        .upsert(
+          {
+            pick_date: TODAY_KST,
+            status: "ready",
+            generated_at: new Date().toISOString()
+          },
+          { onConflict: "pick_date" }
+        )
+        .select("id")
+        .single();
+      if (existingPickError) throw existingPickError;
 
-    const pickItems = (insertedRows ?? []).map((item, index) => ({
-      daily_pick_id: dailyPickId,
-      content_item_id: item.id,
-      position: index + 1
-    }));
+      const dailyPickId = existingPick.id ?? crypto.randomUUID();
+      const { error: pickDeleteError } = await supabase.from("daily_pick_items").delete().eq("daily_pick_id", dailyPickId);
+      if (pickDeleteError) throw pickDeleteError;
 
-    if (pickItems.length > 0) {
-      const { error: pickItemsInsertError } = await supabase.from("daily_pick_items").insert(pickItems);
-      if (pickItemsInsertError) throw pickItemsInsertError;
+      const { error: pickError } = await supabase.from("daily_picks").upsert({
+        id: dailyPickId,
+        pick_date: TODAY_KST,
+        status: "ready",
+        created_at: new Date().toISOString(),
+        generated_at: new Date().toISOString()
+      }, { onConflict: "pick_date" });
+      if (pickError) throw pickError;
+
+      const { data: insertedRows, error: insertedRowsError } = await supabase
+        .from("content_items")
+        .select("id, slug")
+        .in("slug", picked.map((item) => item.slug));
+      if (insertedRowsError) throw insertedRowsError;
+
+      const pickItems = (insertedRows ?? []).map((item, index) => ({
+        daily_pick_id: dailyPickId,
+        content_item_id: item.id,
+        position: index + 1
+      }));
+
+      if (pickItems.length > 0) {
+        const { error: pickItemsInsertError } = await supabase.from("daily_pick_items").insert(pickItems);
+        if (pickItemsInsertError) throw pickItemsInsertError;
+      }
     }
   }
 
@@ -745,13 +965,20 @@ async function main() {
     ])
   );
 
+  const todayCount = rows.filter((row) => formatKstDate(row.published_at) === TODAY_KST).length;
+
   console.log(
     JSON.stringify(
       {
         ok: true,
         count: rows.length,
         countByCategory,
-        todayCount: todayRows.length,
+        todayCount,
+        refreshedSubInterests: REFRESH_ONLY_SUBS.size > 0 ? Array.from(new Set(rows.map((row) => row.sub_interest))) : null,
+        skippedSubInterests:
+          REFRESH_ONLY_SUBS.size > 0
+            ? Array.from(REFRESH_ONLY_SUBS).filter((subInterest) => !rows.some((row) => row.sub_interest === subInterest))
+            : null,
         samples: rows.slice(0, 10).map((item) => ({
           title: item.title,
           category: item.category,

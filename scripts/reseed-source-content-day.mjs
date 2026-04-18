@@ -49,6 +49,13 @@ function getKstDateString(date) {
 }
 
 const TODAY_KST = process.env.CONTENT_SEED_DATE?.trim() || getKstDateString(new Date());
+const PER_SUB_LIMIT = Math.max(1, Number.parseInt(process.env.CONTENT_PER_SUB_LIMIT ?? "3", 10) || 3);
+const REFRESH_ONLY_SUBS = new Set(
+  (process.env.CONTENT_REFRESH_SUBS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+);
 
 const STORED_CATEGORY_BY_MAIN_INTEREST = {
   건강: "건강",
@@ -168,17 +175,37 @@ function sanitize(text, limit = 4000) {
 function decodeHtml(value) {
   return String(value ?? "")
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number.parseInt(code, 10)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&nbsp;/g, " ")
+    .replace(/&middot;/g, "·")
     .replace(/&#x27;/g, "'");
 }
 
 function stripHtml(value) {
   return decodeHtml(value).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function normalizeArticleText(text, limit = 900) {
+  return sanitize(decodeHtml(text), limit)
+    .replace(/^\|?\s*[가-힣A-Za-z\s]+=\s*[가-힣A-Za-z\s]+ 기자\s*\|?\s*/u, "")
+    .replace(/^\[[^\]]*?기자\]\s*/u, "")
+    .replace(/^\|?\s*[^|]{0,30}기자\s*\|?\s*/u, "")
+    .replace(/현재 Internet Explorer 8이하 버전을 이용중이십니다\.?/giu, " ")
+    .replace(/Internet Explorer\s*8\s*이하/giu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isNoiseText(text) {
+  return /무단 전재|재배포 금지|저작권|구독|광고|제보|메일|사진=|자료=|Copyright|All rights reserved|Internet Explorer|저작권자|기사원문|본문 링크|AI 요약|현황판|청사 전경|청와대 제공|등록번호|on-off line/iu.test(
+    text
+  );
 }
 
 function normalizeNewsTitle(title, sourceName = "") {
@@ -215,6 +242,7 @@ function parseItems(xml) {
       if (!title || !link || !pubDate) return null;
       const publishedAt = new Date(pubDate).toISOString();
       const kstDate = formatKstDate(publishedAt);
+      if (kstDate !== TODAY_KST) return null;
       return { title, link, description, sourceName, publishedAt, kstDate };
     })
     .filter(Boolean);
@@ -270,9 +298,9 @@ function extractParagraphs(html) {
 
   for (const match of matches) {
     const text = stripHtml(match[1]);
-    const normalized = sanitize(text, 600);
+    const normalized = normalizeArticleText(text, 600);
     if (!normalized || normalized.length < 28) continue;
-    if (/무단 전재|재배포 금지|기자|저작권자|구독|광고|제보|메일|저작권|무단전재|AI 요약|기사원문|본문 링크|기자명/u.test(normalized)) continue;
+    if (isNoiseText(normalized)) continue;
     if (seen.has(normalized)) continue;
     seen.add(normalized);
     paragraphs.push(normalized);
@@ -282,10 +310,12 @@ function extractParagraphs(html) {
 }
 
 function splitSentences(text) {
-  return sanitize(text, 3000)
+  return normalizeArticleText(text, 3000)
     .split(/(?<=[.!?]|다\.)\s+/u)
-    .map((part) => sanitize(part, 320))
-    .filter(Boolean);
+    .map((part) => normalizeArticleText(part, 320))
+    .filter((part) => part.length >= 35)
+    .filter((part) => !isNoiseText(part))
+    .filter((part) => !/[,:，]$/u.test(part));
 }
 
 function ensureSentence(text) {
@@ -297,12 +327,12 @@ function ensureSentence(text) {
 function buildDisplayTitle(title, subInterest) {
   const cleaned = normalizeNewsTitle(title);
   const parts = cleaned
-    .split(/[:\-–—]|,\s*|…|\.\.\./)
+    .split(/\s+[|｜]\s+|\s+-\s+/u)
     .map((part) => part.trim())
     .filter(Boolean)
-    .filter((part) => part.length >= 5 && part.length <= 26)
+    .filter((part) => part.length >= 8 && part.length <= 42)
     .filter((part) => !NOISY_PATTERNS.some((pattern) => pattern.test(part)));
-  return sanitize(parts[0] || cleaned || `${subInterest} 핵심`, 28);
+  return sanitize(parts[0] || cleaned || `${subInterest} 핵심`, 42);
 }
 
 function buildShortSummary(article) {
@@ -374,8 +404,8 @@ async function collectArticlesForSubInterest(category, subInterest, queries) {
   const seenUrls = new Set();
   const articles = [];
 
-  for (const query of queries.slice(0, 1)) {
-    const items = fetchGoogleNews(query).slice(0, 4);
+  for (const query of queries.slice(0, 3)) {
+    const items = fetchGoogleNews(query).slice(0, 8);
     for (const item of items) {
       if (BLOCKED_SOURCE_NAMES.has(item.sourceName)) continue;
       if (NOISY_PATTERNS.some((pattern) => pattern.test(item.title) || pattern.test(item.description) || pattern.test(item.sourceName))) continue;
@@ -431,37 +461,11 @@ async function collectArticlesForSubInterest(category, subInterest, queries) {
       if (!article.shortSummary || !article.longSummary) continue;
 
       articles.push(article);
-      if (articles.length >= 3) return articles;
+      if (articles.length >= PER_SUB_LIMIT) return articles;
     }
   }
 
   return articles;
-}
-
-async function clearExistingContentData() {
-  const { data: contentItems } = await supabase.from("content_items").select("id, slug");
-  const contentIds = (contentItems ?? []).map((row) => row.id);
-  const contentSlugs = (contentItems ?? []).map((row) => row.slug).filter(Boolean);
-
-  if (contentIds.length > 0) {
-    await supabase.from("favorites").delete().in("content_item_id", contentIds);
-  }
-  if (contentSlugs.length > 0) {
-    await supabase.from("favorites").delete().in("content_slug", contentSlugs);
-  }
-
-  const wipeAll = async (table) => {
-    await supabase.from(table).delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  };
-
-  await wipeAll("shared_comments");
-  await wipeAll("shared_links");
-  await wipeAll("notifications");
-  await wipeAll("email_logs");
-  await wipeAll("daily_pick_items");
-  await wipeAll("daily_picks");
-  await wipeAll("job_logs");
-  await wipeAll("content_items");
 }
 
 async function main() {
@@ -469,6 +473,9 @@ async function main() {
 
   for (const [category, subMap] of Object.entries(TAXONOMY)) {
     for (const [subInterest, queries] of Object.entries(subMap)) {
+      if (REFRESH_ONLY_SUBS.size > 0 && !REFRESH_ONLY_SUBS.has(subInterest)) {
+        continue;
+      }
       const articles = await collectArticlesForSubInterest(category, subInterest, queries);
       for (const [index, article] of articles.entries()) {
         rows.push({
@@ -503,45 +510,88 @@ async function main() {
     }
   }
 
-  await clearExistingContentData();
+  if (REFRESH_ONLY_SUBS.size > 0) {
+    const targetSubs = Array.from(new Set(rows.map((row) => row.sub_interest)));
+    const skippedSubs = Array.from(REFRESH_ONLY_SUBS).filter((subInterest) => !targetSubs.includes(subInterest));
+
+    if (targetSubs.length === 0) {
+      console.log(
+        JSON.stringify(
+          {
+            ok: true,
+            requestedDate: TODAY_KST,
+            generatedDate: TODAY_KST,
+            count: 0,
+            refreshedSubInterests: [],
+            skippedSubInterests: skippedSubs,
+            countBySubInterest: {},
+            samples: []
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+
+  }
 
   if (rows.length > 0) {
-    const { error: insertError } = await supabase.from("content_items").insert(rows);
-    if (insertError) throw insertError;
+    const { error: upsertError } = await supabase.from("content_items").upsert(rows, { onConflict: "slug" });
+    if (upsertError) throw upsertError;
   }
 
   const availableDates = [...new Set(rows.map((row) => formatKstDate(row.published_at)))].sort().reverse();
-  const targetDate = availableDates[0] ?? TODAY_KST;
-  const todayRows = rows.filter((row) => formatKstDate(row.published_at) === targetDate);
-  if (todayRows.length > 0) {
-    const dailyPickId = crypto.randomUUID();
-    const { error: pickError } = await supabase.from("daily_picks").insert({
-      id: dailyPickId,
-      pick_date: targetDate,
-      status: "ready",
-      created_at: new Date().toISOString(),
-      generated_at: new Date().toISOString()
-    });
-    if (pickError) throw pickError;
+    const targetDate = availableDates[0] ?? TODAY_KST;
+  if (REFRESH_ONLY_SUBS.size === 0) {
+    const todayRows = rows.filter((row) => formatKstDate(row.published_at) === targetDate);
+    if (todayRows.length > 0) {
+      const { data: existingPick, error: existingPickError } = await supabase
+        .from("daily_picks")
+        .upsert(
+          {
+            pick_date: targetDate,
+            status: "ready",
+            generated_at: new Date().toISOString()
+          },
+          { onConflict: "pick_date" }
+        )
+        .select("id")
+        .single();
+      if (existingPickError) throw existingPickError;
 
-    const { data: insertedRows, error: insertedRowsError } = await supabase
-      .from("content_items")
-      .select("id, slug, summary_type")
-      .in("slug", todayRows.map((item) => item.slug));
-    if (insertedRowsError) throw insertedRowsError;
+      const dailyPickId = existingPick.id ?? crypto.randomUUID();
+      const { error: pickDeleteError } = await supabase.from("daily_pick_items").delete().eq("daily_pick_id", dailyPickId);
+      if (pickDeleteError) throw pickDeleteError;
 
-    const picked = ["MUST", "USEFUL", "ACTION"]
-      .map((type) => (insertedRows ?? []).find((item) => item.summary_type === type))
-      .filter(Boolean)
-      .map((item, index) => ({
-        daily_pick_id: dailyPickId,
-        content_item_id: item.id,
-        position: index + 1
-      }));
+      const { error: pickError } = await supabase.from("daily_picks").upsert({
+        id: dailyPickId,
+        pick_date: targetDate,
+        status: "ready",
+        created_at: new Date().toISOString(),
+        generated_at: new Date().toISOString()
+      }, { onConflict: "pick_date" });
+      if (pickError) throw pickError;
 
-    if (picked.length > 0) {
-      const { error: pickItemsInsertError } = await supabase.from("daily_pick_items").insert(picked);
-      if (pickItemsInsertError) throw pickItemsInsertError;
+      const { data: insertedRows, error: insertedRowsError } = await supabase
+        .from("content_items")
+        .select("id, slug, summary_type")
+        .in("slug", todayRows.map((item) => item.slug));
+      if (insertedRowsError) throw insertedRowsError;
+
+      const picked = ["MUST", "USEFUL", "ACTION"]
+        .map((type) => (insertedRows ?? []).find((item) => item.summary_type === type))
+        .filter(Boolean)
+        .map((item, index) => ({
+          daily_pick_id: dailyPickId,
+          content_item_id: item.id,
+          position: index + 1
+        }));
+
+      if (picked.length > 0) {
+        const { error: pickItemsInsertError } = await supabase.from("daily_pick_items").insert(picked);
+        if (pickItemsInsertError) throw pickItemsInsertError;
+      }
     }
   }
 
@@ -561,6 +611,11 @@ async function main() {
         requestedDate: TODAY_KST,
         generatedDate: targetDate,
         count: rows.length,
+        refreshedSubInterests: REFRESH_ONLY_SUBS.size > 0 ? Array.from(new Set(rows.map((row) => row.sub_interest))) : null,
+        skippedSubInterests:
+          REFRESH_ONLY_SUBS.size > 0
+            ? Array.from(REFRESH_ONLY_SUBS).filter((subInterest) => !rows.some((row) => row.sub_interest === subInterest))
+            : null,
         countBySubInterest,
         samples: rows.slice(0, 8).map((item) => ({
           slug: item.slug,

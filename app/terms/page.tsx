@@ -22,7 +22,7 @@ export default function TermsPage() {
         {/* ── 이용약관 ── */}
         <div id="terms">
           <SoftCard className="p-7">
-            <h2 className="text-2xl font-bold text-navy-900">이용약관</h2>
+            <h2 className="text-2xl font-bold text-gray-900">이용약관</h2>
 
             <div className="mt-6 space-y-8">
               <Section title="제1조 (목적)">
@@ -75,8 +75,8 @@ export default function TermsPage() {
         {/* ── 개인정보처리방침 ── */}
         <div id="privacy">
           <SoftCard className="p-7">
-            <h2 className="text-2xl font-bold text-navy-900">개인정보처리방침</h2>
-            <p className="mt-3 text-base leading-8 text-navy-700">
+            <h2 className="text-2xl font-bold text-gray-900">개인정보처리방침</h2>
+            <p className="mt-3 text-base leading-8 text-gray-700">
               세줄아침(이하 &ldquo;서비스&rdquo;)은 개인정보보호법 제30조에 따라 이용자의 개인정보를 보호하고 관련 고충을 신속하게 처리하기 위하여 다음과 같이 개인정보처리방침을 수립·공개합니다.
             </p>
 
@@ -85,17 +85,17 @@ export default function TermsPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-navy-200">
-                        <th className="py-2 pr-4 font-semibold text-navy-900">구분</th>
-                        <th className="py-2 font-semibold text-navy-900">항목</th>
+                      <tr className="border-b border-gray-300">
+                        <th className="py-2 pr-4 font-semibold text-gray-900">구분</th>
+                        <th className="py-2 font-semibold text-gray-900">항목</th>
                       </tr>
                     </thead>
-                    <tbody className="text-navy-700">
-                      <tr className="border-b border-navy-100">
+                    <tbody className="text-gray-700">
+                      <tr className="border-b border-gray-200">
                         <td className="py-2 pr-4 font-medium">필수</td>
                         <td className="py-2">이메일 주소, 비밀번호</td>
                       </tr>
-                      <tr className="border-b border-navy-100">
+                      <tr className="border-b border-gray-200">
                         <td className="py-2 pr-4 font-medium">선택</td>
                         <td className="py-2">별명, 프로필 사진</td>
                       </tr>
@@ -123,14 +123,14 @@ export default function TermsPage() {
                 <div className="mt-3 overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-navy-200">
-                        <th className="py-2 pr-4 font-semibold text-navy-900">보존 항목</th>
-                        <th className="py-2 pr-4 font-semibold text-navy-900">보존 근거</th>
-                        <th className="py-2 font-semibold text-navy-900">보존 기간</th>
+                      <tr className="border-b border-gray-300">
+                        <th className="py-2 pr-4 font-semibold text-gray-900">보존 항목</th>
+                        <th className="py-2 pr-4 font-semibold text-gray-900">보존 근거</th>
+                        <th className="py-2 font-semibold text-gray-900">보존 기간</th>
                       </tr>
                     </thead>
-                    <tbody className="text-navy-700">
-                      <tr className="border-b border-navy-100">
+                    <tbody className="text-gray-700">
+                      <tr className="border-b border-gray-200">
                         <td className="py-2 pr-4">전자상거래 관련 기록</td>
                         <td className="py-2 pr-4">전자상거래법</td>
                         <td className="py-2">5년</td>
@@ -150,14 +150,14 @@ export default function TermsPage() {
                 <div className="mt-3 overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-navy-200">
-                        <th className="py-2 pr-4 font-semibold text-navy-900">수탁업체</th>
-                        <th className="py-2 pr-4 font-semibold text-navy-900">위탁 업무</th>
-                        <th className="py-2 font-semibold text-navy-900">보유 및 이용 기간</th>
+                      <tr className="border-b border-gray-300">
+                        <th className="py-2 pr-4 font-semibold text-gray-900">수탁업체</th>
+                        <th className="py-2 pr-4 font-semibold text-gray-900">위탁 업무</th>
+                        <th className="py-2 font-semibold text-gray-900">보유 및 이용 기간</th>
                       </tr>
                     </thead>
-                    <tbody className="text-navy-700">
-                      <tr className="border-b border-navy-100">
+                    <tbody className="text-gray-700">
+                      <tr className="border-b border-gray-200">
                         <td className="py-2 pr-4">Resend Inc.</td>
                         <td className="py-2 pr-4">이메일 발송</td>
                         <td className="py-2">위탁 계약 종료 시까지</td>
@@ -197,7 +197,7 @@ export default function TermsPage() {
 
               <Section title="8. 개인정보처리방침 변경">
                 <p>본 방침은 법령·정책 변경에 따라 개정될 수 있으며, 변경 시 이메일로 사전 고지합니다.</p>
-                <p className="mt-2 text-sm text-navy-500">시행일: 2026년 4월 9일</p>
+                <p className="mt-2 text-sm text-gray-600">시행일: 2026년 4월 9일</p>
               </Section>
             </div>
           </SoftCard>
@@ -210,8 +210,8 @@ export default function TermsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h3 className="text-lg font-bold text-navy-900">{title}</h3>
-      <div className="mt-2 space-y-2 text-base leading-8 text-navy-700">{children}</div>
+      <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+      <div className="mt-2 space-y-2 text-base leading-8 text-gray-700">{children}</div>
     </section>
   );
 }

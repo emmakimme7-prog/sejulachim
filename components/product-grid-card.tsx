@@ -31,7 +31,7 @@ export function ProductGridCard({ products }: { products: ResolvedAffiliateProdu
                   <div className="w-full h-full flex items-center justify-center text-xs text-gray-300">상품 이미지</div>
                 )}
               </div>
-              <p className="text-xs font-medium line-clamp-2 leading-tight text-navy-900">{product.title}</p>
+              <p className="text-xs font-medium line-clamp-2 leading-tight text-gray-900">{product.title}</p>
               {price ? (
                 <p className="text-xs text-orange-600 font-bold mt-1">{price}원</p>
               ) : null}

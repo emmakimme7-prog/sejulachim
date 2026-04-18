@@ -76,6 +76,15 @@ const SUB_INTEREST_KEYWORDS = {
   친구: ["friends talking", "friend meetup"]
 };
 
+const GENERIC_QUERY_TERMS = new Set([
+  "headline", "news", "report", "issue", "policy", "public", "service",
+  "relationship", "social", "connection", "activity", "teamwork",
+  "market", "trend", "routine", "information", "advice", "government",
+  "family", "home", "office", "world", "economy", "community", "hobby",
+  "friends", "transport", "daily", "life", "society", "city", "global",
+  "creative", "conversation", "update", "hacks", "lifestyle", "meeting"
+]);
+
 const STORAGE_BUCKET = "thumbnails";
 
 async function rehostToStorage(imageUrl, slug) {
@@ -116,49 +125,120 @@ function sanitize(text, limit = 120) {
   return String(text ?? "").replace(/\s+/g, " ").trim().slice(0, limit);
 }
 
+function tokenizeEnglish(text) {
+  return sanitize(text, 200)
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3);
+}
+
+function isGenericQuery(query) {
+  const tokens = tokenizeEnglish(query);
+  if (tokens.length === 0) return true;
+  const specificCount = tokens.filter((token) => !GENERIC_QUERY_TERMS.has(token)).length;
+  return specificCount === 0;
+}
+
 function fallbackQuery(item) {
   const subKeywords = item.sub_interest ? SUB_INTEREST_KEYWORDS[item.sub_interest] ?? [] : [];
   const categoryKeywords = CATEGORY_KEYWORDS[item.category] ?? ["daily lifestyle"];
-  return [...subKeywords, ...categoryKeywords].slice(0, 2);
+  const queries = [...subKeywords, ...categoryKeywords].filter((query) => !isGenericQuery(query));
+  if (item.category === "뉴스" || item.category === "관계") {
+    return [];
+  }
+  return queries.slice(0, 2);
 }
 
-async function aiQuery(item) {
+async function aiQueries(item) {
   if (!openai) return null;
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await openai.responses.create({
       model: "gpt-4o-mini",
-      temperature: 0.1,
-      messages: [
+      temperature: 0.2,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "thumbnail_queries",
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              queries: {
+                type: "array",
+                items: { type: "string" },
+                minItems: 1,
+                maxItems: 3
+              }
+            },
+            required: ["queries"]
+          }
+        }
+      },
+      input: [
         {
           role: "system",
           content: [
-            "You create concise English search queries for free editorial or stock photos.",
-            "Return only one line of plain text.",
-            "Use 2 to 6 English words.",
-            "Avoid brand names, punctuation, and quotes.",
-            "Prioritize a visually searchable scene that matches the article's specific topic over generic category images."
-          ].join(" ")
+            {
+              type: "input_text",
+              text: [
+                "Create English stock photo search queries for article thumbnails.",
+                "Prefer a concrete real-world scene from the article over abstract category images.",
+                "Do not use generic phrases like headline news, government policy, office teamwork, family at home, society issue, public information.",
+                "Use 2 to 6 English words per query.",
+                "Prefer visible nouns and scenes such as documents, buses, eyeglasses, classroom, hospital corridor, tax calculator, fraud call center warning.",
+                "Return 3 ranked queries from most specific to safer fallback."
+              ].join(" ")
+            }
+          ]
         },
         {
           role: "user",
           content: [
-            `title: ${sanitize(item.title, 160)}`,
-            `category: ${sanitize(item.category, 40)}`,
-            item.sub_interest ? `subInterest: ${sanitize(item.sub_interest, 80)}` : "",
-            item.short_summary ? `summary: ${sanitize(item.short_summary, 300)}` : ""
-          ].filter(Boolean).join("\n")
+            {
+              type: "input_text",
+              text: [
+                `title: ${sanitize(item.title, 160)}`,
+                `category: ${sanitize(item.category, 40)}`,
+                item.sub_interest ? `subInterest: ${sanitize(item.sub_interest, 80)}` : "",
+                item.short_summary ? `summary: ${sanitize(item.short_summary, 300)}` : ""
+              ].filter(Boolean).join("\n")
+            }
+          ]
         }
       ]
     });
-    const q = completion.choices[0]?.message?.content?.trim();
-    return q ? sanitize(q, 80) : null;
+    const raw = completion.output_text?.trim();
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const queries = Array.isArray(parsed?.queries) ? parsed.queries : [];
+    return queries
+      .map((query) => sanitize(query, 80))
+      .filter(Boolean)
+      .filter((query) => !isGenericQuery(query))
+      .slice(0, 3);
   } catch (e) {
     console.warn(`[ai-query] failed for "${item.title}":`, e.message);
     return null;
   }
 }
 
-async function searchPixabay(query) {
+function buildResultRelevance(entry, query, item) {
+  const tags = String(entry.tags ?? "").toLowerCase();
+  const pageUrl = String(entry.pageURL ?? "").toLowerCase();
+  const titleTokens = tokenizeEnglish(item.title);
+  const summaryTokens = tokenizeEnglish(item.short_summary);
+  const queryTokens = tokenizeEnglish(query);
+  const specificTokens = Array.from(new Set([...queryTokens, ...titleTokens.slice(0, 4), ...summaryTokens.slice(0, 4)]))
+    .filter((token) => !GENERIC_QUERY_TERMS.has(token));
+
+  const haystack = `${tags} ${pageUrl}`;
+  const matches = specificTokens.filter((token) => haystack.includes(token)).length;
+  const exactQueryBonus = queryTokens.length > 0 && queryTokens.every((token) => tags.includes(token)) ? 3 : 0;
+  return matches * 2 + exactQueryBonus;
+}
+
+async function searchPixabay(query, item) {
   if (!env.PIXABAY_API_KEY) return null;
   const url = new URL("https://pixabay.com/api/");
   url.searchParams.set("key", env.PIXABAY_API_KEY.trim());
@@ -172,8 +252,6 @@ async function searchPixabay(query) {
   if (!response.ok) return null;
 
   const data = await response.json();
-  // 검색어 토큰과 이미지 태그 관련성 점수 계산
-  const queryTokens = query.toLowerCase().split(/\s+/).filter(t => t.length >= 2);
   const scored = (data.hits ?? [])
     .filter((entry) => {
       if (!entry.largeImageURL && !entry.webformatURL) return false;
@@ -181,14 +259,12 @@ async function searchPixabay(query) {
       return !BLOCKED_PIXABAY_TERMS.some((term) => haystack.includes(term));
     })
     .map((entry) => {
-      const tags = (entry.tags ?? "").toLowerCase();
-      const matchCount = queryTokens.filter(t => tags.includes(t)).length;
-      return { entry, score: matchCount };
+      return { entry, score: buildResultRelevance(entry, query, item) };
     })
     .sort((a, b) => b.score - a.score);
 
   const hit = scored[0]?.entry;
-  if (!hit) return null;
+  if (!hit || (scored[0]?.score ?? 0) <= 0) return null;
 
   return {
     url: hit.webformatURL || hit.largeImageURL,
@@ -235,12 +311,14 @@ async function searchWikimediaCommons(query) {
 }
 
 async function findThumbnail(item) {
-  const ai = await aiQuery(item);
+  const ai = await aiQueries(item);
   const fallbacks = fallbackQuery(item);
-  const queries = [...new Set([ai, ...fallbacks].filter(Boolean))];
+  const queries = [...new Set([...(ai ?? []), ...fallbacks].filter(Boolean))];
+  if (queries.length === 0) return null;
 
   for (const q of queries) {
-    const result = (await searchPixabay(q)) || (await searchWikimediaCommons(q));
+    if (isGenericQuery(q)) continue;
+    const result = (await searchPixabay(q, item)) || (await searchWikimediaCommons(q));
     if (result) return { result, query: q };
   }
   return null;

@@ -12,6 +12,11 @@ const COUPANG_PRODUCT_SEARCH_PATH = "/v2/providers/affiliate_open_api/apis/opena
 // 캐시 TTL: 7일 신선, 14일 stale-if-error (API 호출 최소화)
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const CACHE_STALE_MAX_MS = 14 * 24 * 60 * 60 * 1000;
+const DEEPLINK_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const COUPANG_DEEPLINK_BATCH_SIZE = 20;
+
+// in-flight 요청 중복 방지: 같은 키워드로 동시에 여러 API 호출이 나가지 않도록
+const inflight = new Map<string, Promise<SearchProductEntry[]>>();
 
 type DeepLinkResponse = {
   rCode?: string;
@@ -53,6 +58,13 @@ type CacheRow = {
   expires_at: string;
 };
 
+type DeepLinkCacheRow = {
+  original_url: string;
+  shorten_url: string;
+  cached_at: string;
+  expires_at: string;
+};
+
 async function getProductCache(keyword: string): Promise<CacheRow | null> {
   try {
     const supabase = createAdminSupabaseClient();
@@ -82,6 +94,52 @@ async function setProductCache(keyword: string, products: SearchProductEntry[]):
   }
 }
 
+async function getDeepLinkCache(urls: string[]): Promise<Map<string, DeepLinkCacheRow>> {
+  if (urls.length === 0) {
+    return new Map();
+  }
+
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { data } = await supabase
+      .from("coupang_deeplink_cache")
+      .select("original_url, shorten_url, cached_at, expires_at")
+      .in("original_url", urls);
+
+    const now = Date.now();
+    const rows = (data ?? []) as DeepLinkCacheRow[];
+    return new Map(
+      rows
+        .filter((row) => row.original_url && row.shorten_url && new Date(row.expires_at).getTime() > now)
+        .map((row) => [row.original_url, row])
+    );
+  } catch {
+    return new Map();
+  }
+}
+
+async function setDeepLinkCache(entries: DeepLinkEntry[]): Promise<void> {
+  if (entries.length === 0) {
+    return;
+  }
+
+  try {
+    const supabase = createAdminSupabaseClient();
+    const now = new Date();
+    await supabase.from("coupang_deeplink_cache").upsert(
+      entries.map((entry) => ({
+        original_url: entry.originalUrl,
+        shorten_url: entry.shortenUrl,
+        cached_at: now.toISOString(),
+        expires_at: new Date(now.getTime() + DEEPLINK_CACHE_TTL_MS).toISOString()
+      })),
+      { onConflict: "original_url" }
+    );
+  } catch {
+    // 딥링크 캐시 저장 실패는 무시
+  }
+}
+
 // ─── Coupang API ──────────────────────────────────────────
 function getSignedDate() {
   const now = new Date();
@@ -102,40 +160,65 @@ function createAuthorizationHeader(method: string, path: string, accessKey: stri
   return `CEA algorithm=HmacSHA256, access-key=${accessKey}, signed-date=${signedDate}, signature=${signature}`;
 }
 
-async function requestAffiliateDeepLinks(urls: string[]) {
+async function requestAffiliateDeepLinks(urls: string[], cacheOnly = false) {
   const env = getOptionalServerEnv();
   const accessKey = env.COUPANG_PARTNERS_ACCESS_KEY?.trim();
   const secretKey = env.COUPANG_PARTNERS_SECRET_KEY?.trim();
+  const uniqueUrls = Array.from(new Set(urls.filter(Boolean)));
 
-  if (!accessKey || !secretKey || urls.length === 0) {
+  if (uniqueUrls.length === 0) {
     return [];
   }
 
-  const authorization = createAuthorizationHeader("POST", COUPANG_DEEPLINK_PATH, accessKey, secretKey);
-  const response = await fetch(`${COUPANG_API_DOMAIN}${COUPANG_DEEPLINK_PATH}`, {
-    method: "POST",
-    headers: {
-      Authorization: authorization,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ coupangUrls: urls }),
-    cache: "no-store",
-    signal: AbortSignal.timeout(3000),
-  });
+  const cachedMap = await getDeepLinkCache(uniqueUrls);
+  const cachedEntries: DeepLinkEntry[] = uniqueUrls
+    .map((url) => {
+      const cached = cachedMap.get(url);
+      if (!cached) return null;
+      return {
+        originalUrl: cached.original_url,
+        shortenUrl: cached.shorten_url
+      };
+    })
+    .filter((item): item is DeepLinkEntry => Boolean(item));
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Coupang deeplink request failed: ${response.status} ${body}`);
+  const missingUrls = uniqueUrls.filter((url) => !cachedMap.has(url));
+  if (missingUrls.length === 0 || cacheOnly || !accessKey || !secretKey) {
+    return cachedEntries;
   }
 
-  const payload = (await response.json()) as DeepLinkResponse;
-  if (payload.rCode && payload.rCode !== "0") {
-    throw new Error(`Coupang deeplink response error: ${payload.rCode} ${payload.rMessage ?? ""}`.trim());
-  }
+  const freshEntries: DeepLinkEntry[] = [];
+  for (let index = 0; index < missingUrls.length; index += COUPANG_DEEPLINK_BATCH_SIZE) {
+    const batch = missingUrls.slice(index, index + COUPANG_DEEPLINK_BATCH_SIZE);
+    const authorization = createAuthorizationHeader("POST", COUPANG_DEEPLINK_PATH, accessKey, secretKey);
+    const response = await fetch(`${COUPANG_API_DOMAIN}${COUPANG_DEEPLINK_PATH}`, {
+      method: "POST",
+      headers: {
+        Authorization: authorization,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ coupangUrls: batch }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+    });
 
-  return (payload.data ?? []).filter(
-    (item): item is DeepLinkEntry => Boolean(item.originalUrl && item.shortenUrl)
-  );
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Coupang deeplink request failed: ${response.status} ${body}`);
+    }
+
+    const payload = (await response.json()) as DeepLinkResponse;
+    if (payload.rCode && payload.rCode !== "0") {
+      throw new Error(`Coupang deeplink response error: ${payload.rCode} ${payload.rMessage ?? ""}`.trim());
+    }
+
+    freshEntries.push(
+      ...(payload.data ?? []).filter((item): item is DeepLinkEntry => Boolean(item.originalUrl && item.shortenUrl))
+    );
+  }
+  await setDeepLinkCache(freshEntries);
+
+  return [...cachedEntries, ...freshEntries];
 }
 
 export async function attachAffiliateLinks(products: ProductCatalogItem[]): Promise<ProductCatalogItem[]> {
@@ -223,7 +306,7 @@ async function requestTopSearchProducts(keyword: string, limit = 1, minScore = 1
 
     if (isWithinStaleWindow) {
       try {
-        const fresh = await callCoupangSearchAPI(keyword, limit * 3, accessKey!, secretKey!, 0);
+        const fresh = await deduplicatedSearch(keyword, limit * 3, accessKey!, secretKey!);
         await setProductCache(keyword, fresh);
         return fresh.filter((p) => scoreSearchResult(p, keyword) >= minScore);
       } catch {
@@ -239,7 +322,7 @@ async function requestTopSearchProducts(keyword: string, limit = 1, minScore = 1
 
   // 2. 캐시 없거나 완전히 만료 → API 호출
   try {
-    const fresh = await callCoupangSearchAPI(keyword, limit * 3, accessKey!, secretKey!, 0);
+    const fresh = await deduplicatedSearch(keyword, limit * 3, accessKey!, secretKey!);
     await setProductCache(keyword, fresh);
     return fresh.filter((p) => scoreSearchResult(p, keyword) >= minScore);
   } catch (error) {
@@ -298,6 +381,20 @@ async function callCoupangSearchAPI(
       return right.score - left.score || (left.item.rank ?? 9999) - (right.item.rank ?? 9999);
     })
     .map((entry) => entry.item);
+}
+
+/** 같은 키워드에 대한 동시 API 호출을 하나로 합침 */
+async function deduplicatedSearch(
+  keyword: string, limit: number, accessKey: string, secretKey: string
+): Promise<SearchProductEntry[]> {
+  const key = `${keyword}::${limit}`;
+  const existing = inflight.get(key);
+  if (existing) return existing;
+
+  const promise = callCoupangSearchAPI(keyword, limit, accessKey, secretKey, 0)
+    .finally(() => inflight.delete(key));
+  inflight.set(key, promise);
+  return promise;
 }
 
 export async function resolveRepresentativeProduct(product: ProductCatalogItem): Promise<ResolvedAffiliateProduct | null> {
@@ -394,18 +491,24 @@ export async function fetchPopularProductsForContent(
   contentTitle?: string | null,
   cacheOnly = false
 ): Promise<ResolvedAffiliateProduct[]> {
-  // 1순위: 기사 제목에서 명사 키워드 추출 (3~6글자 한글 단어만 — 2글자는 너무 일반적)
+  // 1순위: 기사 제목에서 명사 키워드 추출 (2~6글자 한글 단어 + 영문/한영 브랜드명)
   const titleKeywords: string[] = [];
   if (contentTitle?.trim()) {
-    const nouns = contentTitle.match(/[가-힣]{3,6}/g) ?? [];
+    // 한글 2~6글자 + 영문 브랜드명(2글자 이상)
+    const koreanNouns = contentTitle.match(/[가-힣]{2,6}/g) ?? [];
+    const brandNames = contentTitle.match(/[A-Za-z가-힣]{2,}/g)?.filter((w) => /[A-Za-z]/.test(w)) ?? [];
+    const allNouns = [...brandNames, ...koreanNouns];
     const stopWords = new Set([
-      // 일반 대명사/부사
+      // 일반 대명사/부사/조사 (2글자 포함)
       "이것", "그것", "저것", "하는", "있는", "없는", "되는", "이번", "오늘", "내일", "어제",
       "우리", "이런", "그런", "저런", "아직", "정도", "이상", "이하", "매우", "가장", "모든",
       "때문", "위해", "대한", "통해", "따른", "관련", "대해", "까지", "부터", "에서",
+      "하고", "에서", "으로", "에게", "한다", "된다", "있다", "없다", "이다", "같은",
+      "또한", "함께", "대로", "만큼", "처럼", "보다", "역시", "아주", "매번", "거의",
       // 뉴스 동사/명사
       "대폭", "인상", "추진", "배경", "돌파", "발표", "시작", "예정", "확인", "변경",
       "개선", "강화", "논란", "문제", "현황", "전망", "분석", "지속", "가능", "필요",
+      "연속", "수상", "부문", "산업", "뛰어난", "성과", "권위",
       // 시간/콘텐츠 유형
       "월부터", "올해", "내년", "최근", "시대", "방법", "주요", "핵심", "달라진",
       "활용법", "가지", "알아보", "꿀팁", "정리", "소개", "비교", "추천", "리뷰",
@@ -416,7 +519,7 @@ export async function fetchPopularProductsForContent(
       "지원사업", "지원금", "모집", "신청", "접수", "공고", "대상",
       "정부", "사업", "제도", "시행", "실시", "개정", "확대", "축소",
     ]);
-    for (const w of nouns) {
+    for (const w of allNouns) {
       if (!stopWords.has(w) && !titleKeywords.includes(w)) titleKeywords.push(w);
     }
   }
@@ -427,8 +530,12 @@ export async function fetchPopularProductsForContent(
   // 뉴스/정치 카테고리는 제목 키워드가 상품 매칭에 부적합하므로 폴백만 사용
   const skipTitleCategories = new Set(["뉴스", "관계"]);
   const useTitleKeywords = !skipTitleCategories.has(category);
+  // dev 환경에서는 API 호출 방지
+  const isDev = process.env.NODE_ENV === "development";
+  const effectiveCacheOnly = cacheOnly || isDev;
+
   // 제목 키워드는 관련성 필터 적용 (minScore=3), 카테고리 키워드는 신뢰 (minScore=0)
-  const titleKws = useTitleKeywords ? titleKeywords.slice(0, 3) : [];
+  const titleKws = useTitleKeywords ? titleKeywords.slice(0, 4) : [];
   const fallbackKws = [...subKeywords, ...catKeywords].filter((k): k is string => Boolean(k?.trim()));
 
   const results: ResolvedAffiliateProduct[] = [];
@@ -456,7 +563,7 @@ export async function fetchPopularProductsForContent(
   for (const keyword of titleKws) {
     if (results.length >= limit) break;
     try {
-      const items = await requestTopSearchProducts(keyword, limit * 3, 3, cacheOnly);
+      const items = await requestTopSearchProducts(keyword, limit * 3, 3, effectiveCacheOnly);
       addItems(items, keyword);
     } catch {
       // 실패 시 다음 키워드 시도
@@ -467,7 +574,7 @@ export async function fetchPopularProductsForContent(
   for (const keyword of fallbackKws) {
     if (results.length >= limit) break;
     try {
-      const items = await requestTopSearchProducts(keyword, limit * 3, 0, cacheOnly);
+      const items = await requestTopSearchProducts(keyword, limit * 3, 0, effectiveCacheOnly);
       addItems(items, keyword);
     } catch {
       // 실패 시 다음 키워드 시도
@@ -480,7 +587,7 @@ export async function fetchPopularProductsForContent(
   if (finalResults.length > 0) {
     try {
       const urls = finalResults.map((p) => p.linkUrl);
-      const deepLinks = await requestAffiliateDeepLinks(urls);
+      const deepLinks = await requestAffiliateDeepLinks(urls, effectiveCacheOnly);
       const linkMap = new Map(deepLinks.map((d) => [d.originalUrl, d.shortenUrl]));
       for (const product of finalResults) {
         product.linkUrl = linkMap.get(product.linkUrl) ?? product.linkUrl;

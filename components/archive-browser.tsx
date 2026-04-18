@@ -200,9 +200,9 @@ export function ArchiveBrowser({
     return subInterestOptions[selectedTopic] ?? [];
   }, [selectedTopic, subInterestOptions]);
 
-  const filteredItems = useMemo(() => {
+  const baseFilteredItems = useMemo(() => {
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-    const filtered = items.filter((item) => {
+    return items.filter((item) => {
       const matchesTopic = selectedTopic === ALL_TOPICS || item.main_interest === selectedTopic;
       const matchesSubtopic = selectedSubtopic === ALL_SUBTOPICS || item.sub_interest === selectedSubtopic;
       const sourceNames = normalizeSources(item)
@@ -221,7 +221,21 @@ export function ArchiveBrowser({
         .toLowerCase();
 
       const matchesSearch = normalizedSearchQuery.length === 0 || searchHaystack.includes(normalizedSearchQuery);
+      return matchesTopic && matchesSubtopic && matchesSearch;
+    });
+  }, [items, searchQuery, selectedSubtopic, selectedTopic]);
 
+  const availableDateSet = useMemo(() => {
+    const dates = new Set<string>();
+    for (const item of baseFilteredItems) {
+      if (!item.published_at) continue;
+      dates.add(toKSTDateString(new Date(item.published_at)));
+    }
+    return dates;
+  }, [baseFilteredItems]);
+
+  const filteredItems = useMemo(() => {
+    const filtered = baseFilteredItems.filter((item) => {
       let matchesDate = true;
       if (item.published_at) {
         const published = new Date(item.published_at);
@@ -239,7 +253,7 @@ export function ArchiveBrowser({
         matchesDate = false;
       }
 
-      return matchesTopic && matchesSubtopic && matchesSearch && matchesDate;
+      return matchesDate;
     });
 
     const now = Date.now();
@@ -260,7 +274,7 @@ export function ArchiveBrowser({
     }
 
     return sorted;
-  }, [customDate, dateFilter, isFeatureView, items, searchQuery, selectedSubtopic, selectedTopic, sortOrder]);
+  }, [baseFilteredItems, customDate, dateFilter, isFeatureView, sortOrder]);
 
   const latestDate = useMemo(() => {
     if (!localTodayMode) return null;
@@ -464,21 +478,25 @@ export function ArchiveBrowser({
               const isToday = dateStr === todayStr2;
               const isSelected = dateStr === selectedValue;
               const isFuture = dateStr > todayStr2;
+              const hasData = availableDateSet.has(dateStr);
+              const isDisabled = isFuture || !hasData;
               return (
                 <button
                   key={day}
                   type="button"
-                  disabled={isFuture}
+                  disabled={isDisabled}
                   onClick={() => handleSelect(day)}
                   className={`flex items-center justify-center h-[44px] rounded-full text-[14px] font-medium transition ${
                     isSelected
-                      ? "bg-navy-900 text-white"
+                      ? "bg-gray-900 text-white"
                       : isToday
                         ? "bg-orange-50 text-orange-600 font-bold"
-                        : isFuture
+                        : isDisabled
                           ? "text-gray-200 cursor-not-allowed"
                           : "text-gray-700 hover:bg-gray-100"
                   }`}
+                  aria-disabled={isDisabled}
+                  title={hasData ? undefined : "해당 날짜에는 콘텐츠가 없습니다."}
                 >
                   {day}
                 </button>
@@ -516,14 +534,14 @@ export function ArchiveBrowser({
                     onClick={() => { setCalendarMonth({ year: new Date().getFullYear(), month: new Date().getMonth() }); setShowCalendar("today"); }}
                     className={`inline-flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full border transition ${
                       isCustomDate
-                        ? "border-navy-900 bg-navy-900 text-white"
+                        ? "border-gray-900 bg-gray-900 text-white"
                         : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
                     }`}
                   >
                     <CalendarDays className="h-[16px] w-[16px]" />
                   </button>
                   {isCustomDate ? (
-                    <span className="inline-flex h-[32px] shrink-0 items-center gap-1 rounded-full border border-navy-900 bg-navy-900 pl-[10px] pr-[6px] text-[13px] font-medium text-white">
+                    <span className="inline-flex h-[32px] shrink-0 items-center gap-1 rounded-full border border-gray-900 bg-gray-900 pl-[10px] pr-[6px] text-[13px] font-medium text-white">
                       {todaySelectedDate.slice(5).replace("-", "/")}
                       <button
                         type="button"
@@ -555,7 +573,7 @@ export function ArchiveBrowser({
                   }}
                   className={`inline-flex h-[32px] shrink-0 items-center whitespace-nowrap rounded-full border px-[14px] text-[14px] font-medium transition ${
                     todaySelectedDate === option.key || (!todaySelectedDate && option.key === "all")
-                      ? "border-navy-900 bg-navy-900 text-white"
+                      ? "border-gray-900 bg-gray-900 text-white"
                       : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
                   }`}
                 >
@@ -571,7 +589,7 @@ export function ArchiveBrowser({
                 onClick={() => setShowInlineSearch((v) => !v)}
                 className={`inline-flex h-[32px] w-[32px] items-center justify-center rounded-full border transition ${
                   showInlineSearch || searchQuery
-                    ? "border-navy-900 bg-navy-900 text-white"
+                    ? "border-gray-900 bg-gray-900 text-white"
                     : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
                 }`}
                 aria-label="검색"
@@ -585,7 +603,7 @@ export function ArchiveBrowser({
                   onClick={() => setShowSortMenu((v) => !v)}
                   className={`inline-flex h-[32px] w-[32px] items-center justify-center rounded-full border transition ${
                     showSortMenu
-                      ? "border-navy-900 bg-navy-900 text-white"
+                      ? "border-gray-900 bg-gray-900 text-white"
                       : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
                   }`}
                   aria-label="정렬"
@@ -632,7 +650,7 @@ export function ArchiveBrowser({
               <button
                 type="button"
                 onClick={() => setSearchQuery(draftSearchQuery.trim())}
-                className="inline-flex h-[32px] shrink-0 items-center justify-center rounded-full bg-navy-900 px-[12px] text-[13px] font-medium text-white transition hover:bg-navy-700"
+                className="inline-flex h-[32px] shrink-0 items-center justify-center rounded-full bg-gray-900 px-[12px] text-[13px] font-medium text-white transition hover:bg-gray-700"
               >
                 검색
               </button>
@@ -659,14 +677,14 @@ export function ArchiveBrowser({
               onClick={() => { setCalendarMonth({ year: new Date().getFullYear(), month: new Date().getMonth() }); setShowCalendar("normal"); }}
               className={`inline-flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full border transition ${
                 dateFilter === CUSTOM_DATE
-                  ? "border-navy-900 bg-navy-900 text-white"
+                  ? "border-gray-900 bg-gray-900 text-white"
                   : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
               }`}
             >
               <CalendarDays className="h-[16px] w-[16px]" />
             </button>
             {dateFilter === CUSTOM_DATE && customDate ? (
-              <span className="inline-flex h-[32px] shrink-0 items-center gap-1 rounded-full border border-navy-900 bg-navy-900 pl-[10px] pr-[6px] text-[13px] font-medium text-white">
+              <span className="inline-flex h-[32px] shrink-0 items-center gap-1 rounded-full border border-gray-900 bg-gray-900 pl-[10px] pr-[6px] text-[13px] font-medium text-white">
                 {customDate.slice(5).replace("-", "/")}
                 <button
                   type="button"
@@ -688,7 +706,7 @@ export function ArchiveBrowser({
                 onClick={() => { setDateFilter(option.key); setCustomDate(""); }}
                 className={`inline-flex h-[32px] shrink-0 items-center whitespace-nowrap rounded-full border px-[14px] text-[14px] font-medium transition ${
                   dateFilter === option.key
-                    ? "border-navy-900 bg-navy-900 text-white"
+                    ? "border-gray-900 bg-gray-900 text-white"
                     : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
                 }`}
               >
@@ -702,7 +720,7 @@ export function ArchiveBrowser({
                 onClick={() => setShowInlineSearch((v) => !v)}
                 className={`inline-flex h-[32px] w-[32px] items-center justify-center rounded-full border transition ${
                   showInlineSearch || searchQuery
-                    ? "border-navy-900 bg-navy-900 text-white"
+                    ? "border-gray-900 bg-gray-900 text-white"
                     : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
                 }`}
                 aria-label="검색"
@@ -715,7 +733,7 @@ export function ArchiveBrowser({
                   onClick={() => setShowSortMenu((v) => !v)}
                   className={`inline-flex h-[32px] w-[32px] items-center justify-center rounded-full border transition ${
                     showSortMenu
-                      ? "border-navy-900 bg-navy-900 text-white"
+                      ? "border-gray-900 bg-gray-900 text-white"
                       : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
                   }`}
                   aria-label="정렬"
@@ -762,7 +780,7 @@ export function ArchiveBrowser({
               <button
                 type="button"
                 onClick={() => setSearchQuery(draftSearchQuery.trim())}
-                className="inline-flex h-[32px] shrink-0 items-center justify-center rounded-full bg-navy-900 px-[12px] text-[13px] font-medium text-white transition hover:bg-navy-700"
+                className="inline-flex h-[32px] shrink-0 items-center justify-center rounded-full bg-gray-900 px-[12px] text-[13px] font-medium text-white transition hover:bg-gray-700"
               >
                 검색
               </button>
@@ -837,16 +855,16 @@ export function ArchiveBrowser({
 
       {selectedSlugs.length > 0 ? (
         <div className="fixed bottom-[34px] left-1/2 z-40 -translate-x-1/2 animate-in slide-in-from-bottom-4">
-          <div className="flex items-center gap-[8px] rounded-full border border-navy-200 bg-white pl-[16px] pr-[8px] py-[8px] shadow-[0_8px_40px_rgba(17,32,51,0.18)]">
-            <span className="whitespace-nowrap text-[14px] font-semibold text-navy-900">{selectedSlugs.length}개 선택</span>
-            <div className="h-[20px] w-px bg-navy-200" />
+          <div className="flex items-center gap-[8px] rounded-full border border-gray-300 bg-white pl-[16px] pr-[8px] py-[8px] shadow-[0_8px_40px_rgba(17,32,51,0.18)]">
+            <span className="whitespace-nowrap text-[14px] font-semibold text-gray-900">{selectedSlugs.length}개 선택</span>
+            <div className="h-[20px] w-px bg-gray-300" />
             <ListenButton
               text={selectedListenText}
               speechTitle={`${selectedSlugs.length}개 선택`}
               segments={selectedSegments}
               label="듣기"
               mobileIconOnly
-              className="h-[36px] w-[36px] sm:w-auto sm:px-[12px] !border-navy-200 !bg-white !text-navy-700 hover:!bg-navy-50 !text-[13px]"
+              className="h-[36px] w-[36px] sm:w-auto sm:px-[12px] !border-gray-300 !bg-white !text-gray-700 hover:!bg-gray-50 !text-[13px]"
             />
             {resolvedShareProfile ? (
               <CompleteShareButton
@@ -861,7 +879,7 @@ export function ArchiveBrowser({
             <button
               type="button"
               onClick={() => setSelectedSlugs([])}
-              className="inline-flex h-[36px] w-[36px] items-center justify-center rounded-full text-navy-400 transition hover:bg-navy-100 hover:text-navy-700"
+              className="inline-flex h-[36px] w-[36px] items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-200 hover:text-gray-700"
               aria-label="선택 해제"
             >
               <X className="h-4 w-4" />
@@ -873,9 +891,9 @@ export function ArchiveBrowser({
 
       <div className="grid gap-[12px] mt-[12px]">
         {displayItems.length === 0 ? (
-          <div className="rounded-xl border border-navy-100 bg-white px-5 py-10 text-center md:px-8 md:py-14">
-            <p className="text-lg font-bold text-navy-900 md:text-xl">{localTodayMode ? "오늘뉴스가 아직 등록되지 않았습니다." : "검색 결과가 없습니다."}</p>
-            <p className="mt-3 text-sm leading-7 text-navy-600 md:text-base">
+          <div className="rounded-xl border border-gray-200 bg-white px-5 py-10 text-center md:px-8 md:py-14">
+            <p className="text-lg font-bold text-gray-900 md:text-xl">{localTodayMode ? "오늘뉴스가 아직 등록되지 않았습니다." : "검색 결과가 없습니다."}</p>
+            <p className="mt-3 text-sm leading-7 text-gray-600 md:text-base">
               {localTodayMode ? "잠시 후 다시 확인해보세요." : "다른 검색어를 입력하거나 카테고리와 날짜 범위를 다시 선택해보세요."}
             </p>
           </div>
@@ -896,7 +914,7 @@ export function ArchiveBrowser({
             <div key={item.id}>
               <article
                 data-archive-item
-                className="border-b border-navy-100 pb-[18px] pt-[18px] md:rounded-xl md:border md:border-navy-100 md:bg-white md:p-5 md:shadow-none md:hover:shadow-md"
+                className="border-b border-gray-200 pb-[18px] pt-[18px] md:rounded-xl md:border md:border-gray-200 md:bg-white md:p-5 md:shadow-none md:hover:shadow-md"
               >
                 {/* 상단: 카테고리 + 날짜 */}
                 <div className="mb-3 flex items-center gap-2 flex-wrap">
@@ -905,13 +923,13 @@ export function ArchiveBrowser({
                     checked={selectedSlugs.includes(item.slug)}
                     onChange={() => toggleSlug(item.slug)}
                     onClick={(e) => e.stopPropagation()}
-                    className="h-4 w-4 shrink-0 rounded border-navy-200 text-orange-500 focus:ring-orange-200"
+                    className="h-4 w-4 shrink-0 rounded border-gray-300 text-orange-500 focus:ring-orange-200"
                   />
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[item.main_interest] ?? "bg-orange-50 border border-orange-200 text-orange-700"}`}>
                     {interestLabels[item.main_interest] ?? item.main_interest}
                     {item.sub_interest ? ` · ${item.sub_interest}` : ""}
                   </span>
-                  <span className="ml-auto text-xs text-navy-400">
+                  <span className="ml-auto text-xs text-gray-500">
                     {item.published_at ? formatDate(item.published_at) : "발행 전"}
                   </span>
                 </div>
@@ -931,7 +949,7 @@ export function ArchiveBrowser({
                         />
                       ) : null}
                       <div className="flex items-stretch gap-3">
-                        <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-all text-navy-900 transition group-hover:text-orange-600">
+                        <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-all text-gray-900 transition group-hover:text-orange-600">
                           {item.title}
                         </h2>
                         {/* 모바일 글씨 작게: 썸네일 제목 옆 배치 */}
@@ -945,7 +963,7 @@ export function ArchiveBrowser({
                           />
                         ) : null}
                       </div>
-                      <p className="mt-2 text-sm leading-6 break-all text-navy-600">
+                      <p className="mt-2 text-sm leading-6 break-all text-gray-600">
                         {item.short_summary}
                       </p>
                       {item.action_line ? (
@@ -1021,7 +1039,7 @@ export function ArchiveBrowser({
                               <div className="w-full h-full flex items-center justify-center text-xs text-gray-300">상품 이미지</div>
                             )}
                           </div>
-                          <p className="text-xs font-medium line-clamp-2 leading-tight text-navy-900">{product.title}</p>
+                          <p className="text-xs font-medium line-clamp-2 leading-tight text-gray-900">{product.title}</p>
                           {price ? (
                             <p className="text-xs text-orange-600 font-bold mt-1">{price}원</p>
                           ) : null}
@@ -1043,25 +1061,25 @@ export function ArchiveBrowser({
       )}
 
       {showLoginPrompt ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/45 px-5 py-8">
-          <div className="w-full max-w-md rounded-[32px] bg-white p-6 shadow-2xl ring-1 ring-navy-100 md:p-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/45 px-5 py-8">
+          <div className="w-full max-w-md rounded-[32px] bg-white p-6 shadow-2xl ring-1 ring-gray-200 md:p-8">
             <p className="text-sm font-semibold tracking-[0.18em] text-orange-500">공유 안내</p>
-            <h2 className="mt-2 text-2xl font-extrabold tracking-[-0.04em] text-navy-900">로그인 후 공유하실 수 있어요.</h2>
-            <p className="mt-4 text-base leading-7 text-navy-700">내 프로필 정보와 함께 공유되기 때문에 먼저 로그인해 주세요.</p>
+            <h2 className="mt-2 text-2xl font-extrabold tracking-[-0.04em] text-gray-900">로그인 후 공유하실 수 있어요.</h2>
+            <p className="mt-4 text-base leading-7 text-gray-700">내 프로필 정보와 함께 공유되기 때문에 먼저 로그인해 주세요.</p>
             <div className="mt-6 flex gap-3">
               <button
                 type="button"
                 onClick={() => {
                   window.location.href = "/login";
                 }}
-                className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl bg-navy-900 px-5 py-3 text-base font-semibold text-white"
+                className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl bg-gray-900 px-5 py-3 text-base font-semibold text-white"
               >
                 로그인하기
               </button>
               <button
                 type="button"
                 onClick={() => setShowLoginPrompt(false)}
-                className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl border border-navy-200 bg-white px-5 py-3 text-base font-semibold text-navy-900"
+                className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl border border-gray-300 bg-white px-5 py-3 text-base font-semibold text-gray-900"
               >
                 닫기
               </button>

@@ -6,15 +6,15 @@ type ButtonVariant = "primary" | "secondary" | "outline" | "ghost";
 type ButtonSize = "sm" | "md" | "lg";
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: "bg-navy-900 text-white shadow-[0_10px_30px_rgba(17,32,51,0.18)] hover:bg-navy-700",
-  secondary: "bg-orange-500 text-white shadow-[0_10px_30px_rgba(229,124,35,0.18)] hover:bg-orange-400",
-  outline: "border border-navy-200 bg-white text-navy-900 hover:border-navy-300 hover:bg-navy-50",
-  ghost: "bg-transparent text-navy-800 hover:bg-navy-50"
+  primary: "bg-gray-900 text-white hover:bg-gray-800 active:bg-black",
+  secondary: "bg-orange-500 text-white hover:bg-orange-600 active:bg-orange-600",
+  outline: "border border-gray-200 bg-white text-gray-900 hover:border-gray-300 hover:bg-gray-50",
+  ghost: "bg-transparent text-gray-700 hover:bg-gray-100"
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "min-h-10 rounded-2xl px-4 text-sm font-semibold",
-  md: "min-h-12 rounded-2xl px-5 text-base font-semibold",
+  sm: "min-h-9 rounded-lg px-3.5 text-sm font-semibold",
+  md: "min-h-11 rounded-xl px-5 text-base font-semibold",
   lg: "min-h-14 rounded-full px-6 text-lg font-bold"
 };
 
@@ -38,7 +38,7 @@ export function Button({
     <button
       type={type}
       className={cn(
-        "inline-flex items-center justify-center gap-2 whitespace-normal text-center transition disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex items-center justify-center gap-2 whitespace-normal text-center transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50",
         variantStyles[variant],
         sizeStyles[size],
         fullWidth && "w-full",

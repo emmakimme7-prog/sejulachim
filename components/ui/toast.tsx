@@ -6,10 +6,10 @@ export function Toast({ message, tone = "default" }: { message: string; tone?: "
   return (
     <div
       className={cn(
-        "fixed left-1/2 top-1/2 z-[80] flex min-h-14 max-w-[min(92vw,560px)] items-center justify-center -translate-x-1/2 -translate-y-1/2 rounded-[22px] px-6 py-4 text-center text-base font-semibold leading-7 shadow-[0_18px_40px_rgba(17,32,51,0.28)]",
+        "fixed left-1/2 top-1/2 z-[80] flex min-h-12 max-w-[min(92vw,560px)] items-center justify-center -translate-x-1/2 -translate-y-1/2 rounded-2xl px-5 py-3.5 text-center text-sm font-semibold leading-6 shadow-lg",
         tone === "error"
-          ? "border border-[#FECACA] bg-[#C62828] text-[#FFFFFF]"
-          : "border border-[#112033] bg-[#112033] text-[#FFFFFF]"
+          ? "bg-rose-600 text-white"
+          : "bg-gray-900 text-white"
       )}
       role="alert"
       aria-live="assertive"

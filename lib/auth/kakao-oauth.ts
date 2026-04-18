@@ -180,6 +180,7 @@ export function buildKakaoAuthorizationUrl(state: string) {
   url.searchParams.set("redirect_uri", getRedirectUri("kakao"));
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", "account_email");
+  url.searchParams.set("prompt", "consent");
   url.searchParams.set("state", state);
   return url;
 }
@@ -196,7 +197,7 @@ export function buildGoogleAuthorizationUrl(state: string) {
   url.searchParams.set("redirect_uri", getRedirectUri("google"));
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", "openid email profile");
-  url.searchParams.set("prompt", "select_account");
+  url.searchParams.set("prompt", "consent select_account");
   url.searchParams.set("state", state);
   return url;
 }
@@ -304,6 +305,7 @@ export function buildNaverAuthorizationUrl(state: string) {
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", getRedirectUri("naver"));
   url.searchParams.set("response_type", "code");
+  url.searchParams.set("auth_type", "reprompt");
   url.searchParams.set("state", state);
   return url;
 }

@@ -37,6 +37,13 @@ CREATE TABLE IF NOT EXISTS coupang_product_cache (
   cached_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   expires_at TIMESTAMPTZ NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS coupang_deeplink_cache (
+  original_url TEXT PRIMARY KEY,
+  shorten_url TEXT NOT NULL,
+  cached_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL
+);
 `;
 
 const { error } = await supabase.rpc("exec_sql", { sql }).catch(() => ({ error: { message: "rpc not available" } }));
