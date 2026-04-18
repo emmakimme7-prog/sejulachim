@@ -5,8 +5,10 @@ import { FeedCategorySidebar } from "@/components/feed-category-sidebar";
 import { FeedRightSidebar } from "@/components/feed-right-sidebar";
 import { HomeContent } from "@/components/home-content";
 import { OAuthLinkedNotice } from "@/components/oauth-linked-notice";
+import { getCurrentUserSession } from "@/lib/auth/user-session";
 import { getInterestConfig } from "@/lib/content/interest-config";
 import { listPublicContentItems, listTodayPreview } from "@/lib/content/public-content";
+import { findUserById, listUserInterestSelections } from "@/lib/mongodb/user-data";
 import { fetchPopularProductsForContent } from "@/lib/products/coupang-partners";
 
 export const revalidate = 300;
@@ -78,6 +80,25 @@ export default async function HomePage({
     action_line: it.action_line,
   }));
 
+  // 로그인 사용자의 구독 설정 (사이드바 위젯용)
+  let userInterests: string[] | undefined;
+  let userDeliveryTime: string | undefined;
+  try {
+    const session = await getCurrentUserSession();
+    if (session) {
+      const [user, interestRows] = await Promise.all([
+        findUserById(session.id),
+        listUserInterestSelections(session.id),
+      ]);
+      userInterests = interestRows
+        .map((row) => row.main_interest)
+        .filter((v) => interestConfig.mainInterests.includes(v));
+      userDeliveryTime = user?.delivery_time ?? undefined;
+    }
+  } catch {
+    // 세션/DB 실패 시 조용히 미로그인 상태로 폴백
+  }
+
   return (
     <HomeContent previews={todayPreviews}>
       <Suspense><OAuthLinkedNotice /></Suspense>
@@ -109,7 +130,11 @@ export default async function HomePage({
             </Suspense>
           </main>
           <aside className="hidden xl:block xl:sticky xl:top-[90px] xl:self-start">
-            <FeedRightSidebar items={sidebarItems} />
+            <FeedRightSidebar
+              items={sidebarItems}
+              interests={userInterests}
+              deliveryTime={userDeliveryTime}
+            />
           </aside>
         </div>
       </div>

@@ -12,7 +12,23 @@ type Item = {
   action_line?: string | null;
 };
 
-export function FeedRightSidebar({ items }: { items: Item[] }) {
+const CATEGORY_META: Record<string, { emoji: string; color: string; bg: string }> = {
+  건강: { emoji: "💪", color: "#2E7D3F", bg: "#E8F5EC" },
+  돈: { emoji: "💰", color: "#B26A00", bg: "#FFF4E0" },
+  실생활: { emoji: "🏠", color: "#1565C0", bg: "#E3F1FD" },
+  뉴스: { emoji: "📰", color: "#424242", bg: "#EFEFEF" },
+  관계: { emoji: "💛", color: "#C2185B", bg: "#FDE8EF" },
+};
+
+export function FeedRightSidebar({
+  items,
+  interests,
+  deliveryTime,
+}: {
+  items: Item[];
+  interests?: string[];
+  deliveryTime?: string;
+}) {
   const handlePlayAll = useCallback(() => {
     if (items.length === 0) return;
     const text = items
@@ -88,17 +104,13 @@ export function FeedRightSidebar({ items }: { items: Item[] }) {
         </button>
       </div>
 
-      {/* 내 구독 설정 바로가기 */}
-      <Link
-        href="/account"
+      {/* 내 구독 설정 */}
+      <div
         style={{
-          display: "block",
           background: "#fff",
           borderRadius: 16,
           padding: 18,
           border: "1.5px solid #F2E6D7",
-          textDecoration: "none",
-          color: "inherit",
         }}
       >
         <div
@@ -108,17 +120,70 @@ export function FeedRightSidebar({ items }: { items: Item[] }) {
             color: "#7A6F62",
             letterSpacing: "0.05em",
             textTransform: "uppercase",
-            marginBottom: 8,
+            marginBottom: 12,
           }}
         >
           내 구독 설정
         </div>
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#1F1A14", letterSpacing: "-0.02em", lineHeight: 1.5 }}>
-          배송 시간 · 관심 분야 · 알림
-          <br />
-          <span style={{ color: "#B2570F", fontSize: 13, fontWeight: 800 }}>설정 바꾸기 →</span>
-        </div>
-      </Link>
+
+        {deliveryTime ? (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: "#7A6F62", fontWeight: 600, marginBottom: 4 }}>배송 시간</div>
+            <div style={{ fontSize: 16, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.02em" }}>
+              매일 아침 {deliveryTime.slice(0, 5)}
+            </div>
+          </div>
+        ) : null}
+
+        {interests && interests.length > 0 ? (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: "#7A6F62", fontWeight: 600, marginBottom: 6 }}>받는 분야</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {interests.map((cat) => {
+                const m = CATEGORY_META[cat] ?? { emoji: "📄", color: "#7A6F62", bg: "#F5EEE2" };
+                return (
+                  <span
+                    key={cat}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      padding: "3px 10px",
+                      borderRadius: 999,
+                      background: m.bg,
+                      color: m.color,
+                      fontSize: 12,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {m.emoji} {cat}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        {!deliveryTime && (!interests || interests.length === 0) ? (
+          <div style={{ fontSize: 13, color: "#4A4037", fontWeight: 500, marginBottom: 10 }}>
+            로그인하면 내 관심 분야와 배송 시간을 볼 수 있어요.
+          </div>
+        ) : null}
+
+        <Link
+          href="/account"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            color: "#B2570F",
+            fontSize: 13,
+            fontWeight: 800,
+            textDecoration: "none",
+          }}
+        >
+          설정 바꾸기 →
+        </Link>
+      </div>
 
       {/* 글씨 크기 팁 */}
       <div

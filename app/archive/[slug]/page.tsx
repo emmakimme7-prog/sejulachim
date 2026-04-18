@@ -138,7 +138,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
     // 상품 로딩 실패/타임아웃 시 빈 배열로 진행
   }
   const relatedProducts = allProducts.slice(0, 3);
-  const bottomProducts = allProducts.slice(3, 8);
+  const bottomProducts = allProducts.slice(0, 5);
 
   const detailParagraphs = buildDetailParagraphs(
     data.short_summary,
