@@ -43,6 +43,18 @@ const CATEGORY_STYLE: Record<string, string> = {
   "관계": "bg-rose-50 border border-rose-200 text-rose-700",
 };
 
+const CATEGORY_META: Record<string, { emoji: string; color: string; bg: string }> = {
+  건강: { emoji: "💪", color: "#2E7D3F", bg: "#E8F5EC" },
+  돈: { emoji: "💰", color: "#B26A00", bg: "#FFF4E0" },
+  실생활: { emoji: "🏠", color: "#1565C0", bg: "#E3F1FD" },
+  뉴스: { emoji: "📰", color: "#424242", bg: "#EFEFEF" },
+  관계: { emoji: "💛", color: "#C2185B", bg: "#FDE8EF" },
+};
+
+function seniorCategoryMeta(cat: string) {
+  return CATEGORY_META[cat] ?? { emoji: "📄", color: "#7A6F62", bg: "#F5EEE2" };
+}
+
 /** UTC Date를 KST(+9) 날짜 문자열 YYYY-MM-DD로 변환 */
 function toKSTDateString(date: Date): string {
   const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
@@ -914,70 +926,103 @@ export function ArchiveBrowser({
             <div key={item.id}>
               <article
                 data-archive-item
-                className="border-b border-gray-200 pb-[18px] pt-[18px] md:rounded-xl md:border md:border-gray-200 md:bg-white md:p-5 md:shadow-none md:hover:shadow-md"
+                style={{
+                  background: "#fff",
+                  borderRadius: 20,
+                  border: "1.5px solid #F2E6D7",
+                  padding: 18,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                }}
               >
-                {/* 상단: 카테고리 + 날짜 */}
-                <div className="mb-3 flex items-center gap-2 flex-wrap">
+                {/* 상단: 체크박스 + 카테고리 배지 + 날짜 */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
                   <input
                     type="checkbox"
                     checked={selectedSlugs.includes(item.slug)}
                     onChange={() => toggleSlug(item.slug)}
                     onClick={(e) => e.stopPropagation()}
-                    className="h-4 w-4 shrink-0 rounded border-gray-300 text-orange-500 focus:ring-orange-200"
+                    style={{ width: 18, height: 18, accentColor: "#E57C23", flexShrink: 0 }}
                   />
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[item.main_interest] ?? "bg-orange-50 border border-orange-200 text-orange-700"}`}>
-                    {interestLabels[item.main_interest] ?? item.main_interest}
-                    {item.sub_interest ? ` · ${item.sub_interest}` : ""}
-                  </span>
-                  <span className="ml-auto text-xs text-gray-500">
+                  {(() => {
+                    const m = seniorCategoryMeta(item.main_interest);
+                    return (
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "4px 12px",
+                          borderRadius: 999,
+                          background: m.bg,
+                          color: m.color,
+                          fontSize: 13,
+                          fontWeight: 800,
+                          letterSpacing: "-0.01em",
+                        }}
+                      >
+                        <span style={{ fontSize: 15 }}>{m.emoji}</span>
+                        {interestLabels[item.main_interest] ?? item.main_interest}
+                        {item.sub_interest ? ` · ${item.sub_interest}` : ""}
+                      </span>
+                    );
+                  })()}
+                  <span style={{ marginLeft: "auto", fontSize: 12, color: "#9C907F", fontWeight: 600 }}>
                     {item.published_at ? formatDate(item.published_at) : "발행 전"}
                   </span>
                 </div>
 
                 {/* 본문 */}
-                <Link href={`/archive/${item.slug}`} className="group block">
-                  <div className="md:flex md:items-stretch md:gap-4">
-                    <div className="min-w-0 flex-1">
-                      {/* 모바일 글씨 중간/크게: 썸네일 상단 배치 */}
-                      {item.thumbnail_url ? (
-                        <ContentThumbnail
-                          src={item.thumbnail_url}
-                          alt={item.thumbnail_alt?.trim() || item.title}
-                          className="mb-3 aspect-[16/9] w-full overflow-hidden rounded-md font-size-top-thumb md:hidden"
-                          imgClassName="w-full h-full object-cover"
-                          fallbackLabel="준비 중"
-                        />
-                      ) : null}
-                      <div className="flex items-stretch gap-3">
-                        <h2 className="flex-1 md:flex-none text-[1.45rem] font-bold leading-snug break-all text-gray-900 transition group-hover:text-orange-600">
-                          {item.title}
-                        </h2>
-                        {/* 모바일 글씨 작게: 썸네일 제목 옆 배치 */}
-                        {item.thumbnail_url ? (
-                          <ContentThumbnail
-                            src={item.thumbnail_url}
-                            alt={item.thumbnail_alt?.trim() || item.title}
-                            className="w-20 min-h-[5rem] shrink-0 overflow-hidden rounded-md font-size-side-thumb md:hidden"
-                            imgClassName="w-full h-full object-cover"
-                            fallbackLabel="준비 중"
-                          />
-                        ) : null}
-                      </div>
-                      <p className="mt-2 text-sm leading-6 break-all text-gray-600">
+                <Link href={`/archive/${item.slug}`} className="group block" style={{ textDecoration: "none", color: "inherit" }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h2
+                        style={{
+                          margin: 0,
+                          fontSize: 20,
+                          fontWeight: 900,
+                          color: "#1F1A14",
+                          letterSpacing: "-0.03em",
+                          lineHeight: 1.35,
+                          marginBottom: 10,
+                        }}
+                      >
+                        {item.title}
+                      </h2>
+                      <p
+                        style={{
+                          margin: "0 0 12px",
+                          fontSize: 15,
+                          lineHeight: 1.6,
+                          color: "#4A4037",
+                          fontWeight: 500,
+                        }}
+                      >
                         {item.short_summary}
                       </p>
                       {item.action_line ? (
-                        <p className="mt-1.5 text-sm font-semibold text-orange-600">
-                          {item.action_line}
-                          <ChevronRight className="ml-[2px] inline h-[14px] w-[14px] align-middle" aria-hidden="true" />
-                        </p>
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            padding: "10px 14px",
+                            borderRadius: 12,
+                            background: "#FFF2E3",
+                            fontSize: 14,
+                            fontWeight: 800,
+                            color: "#B2570F",
+                            letterSpacing: "-0.01em",
+                          }}
+                        >
+                          ✓ {item.action_line}
+                        </div>
                       ) : null}
                     </div>
                     {item.thumbnail_url ? (
                       <ContentThumbnail
                         src={item.thumbnail_url}
                         alt={item.thumbnail_alt?.trim() || item.title}
-                        className="hidden md:block w-28 min-h-[6rem] shrink-0 overflow-hidden rounded-md"
+                        className="w-24 h-24 shrink-0 overflow-hidden rounded-xl md:w-28 md:h-28"
                         imgClassName="w-full h-full object-cover"
                         fallbackLabel="준비 중"
                       />
@@ -986,11 +1031,21 @@ export function ArchiveBrowser({
                 </Link>
 
                 {/* 하단: 액션 버튼 */}
-                <div className="mt-3 flex items-center justify-end gap-3 border-t border-gray-100 pt-3">
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: 14,
+                    marginTop: 14,
+                    paddingTop: 12,
+                    borderTop: "1px solid #F5EEE2",
+                  }}
+                >
                   <ListenButton
                     text={[item.title, item.short_summary, item.action_line].filter(Boolean).join(". ")}
                     speechTitle={item.title}
-                    className="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[0.82rem] !font-normal !text-gray-500 hover:!text-gray-800 !shadow-none"
+                    className="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[13px] !font-semibold !text-[#7A6F62] hover:!text-[#1F1A14] !shadow-none"
                     label="듣기"
                     onPlay={() => handleCardPlay(idx)}
                   />
@@ -998,12 +1053,12 @@ export function ArchiveBrowser({
                     shareSlugs={[item.slug]}
                     interestSummary={item.title}
                     buttonLabel="공유"
-                    triggerClassName="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[0.82rem] !font-normal !text-gray-500 hover:!text-gray-800 !shadow-none"
+                    triggerClassName="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[13px] !font-semibold !text-[#7A6F62] hover:!text-[#1F1A14] !shadow-none"
                     modalTitle="이 소식을 공유해보세요."
                   />
                   <div className="flex-1" />
                   {(item.view_count ?? 0) > 0 ? (
-                    <span className="text-xs text-gray-400">{(item.view_count ?? 0).toLocaleString()} 조회</span>
+                    <span style={{ fontSize: 12, color: "#9C907F", fontWeight: 600 }}>{(item.view_count ?? 0).toLocaleString()} 조회</span>
                   ) : null}
                   {resolvedShareProfile ? (
                     <FavoriteToggleButton
@@ -1011,7 +1066,7 @@ export function ArchiveBrowser({
                       contentItemId={item.id}
                       initialFavorite={resolvedFavoriteIds.includes(item.slug)}
                       label="저장"
-                      className="inline-flex items-center gap-1 text-[0.82rem] text-gray-500 transition hover:text-gray-800"
+                      className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#7A6F62] hover:text-[#1F1A14] transition"
                     />
                   ) : null}
                 </div>
