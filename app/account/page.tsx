@@ -14,7 +14,7 @@ import { AccountInterestsForm } from "@/components/account-interests-form";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel, TextInput } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
-import { PageIntro, SoftCard } from "@/components/ui/panel";
+import { SoftCard } from "@/components/ui/panel";
 import { type FontSizeValue } from "@/components/font-size-provider";
 import { requireUserSession } from "@/lib/auth/user-session";
 import { getInterestConfig } from "@/lib/content/interest-config";
@@ -88,8 +88,31 @@ export default async function AccountPage({ searchParams }: PageProps) {
   const avatar = getAvatarOption(avatarKey);
 
   return (
-    <div className="app-shell section-block">
-        <PageIntro eyebrow="프로필" title="프로필 설정" description={session.email} className="mb-8" />
+    <div style={{ background: "#F0EEE9", minHeight: "100vh", padding: "32px 20px 60px" }}>
+      <div style={{ maxWidth: 820, margin: "0 auto" }}>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "6px 14px",
+            background: "#fff",
+            borderRadius: 999,
+            border: "1.5px solid #F5DDC2",
+            fontSize: 12,
+            fontWeight: 800,
+            color: "#B2570F",
+            marginBottom: 12,
+          }}
+        >
+          프로필
+        </div>
+        <h1 style={{ margin: 0, fontSize: 30, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.03em" }}>
+          내 정보
+        </h1>
+        <p style={{ margin: "6px 0 24px", fontSize: 15, color: "#7A6F62", fontWeight: 500 }}>
+          {session.email}
+        </p>
 
         {status ? (
           <Notice tone="success" className="mt-6">
@@ -259,6 +282,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
             ]}
           />
         </div>
+      </div>
     </div>
   );
 }
