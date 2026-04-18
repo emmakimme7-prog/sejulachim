@@ -338,6 +338,7 @@ const RATES = [0.75, 1, 1.25, 1.5, 2] as const;
 
 export function SpeechPlayer() {
   const [snap, setSnap] = useState<SpeechSnapshot>(() => getSpeechSnapshot());
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeSpeechState(() => setSnap(getSpeechSnapshot()));
@@ -346,7 +347,6 @@ export function SpeechPlayer() {
 
   if (!snap.active) return null;
 
-  // segments / playlist / 자동재생 ON이면 미디어플레이어 UI
   const mediaMode = Boolean(snap.segments) || Boolean(snap.playlist) || snap.autoPlay;
 
   function cycleRate() {
@@ -363,10 +363,7 @@ export function SpeechPlayer() {
   }
 
   function prevItem() {
-    if (snap.segments) {
-      jumpToSegment(Math.max(0, snap.currentSegmentIndex - 1));
-    }
-    // 자동재생 단독 모드에서는 이전 없음 (disabled)
+    if (snap.segments) jumpToSegment(Math.max(0, snap.currentSegmentIndex - 1));
   }
 
   function nextItem() {
@@ -384,132 +381,478 @@ export function SpeechPlayer() {
     ? snap.playlistCurrentIdx < (snap.playlist.length) - 1
     : snap.autoPlay && autoPlayNextFn !== null;
 
+  const currentTitle =
+    snap.segments?.[snap.currentSegmentIndex]?.label ??
+    snap.playlist?.[snap.playlistCurrentIdx]?.label ??
+    snap.title;
+
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 sm:left-1/2 sm:right-auto sm:w-[440px] sm:-translate-x-1/2">
-      <div className="rounded-2xl border border-white/10 bg-gray-900/90 px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md">
-
-        {/* 타이틀 + 닫기(X = 완전 종료) */}
-        <div className="mb-2 flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            {snap.segments ? (
-              <div className="flex flex-col gap-0.5">
-                {snap.segments.slice(snap.currentSegmentIndex, snap.currentSegmentIndex + 2).map((seg, i) => (
-                  <span
-                    key={seg.label}
-                    className={`truncate text-sm font-semibold leading-6 transition-colors ${
-                      i === 0 ? "text-orange-400" : "text-white/35"
-                    }`}
-                  >
-                    {seg.label}
-                  </span>
-                ))}
+    <div
+      className="fixed z-50 left-3 right-3 bottom-[84px] sm:left-1/2 sm:right-auto sm:bottom-[96px] sm:w-[560px] sm:-translate-x-1/2 lg:left-0 lg:right-0 lg:bottom-0 lg:w-auto lg:translate-x-0"
+    >
+      {/* PC: 하단 풀폭 / 모바일·태블릿: 카드 */}
+      <div
+        style={{
+          background: "#fff",
+          borderTop: "1.5px solid #F2E6D7",
+          borderRadius: 0,
+          boxShadow: "0 -8px 28px rgba(31,26,20,0.10)",
+        }}
+        className="hidden lg:block"
+      >
+        <div style={{ height: 3, background: "#F5EEE2", position: "relative" }}>
+          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${snap.progress}%`, background: "#E57C23", transition: "width 0.3s" }} />
+        </div>
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "0 auto",
+            padding: "12px 32px",
+            display: "flex",
+            alignItems: "center",
+            gap: 20,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0, flex: 1 }}>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                background: "#FFF2E3",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 24,
+                flexShrink: 0,
+                border: "2px solid #FFD1A333",
+              }}
+              aria-hidden="true"
+            >
+              🎧
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#B2570F", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 3 }}>
+                지금 듣는 중
               </div>
-            ) : snap.playlist && snap.autoPlay ? (
-              <div className="flex flex-col gap-0.5">
-                {snap.playlist.map((item, i) => (
-                  <span
-                    key={i}
-                    className={`truncate text-sm font-semibold leading-6 transition-colors ${
-                      i === snap.playlistCurrentIdx ? "text-orange-400" : "text-white/35"
-                    }`}
-                  >
-                    {item.label}
-                  </span>
-                ))}
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 900,
+                  color: "#1F1A14",
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.3,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  maxWidth: 460,
+                }}
+              >
+                {currentTitle}
               </div>
-            ) : (
-              <p className="truncate text-sm font-semibold text-white/90">{snap.title}</p>
-            )}
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={stopSpeech}
-            className="shrink-0 text-white/40 transition hover:text-white"
-            aria-label="닫기"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
 
-        {/* 진행 바 */}
-        <div className="mb-3 h-1 overflow-hidden rounded-full bg-white/15">
-          <div
-            className="h-full rounded-full bg-orange-400 transition-[width] duration-300"
-            style={{ width: `${snap.progress}%` }}
-          />
-        </div>
-
-        {/* 컨트롤 */}
-        <div className="flex items-center justify-between">
-          {/* 배속 */}
-          <button
-            type="button"
-            onClick={cycleRate}
-            className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-white/20"
-            aria-label={`재생 속도 변경 (현재 ${snap.rate}배속)`}
-          >
-            <Volume2 className="h-3.5 w-3.5 opacity-70" />
-            <span>{snap.rate}x</span>
-          </button>
-
-          {/* 이전 / 일시정지 / 다음 */}
-          <div className="flex items-center gap-1">
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {mediaMode ? (
               <button
                 type="button"
                 onClick={prevItem}
                 disabled={!canPrev}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white disabled:opacity-30"
                 aria-label="이전"
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 999,
+                  background: "#FFFBF5",
+                  border: "1.5px solid #F2E6D7",
+                  cursor: canPrev ? "pointer" : "not-allowed",
+                  opacity: canPrev ? 1 : 0.4,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "inherit",
+                }}
               >
-                <SkipBack className="h-4 w-4" />
+                <SkipBack className="h-5 w-5" color="#4A4037" />
               </button>
             ) : null}
             <button
               type="button"
               onClick={togglePauseSpeech}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
               aria-label={snap.paused ? "재생" : "일시정지"}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 999,
+                background: "#E57C23",
+                color: "#fff",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 4px 14px rgba(229,124,35,0.35)",
+                fontFamily: "inherit",
+              }}
             >
-              {snap.paused
-                ? <Play className="h-4 w-4" />
-                : <Pause className="h-4 w-4" />
-              }
+              {snap.paused ? <Play className="h-6 w-6" /> : <Pause className="h-6 w-6" />}
             </button>
             {mediaMode ? (
               <button
                 type="button"
                 onClick={nextItem}
                 disabled={!canNext}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white disabled:opacity-30"
                 aria-label="다음"
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 999,
+                  background: "#FFFBF5",
+                  border: "1.5px solid #F2E6D7",
+                  cursor: canNext ? "pointer" : "not-allowed",
+                  opacity: canNext ? 1 : 0.4,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "inherit",
+                }}
               >
-                <SkipForward className="h-4 w-4" />
+                <SkipForward className="h-5 w-5" color="#4A4037" />
               </button>
             ) : null}
           </div>
 
-          {/* 자동재생 토글 (항상 표시) */}
-          <button
-            type="button"
-            onClick={toggleAutoPlay}
-            className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-white/50 transition hover:text-white/80 whitespace-nowrap"
-          >
-            <span>자동재생</span>
-            <span
-              className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
-                snap.autoPlay ? "bg-orange-500" : "bg-white/20"
-              }`}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              type="button"
+              onClick={cycleRate}
+              aria-label={`재생 속도 (현재 ${snap.rate}배속)`}
+              style={{
+                minHeight: 40,
+                padding: "0 14px",
+                borderRadius: 10,
+                background: "#FFFBF5",
+                color: "#1F1A14",
+                border: "1.5px solid #E8DCC7",
+                fontSize: 13,
+                fontWeight: 900,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                letterSpacing: "-0.01em",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                whiteSpace: "nowrap",
+              }}
             >
-              <span
-                className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
-                  snap.autoPlay ? "translate-x-[18px]" : "translate-x-[3px]"
-                }`}
-              />
-            </span>
-          </button>
+              🐢 {snap.rate}×
+            </button>
+            <button
+              type="button"
+              onClick={toggleAutoPlay}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                minHeight: 40,
+                padding: "0 12px",
+                borderRadius: 10,
+                background: snap.autoPlay ? "#1F1A14" : "#FFFBF5",
+                color: snap.autoPlay ? "#fff" : "#4A4037",
+                border: snap.autoPlay ? "none" : "1.5px solid #E8DCC7",
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                whiteSpace: "nowrap",
+              }}
+            >
+              자동재생 {snap.autoPlay ? "ON" : "OFF"}
+            </button>
+            <button
+              type="button"
+              onClick={stopSpeech}
+              aria-label="닫기"
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 999,
+                background: "#F5EEE2",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "inherit",
+              }}
+            >
+              <X className="h-4 w-4" color="#7A6F62" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 모바일/태블릿: 카드 형태 */}
+      <div
+        className="lg:hidden"
+        style={{
+          background: "#fff",
+          borderRadius: 20,
+          border: "1.5px solid #F2E6D7",
+          boxShadow: "0 -4px 22px rgba(31,26,20,0.10), 0 8px 24px rgba(31,26,20,0.06)",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ height: 4, background: "#F5EEE2", position: "relative" }}>
+          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${snap.progress}%`, background: "#E57C23", transition: "width 0.3s" }} />
         </div>
 
+        {!expanded ? (
+          <div
+            onClick={() => setExpanded(true)}
+            style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }}
+          >
+            <div
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: 14,
+                background: "#FFF2E3",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 26,
+                flexShrink: 0,
+                border: "2px solid #FFD1A333",
+              }}
+              aria-hidden="true"
+            >
+              🎧
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#B2570F", letterSpacing: "0.03em", textTransform: "uppercase", marginBottom: 2 }}>
+                지금 듣는 중
+              </div>
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 900,
+                  color: "#1F1A14",
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.3,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {currentTitle}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                togglePauseSpeech();
+              }}
+              aria-label={snap.paused ? "재생" : "일시정지"}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 999,
+                background: "#E57C23",
+                color: "#fff",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                fontFamily: "inherit",
+                boxShadow: "0 4px 12px rgba(229,124,35,0.35)",
+              }}
+            >
+              {snap.paused ? <Play className="h-6 w-6" /> : <Pause className="h-6 w-6" />}
+            </button>
+          </div>
+        ) : (
+          <div style={{ padding: "14px 18px 18px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "4px 10px",
+                  borderRadius: 999,
+                  background: "#FFF2E3",
+                  color: "#B2570F",
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                🎧 오디오
+              </div>
+              <span style={{ fontSize: 12, color: "#9C907F", fontWeight: 700 }}>듣는 중</span>
+              <button
+                type="button"
+                onClick={() => setExpanded(false)}
+                aria-label="접기"
+                style={{
+                  marginLeft: "auto",
+                  width: 36,
+                  height: 36,
+                  borderRadius: 999,
+                  background: "#F5EEE2",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "inherit",
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A4037" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={stopSpeech}
+                aria-label="닫기"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 999,
+                  background: "#F5EEE2",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "inherit",
+                }}
+              >
+                <X className="h-4 w-4" color="#7A6F62" />
+              </button>
+            </div>
+
+            <div style={{ fontSize: 17, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.02em", lineHeight: 1.35, marginBottom: 16 }}>
+              {currentTitle}
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={prevItem}
+                disabled={!canPrev}
+                aria-label="이전"
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 999,
+                  background: "#FFFBF5",
+                  border: "1.5px solid #F2E6D7",
+                  cursor: canPrev ? "pointer" : "not-allowed",
+                  opacity: canPrev ? 1 : 0.35,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "inherit",
+                }}
+              >
+                <SkipBack className="h-7 w-7" color="#4A4037" />
+              </button>
+              <button
+                type="button"
+                onClick={togglePauseSpeech}
+                aria-label={snap.paused ? "재생" : "일시정지"}
+                style={{
+                  width: 76,
+                  height: 76,
+                  borderRadius: 999,
+                  background: "#E57C23",
+                  color: "#fff",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 6px 18px rgba(229,124,35,0.4)",
+                  fontFamily: "inherit",
+                }}
+              >
+                {snap.paused ? <Play className="h-8 w-8" /> : <Pause className="h-8 w-8" />}
+              </button>
+              <button
+                type="button"
+                onClick={nextItem}
+                disabled={!canNext}
+                aria-label="다음"
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 999,
+                  background: "#FFFBF5",
+                  border: "1.5px solid #F2E6D7",
+                  cursor: canNext ? "pointer" : "not-allowed",
+                  opacity: canNext ? 1 : 0.35,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "inherit",
+                }}
+              >
+                <SkipForward className="h-7 w-7" color="#4A4037" />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                type="button"
+                onClick={cycleRate}
+                style={{
+                  flex: 1,
+                  minHeight: 48,
+                  borderRadius: 12,
+                  background: "#fff",
+                  color: "#1F1A14",
+                  border: "1.5px solid #E8DCC7",
+                  fontSize: 14,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  letterSpacing: "-0.01em",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                }}
+              >
+                🐢 속도 {snap.rate}×
+              </button>
+              <button
+                type="button"
+                onClick={toggleAutoPlay}
+                style={{
+                  flex: 1,
+                  minHeight: 48,
+                  borderRadius: 12,
+                  background: snap.autoPlay ? "#1F1A14" : "#fff",
+                  color: snap.autoPlay ? "#fff" : "#4A4037",
+                  border: snap.autoPlay ? "none" : "1.5px solid #E8DCC7",
+                  fontSize: 14,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                자동재생 {snap.autoPlay ? "ON" : "OFF"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
