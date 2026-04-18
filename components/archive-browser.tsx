@@ -55,6 +55,31 @@ function seniorCategoryMeta(cat: string) {
   return CATEGORY_META[cat] ?? { emoji: "📄", color: "#7A6F62", bg: "#F5EEE2" };
 }
 
+function CategoryPlaceholder({ cat, size = 96 }: { cat: string; size?: number }) {
+  const m = seniorCategoryMeta(cat);
+  const stripe = `repeating-linear-gradient(135deg, ${m.color}14 0 8px, transparent 8px 16px)`;
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 14,
+        background: m.bg,
+        backgroundImage: stripe,
+        border: `1px solid ${m.color}22`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        fontSize: Math.round(size * 0.44),
+      }}
+      aria-hidden="true"
+    >
+      {m.emoji}
+    </div>
+  );
+}
+
 /** UTC Date를 KST(+9) 날짜 문자열 YYYY-MM-DD로 변환 */
 function toKSTDateString(date: Date): string {
   const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
@@ -1026,7 +1051,9 @@ export function ArchiveBrowser({
                         imgClassName="w-full h-full object-cover"
                         fallbackLabel="준비 중"
                       />
-                    ) : null}
+                    ) : (
+                      <CategoryPlaceholder cat={item.main_interest} size={96} />
+                    )}
                   </div>
                 </Link>
 
