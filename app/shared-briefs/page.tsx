@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import { SharedBriefCard } from "@/components/shared-brief-card";
 import { SharedComments } from "@/components/shared-comments";
-import { PageIntro } from "@/components/ui/panel";
 import { getCurrentUserSession } from "@/lib/auth/user-session";
 import { DEMO_ARCHIVE_ITEMS } from "@/lib/content/demo-data";
 import { normalizeSources } from "@/lib/content/sources";
@@ -60,24 +59,75 @@ export default async function SharedBriefsPage({ searchParams }: PageProps) {
   const items = mergedItems.filter((item) => slugs.includes(item.slug));
 
   return (
-    <div className="app-shell section-block">
-      <PageIntro
-        eyebrow="SHARE"
-        title="공유 받은 소식"
-        description="선택된 지난 소식을 모아보고, 마음에 들면 세줄아침을 바로 살펴보실 수 있습니다."
-        className="mb-10"
-      />
+    <div style={{ background: "#F0EEE9", minHeight: "100vh", padding: "32px 20px 60px" }}>
+      <div style={{ maxWidth: 1080, margin: "0 auto 24px" }}>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "6px 14px",
+            background: "#fff",
+            borderRadius: 999,
+            border: "1.5px solid #F5DDC2",
+            fontSize: 12,
+            fontWeight: 800,
+            color: "#B2570F",
+            marginBottom: 12,
+          }}
+        >
+          공유 받은 소식
+        </div>
+        <h1 style={{ margin: 0, fontSize: 30, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.03em" }}>
+          공유 받은 소식
+        </h1>
+        <p style={{ margin: "6px 0 0", fontSize: 15, color: "#7A6F62", fontWeight: 500, lineHeight: 1.6 }}>
+          선택된 지난 소식을 모아보고, 마음에 들면 세줄아침을 바로 살펴보실 수 있어요.
+        </p>
+      </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_220px]">
-        <div className="space-y-6">
-          <div className="space-y-4">
+      <div style={{ maxWidth: 1080, margin: "0 auto", display: "grid", gap: 24 }} className="xl:!grid-cols-[minmax(0,1fr)_220px]">
+        <div style={{ display: "grid", gap: 20 }}>
+          <div style={{ display: "grid", gap: 14 }}>
             {nickname ? (
-              <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-2xl shadow-sm">{avatar.emoji}</div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "14px 16px",
+                  borderRadius: 16,
+                  background: "#FFFBF5",
+                  border: "1.5px solid #F2E6D7",
+                }}
+              >
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 999,
+                    background: "#FFF2E3",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 24,
+                    flexShrink: 0,
+                  }}
+                >
+                  {avatar.emoji}
+                </div>
                 <div>
-                  <p className="text-xs font-semibold text-orange-500">공유해준 사람</p>
-                  <p className="mt-0.5 text-base font-bold text-gray-900">{nickname}</p>
-                  {sharedRecord?.message ? <p className="mt-1 text-sm leading-6 text-gray-700">{sharedRecord.message}</p> : null}
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#B2570F", letterSpacing: "-0.01em" }}>
+                    공유해준 사람
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: "#1F1A14", marginTop: 2, letterSpacing: "-0.02em" }}>
+                    {nickname}
+                  </div>
+                  {sharedRecord?.message ? (
+                    <p style={{ margin: "4px 0 0", fontSize: 13, color: "#4A4037", lineHeight: 1.5, fontWeight: 500 }}>
+                      {sharedRecord.message}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -102,8 +152,22 @@ export default async function SharedBriefsPage({ searchParams }: PageProps) {
                 />
               ))}
               {items.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-gray-300 bg-white p-[18px] text-sm leading-6 text-gray-600">
-                  아직 공유된 지난 소식을 불러오지 못했습니다. 지난 소식에서 다시 선택해 공유해보세요.
+                <div
+                  style={{
+                    borderRadius: 18,
+                    border: "2px dashed #E8DCC7",
+                    background: "#FFFBF5",
+                    padding: 22,
+                    fontSize: 14,
+                    color: "#7A6F62",
+                    fontWeight: 600,
+                    lineHeight: 1.6,
+                    textAlign: "center",
+                  }}
+                >
+                  아직 공유된 지난 소식을 불러오지 못했습니다.
+                  <br />
+                  지난 소식에서 다시 선택해 공유해보세요.
                 </div>
               ) : null}
             </div>
@@ -134,10 +198,46 @@ export default async function SharedBriefsPage({ searchParams }: PageProps) {
 
         <aside className="xl:sticky xl:top-24 xl:self-start">
           <div className="flex flex-row gap-3 xl:flex-col">
-            <Link href="/" className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl border border-gray-300 bg-white px-5 py-3 text-base font-semibold text-gray-900 shadow-sm">
+            <Link
+              href="/"
+              style={{
+                flex: 1,
+                minHeight: 52,
+                padding: "0 20px",
+                borderRadius: 14,
+                background: "#fff",
+                color: "#1F1A14",
+                border: "1.5px solid #E8DCC7",
+                fontSize: 15,
+                fontWeight: 800,
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                letterSpacing: "-0.01em",
+              }}
+            >
               소식 더보기
             </Link>
-            <Link href="/signup" className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl bg-orange-500 px-5 py-3 text-base font-semibold text-white shadow-sm">
+            <Link
+              href="/signup"
+              style={{
+                flex: 1,
+                minHeight: 52,
+                padding: "0 20px",
+                borderRadius: 14,
+                background: "#E57C23",
+                color: "#fff",
+                fontSize: 15,
+                fontWeight: 900,
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                letterSpacing: "-0.01em",
+                boxShadow: "0 6px 16px rgba(229, 124, 35, 0.3)",
+              }}
+            >
               무료로 받아보기
             </Link>
           </div>
