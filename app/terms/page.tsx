@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { PageIntro, SoftCard } from "@/components/ui/panel";
+import { SoftCard } from "@/components/ui/panel";
 
 export const metadata: Metadata = {
   title: "이용약관 및 개인정보처리방침",
@@ -10,15 +10,34 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="app-shell max-w-4xl section-block">
-      <PageIntro
-        eyebrow="TERMS"
-        title="이용약관 · 개인정보처리방침"
-        description="가입 전 확인하실 수 있도록 두 내용을 한 페이지에서 나눠 보여드립니다."
-        className="mb-10"
-      />
+    <div style={{ background: "#F0EEE9", minHeight: "100vh", padding: "32px 20px 60px" }}>
+      <div style={{ maxWidth: 880, margin: "0 auto 24px" }}>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "6px 14px",
+            background: "#fff",
+            borderRadius: 999,
+            border: "1.5px solid #F5DDC2",
+            fontSize: 12,
+            fontWeight: 800,
+            color: "#B2570F",
+            marginBottom: 12,
+          }}
+        >
+          약관
+        </div>
+        <h1 style={{ margin: 0, fontSize: 30, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.03em" }}>
+          이용약관 · 개인정보처리방침
+        </h1>
+        <p style={{ margin: "6px 0 0", fontSize: 15, color: "#7A6F62", fontWeight: 500, lineHeight: 1.6 }}>
+          가입 전 확인하실 수 있도록 두 내용을 한 페이지에서 나눠 보여드립니다.
+        </p>
+      </div>
 
-      <div className="grid gap-4">
+      <div style={{ maxWidth: 880, margin: "0 auto", display: "grid", gap: 16 }}>
         {/* ── 이용약관 ── */}
         <div id="terms">
           <SoftCard className="p-7">
