@@ -273,13 +273,13 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
           }}
         >
           {[
-            { n: "1", t: "아침 7시 도착", d: "이메일로\n짧은 브리핑이 옵니다" },
-            { n: "2", t: "세 줄로 핵심만", d: "긴 기사 대신\n핵심만 세 줄" },
-            { n: "3", t: "소리로 듣기", d: "버튼 한 번이면\n귀로 편하게 듣습니다" },
-            { n: "4", t: "더 보고 싶으면", d: "관심 분야만\n골라서 읽을 수 있습니다" },
+            { emoji: "📬", t: "아침 7시 도착", d: "이메일로\n짧은 브리핑이 옵니다" },
+            { emoji: "✏️", t: "세 줄로 핵심만", d: "긴 기사 대신\n핵심만 세 줄" },
+            { emoji: "🎧", t: "읽기 싫으면 듣기", d: "아침 준비하면서\n라디오처럼 듣습니다" },
+            { emoji: "📚", t: "더 보고 싶으면", d: "관심 분야만\n골라서 읽을 수 있습니다" },
           ].map((it) => (
             <div
-              key={it.n}
+              key={it.t}
               style={{
                 background: "#fff",
                 borderRadius: 20,
@@ -289,20 +289,19 @@ export function LandingHero({ previews }: { previews: PreviewItem[] }) {
             >
               <div
                 style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 14,
+                  width: 56,
+                  height: 56,
+                  borderRadius: 16,
                   background: "#FFF2E3",
-                  color: "#B2570F",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: 22,
-                  fontWeight: 900,
+                  fontSize: 30,
                   marginBottom: 14,
                 }}
+                aria-hidden="true"
               >
-                {it.n}
+                {it.emoji}
               </div>
               <div style={{ fontSize: 17, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.02em", marginBottom: 6 }}>
                 {it.t}

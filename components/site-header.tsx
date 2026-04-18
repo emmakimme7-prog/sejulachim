@@ -8,6 +8,59 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { SpeechSearchButton } from "@/components/speech-controls";
+import { fontSizeOptions, useFontSize } from "@/components/font-size-provider";
+
+function FontSizePills() {
+  const { fontSize, setFontSize } = useFontSize();
+  const sizes: { value: typeof fontSize; size: number }[] = [
+    { value: "small", size: 13 },
+    { value: "medium", size: 16 },
+    { value: "large", size: 19 },
+  ];
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        background: "#F5EEE2",
+        borderRadius: 999,
+        padding: 3,
+        gap: 2,
+      }}
+    >
+      {sizes.map((opt) => {
+        const active = fontSize === opt.value;
+        const label = fontSizeOptions.find((o) => o.value === opt.value)?.label ?? "";
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setFontSize(opt.value)}
+            aria-label={`${label} 글씨 크기`}
+            aria-pressed={active}
+            style={{
+              minWidth: 32,
+              height: 30,
+              padding: "0 8px",
+              border: "none",
+              borderRadius: 999,
+              background: active ? "#1F1A14" : "transparent",
+              color: active ? "#fff" : "#4A4037",
+              fontWeight: active ? 900 : 700,
+              fontSize: opt.size,
+              letterSpacing: "-0.02em",
+              cursor: "pointer",
+              transition: "all 0.15s",
+              fontFamily: "inherit",
+            }}
+          >
+            가
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 type SessionPayload = {
   session: {
@@ -212,43 +265,117 @@ export function SiteHeader() {
               </div>
             </Link>
 
-            {/* 데스크탑 탭 */}
-            <nav className="hidden lg:flex items-center gap-[6px]">
+            {/* 데스크탑 탭 (pill 스타일) */}
+            <nav className="hidden lg:flex items-center gap-[4px]">
+              <button
+                type="button"
+                onClick={() => router.push("/?view=today")}
+                className="inline-flex items-center whitespace-nowrap"
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 10,
+                  background: isTodayActive ? "#FFF2E3" : "transparent",
+                  color: isTodayActive ? "#B2570F" : "#4A4037",
+                  fontSize: 16,
+                  fontWeight: isTodayActive ? 900 : 800,
+                  letterSpacing: "-0.01em",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                오늘의 소식
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/")}
+                className="inline-flex items-center whitespace-nowrap"
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 10,
+                  background: isPopularActive ? "#FFF2E3" : "transparent",
+                  color: isPopularActive ? "#B2570F" : "#4A4037",
+                  fontSize: 16,
+                  fontWeight: isPopularActive ? 900 : 800,
+                  letterSpacing: "-0.01em",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                인기 소식
+              </button>
               {!isLoggedIn && sessionLoaded ? (
                 <button
                   type="button"
                   onClick={() => router.push("/?view=intro")}
-                  className={`relative px-[23px] py-[12px] text-[17px] font-extrabold tracking-[-0.01em] transition-colors ${isIntroActive ? "text-[#B2570F]" : "text-[#4A4037] hover:text-[#1F1A14]"}`}
+                  className="inline-flex items-center whitespace-nowrap"
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: 10,
+                    background: isIntroActive ? "#FFF2E3" : "transparent",
+                    color: isIntroActive ? "#B2570F" : "#4A4037",
+                    fontSize: 16,
+                    fontWeight: isIntroActive ? 900 : 800,
+                    letterSpacing: "-0.01em",
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
                 >
                   소개
-                  {isIntroActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
                 </button>
               ) : null}
-              <button
-                type="button"
-                onClick={() => router.push("/")}
-                className={`relative px-[23px] py-[12px] text-[17px] font-extrabold tracking-[-0.01em] transition-colors ${isPopularActive ? "text-[#B2570F]" : "text-[#4A4037] hover:text-[#1F1A14]"}`}
-              >
-                인기뉴스
-                {isPopularActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/?view=today")}
-                className={`relative px-[23px] py-[12px] text-[17px] font-extrabold tracking-[-0.01em] transition-colors ${isTodayActive ? "text-[#B2570F]" : "text-[#4A4037] hover:text-[#1F1A14]"}`}
-              >
-                오늘뉴스
-                {isTodayActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
-              </button>
             </nav>
 
+            {/* 인라인 검색 (lg 이상) */}
+            <form
+              onSubmit={handleHeaderSearchSubmit}
+              className="hidden lg:flex relative"
+              style={{ flex: "0 1 320px", marginLeft: "auto", marginRight: 12 }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  left: 14,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  pointerEvents: "none",
+                  display: "flex",
+                }}
+              >
+                <Search style={{ width: 18, height: 18, color: "#9C907F" }} />
+              </div>
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="지난 소식 검색"
+                style={{
+                  width: "100%",
+                  height: 40,
+                  paddingLeft: 42,
+                  paddingRight: 16,
+                  borderRadius: 999,
+                  border: "1.5px solid #E8DCC7",
+                  background: "#FFFBF5",
+                  fontSize: 14,
+                  color: "#1F1A14",
+                  fontFamily: "inherit",
+                  outline: "none",
+                }}
+              />
+            </form>
+
             {/* 우측 액션 버튼 */}
-            <div className="flex items-center gap-[6px] sm:gap-[12px]">
+            <div className="flex items-center gap-[6px] sm:gap-[10px]">
+              <div className="hidden lg:block">
+                <FontSizePills />
+              </div>
               <button
                 data-search-toggle
                 type="button"
                 onClick={() => setShowSearch((current) => !current)}
-                className="inline-flex h-[40px] w-[40px] items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100"
+                className="inline-flex h-[40px] w-[40px] items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 lg:hidden"
                 aria-label="검색 열기"
               >
                 <Search className="h-[22px] w-[22px]" />
@@ -299,7 +426,7 @@ export function SiteHeader() {
                     style={{ boxShadow: "0 4px 10px rgba(229,124,35,0.28)" }}
                     className="inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#E57C23] px-[16px] text-[15px] font-extrabold tracking-[-0.01em] text-white transition hover:bg-[#D16612] sm:min-h-[44px] sm:px-[22px] sm:text-[16px]"
                   >
-                    무료신청
+                    무료 구독 시작
                   </Link>
                 </>
               )}
@@ -309,6 +436,22 @@ export function SiteHeader() {
 
         {/* 모바일 탭 */}
         <div className="flex border-t border-gray-100 lg:hidden">
+          <button
+            type="button"
+            onClick={() => router.push("/?view=today")}
+            className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-extrabold tracking-[-0.01em] transition-colors ${isTodayActive ? "text-[#B2570F]" : "text-gray-600"}`}
+          >
+            오늘의 소식
+            {isTodayActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#E57C23]" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-extrabold tracking-[-0.01em] transition-colors ${isPopularActive ? "text-[#B2570F]" : "text-gray-600"}`}
+          >
+            인기 소식
+            {isPopularActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#E57C23]" />}
+          </button>
           {!isLoggedIn && sessionLoaded ? (
             <button
               type="button"
@@ -316,25 +459,9 @@ export function SiteHeader() {
               className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-extrabold tracking-[-0.01em] transition-colors ${isIntroActive ? "text-[#B2570F]" : "text-gray-600"}`}
             >
               소개
-              {isIntroActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
+              {isIntroActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#E57C23]" />}
             </button>
           ) : null}
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-extrabold tracking-[-0.01em] transition-colors ${isPopularActive ? "text-[#B2570F]" : "text-gray-600"}`}
-          >
-            인기뉴스
-            {isPopularActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push("/?view=today")}
-            className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-extrabold tracking-[-0.01em] transition-colors ${isTodayActive ? "text-[#B2570F]" : "text-gray-600"}`}
-          >
-            오늘뉴스
-            {isTodayActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500" />}
-          </button>
         </div>
 
       </div>

@@ -323,32 +323,86 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
             </div>
 
             {/* 듣기 플레이어 액션 바 */}
+            {/* 큰 듣기 플레이어 */}
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "flex-end",
-                gap: 16,
-                padding: "12px 16px",
-                borderRadius: 14,
+                gap: 18,
+                padding: 20,
+                borderRadius: 18,
                 background: "#fff",
-                border: "1.5px solid #F2E6D7",
-                marginBottom: 24,
+                border: "2px solid #FFD1A3",
+                marginBottom: 20,
+                boxShadow: "0 2px 8px rgba(229, 124, 35, 0.08)",
+              }}
+            >
+              <div style={{ flexShrink: 0 }}>
+                <DetailListenButton
+                  text={listenText}
+                  title={data.title}
+                  nextItems={relatedItems.map((item) => ({
+                    title: item.title,
+                    short_summary: "short_summary" in item ? item.short_summary : null,
+                    long_summary: "long_summary" in item ? item.long_summary : null,
+                    action_line: "action_line" in item ? item.action_line : null,
+                    slug: item.slug,
+                  }))}
+                  className="!w-[60px] !h-[60px] !min-h-0 !p-0 !rounded-full !bg-[#E57C23] hover:!bg-[#D16612] !border-0 !text-white !shadow-[0_6px_16px_rgba(229,124,35,0.35)] flex items-center justify-center [&_span.sr-only]:hidden [&>span:last-child]:hidden"
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: "#B2570F",
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                    marginBottom: 4,
+                  }}
+                >
+                  오디오로 듣기
+                </div>
+                <div
+                  style={{
+                    fontSize: 17,
+                    fontWeight: 900,
+                    color: "#1F1A14",
+                    letterSpacing: "-0.02em",
+                    marginBottom: 10,
+                  }}
+                >
+                  전체 내용 듣기
+                </div>
+                <div
+                  style={{
+                    height: 6,
+                    background: "#F5EEE2",
+                    borderRadius: 999,
+                    overflow: "hidden",
+                  }}
+                  aria-hidden="true"
+                >
+                  <div style={{ width: "0%", height: "100%", background: "#E57C23", transition: "width 0.2s" }} />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 6, flexShrink: 0 }} className="hidden md:flex">
+                <DetailActionBar shareSlug={slug} shareTitle={data.title} />
+              </div>
+            </div>
+
+            {/* 모바일용 액션 바 */}
+            <div
+              className="md:hidden"
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+                marginBottom: 20,
               }}
             >
               <DetailActionBar shareSlug={slug} shareTitle={data.title} />
-              <DetailListenButton
-                text={listenText}
-                title={data.title}
-                nextItems={relatedItems.map((item) => ({
-                  title: item.title,
-                  short_summary: "short_summary" in item ? item.short_summary : null,
-                  long_summary: "long_summary" in item ? item.long_summary : null,
-                  action_line: "action_line" in item ? item.action_line : null,
-                  slug: item.slug,
-                }))}
-                className="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[14px] !font-bold !text-[#B2570F] hover:!text-[#E57C23] !shadow-none"
-              />
             </div>
 
             {/* 세줄 요약 (short_summary) */}
