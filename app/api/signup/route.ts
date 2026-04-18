@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { isStrongEnoughPassword } from "@/lib/auth/passwords";
+import { createUserSession } from "@/lib/auth/user-session";
 import { hasSupabaseServerEnv } from "@/lib/env";
 import { addSecurityJobLog, findUserByEmail } from "@/lib/mongodb/user-data";
 import { sendSignupPreviewEmail, upsertMongoSignup } from "@/lib/mongodb/signup";
@@ -58,6 +59,19 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown";
       await addSecurityJobLog("signup.preview_email", "failed", `user=${user.id}; error=${message}`);
+    }
+
+    // 가입 완료 후 자동 로그인 — 세션 쿠키 발급
+    try {
+      await createUserSession({
+        userId: user.id,
+        email: normalizedEmail,
+        rememberMe: true,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown";
+      await addSecurityJobLog("signup.auto_session", "failed", `user=${user.id}; error=${message}`);
+      // 세션 발급 실패해도 가입 자체는 성공 응답 (사용자가 수동 로그인 가능)
     }
 
     return NextResponse.json({ ok: true });

@@ -23,11 +23,9 @@ const CATEGORY_META: Record<string, { emoji: string; color: string; bg: string }
 export function FeedRightSidebar({
   items,
   interests,
-  deliveryTime,
 }: {
   items: Item[];
   interests?: string[];
-  deliveryTime?: string;
 }) {
   const handlePlayAll = useCallback(() => {
     if (items.length === 0) return;
@@ -126,15 +124,6 @@ export function FeedRightSidebar({
           내 구독 설정
         </div>
 
-        {deliveryTime ? (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, color: "#7A6F62", fontWeight: 600, marginBottom: 4 }}>배송 시간</div>
-            <div style={{ fontSize: 16, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.02em" }}>
-              매일 아침 {deliveryTime.slice(0, 5)}
-            </div>
-          </div>
-        ) : null}
-
         {interests && interests.length > 0 ? (
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, color: "#7A6F62", fontWeight: 600, marginBottom: 6 }}>받는 분야</div>
@@ -162,13 +151,11 @@ export function FeedRightSidebar({
               })}
             </div>
           </div>
-        ) : null}
-
-        {!deliveryTime && (!interests || interests.length === 0) ? (
+        ) : (
           <div style={{ fontSize: 13, color: "#4A4037", fontWeight: 500, marginBottom: 10 }}>
-            로그인하면 내 관심 분야와 배송 시간을 볼 수 있어요.
+            로그인하면 내 관심 분야가 표시됩니다.
           </div>
-        ) : null}
+        )}
 
         <Link
           href="/account"
