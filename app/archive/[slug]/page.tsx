@@ -293,8 +293,6 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
               }}
             >
               <span>{data.published_at ? formatDate(data.published_at) : "발행 전"}</span>
-              <span>·</span>
-              <span>정리: 세줄아침 편집부</span>
             </div>
 
             {/* 히어로 썸네일 */}
@@ -341,6 +339,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                   text={listenText}
                   title={data.title}
                   iconOnly
+                  playIcon
                   nextItems={relatedItems.map((item) => ({
                     title: item.title,
                     short_summary: "short_summary" in item ? item.short_summary : null,

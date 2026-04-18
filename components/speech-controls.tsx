@@ -247,6 +247,7 @@ type ListenButtonProps = {
   label?: string;
   mobileIconOnly?: boolean;
   onPlay?: () => void;
+  playIcon?: boolean;
 };
 
 export function ListenButton({
@@ -257,6 +258,7 @@ export function ListenButton({
   label = "듣기",
   mobileIconOnly = false,
   onPlay,
+  playIcon = false,
 }: ListenButtonProps) {
   const pathname = usePathname();
   const normalizedText = text.replace(/\s+/g, " ").trim();
@@ -320,7 +322,7 @@ export function ListenButton({
       title={label}
     >
       <span className="inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center">
-        {playing ? <Square className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}
+        {playing ? <Square className="h-[18px] w-[18px]" /> : playIcon ? <Play className="h-[18px] w-[18px]" fill="currentColor" /> : <Volume2 className="h-[18px] w-[18px]" />}
       </span>
       {showLabel ? (
         <span className={`shrink-0 whitespace-nowrap leading-none ${mobileIconOnly ? "hidden sm:inline" : ""}`}>

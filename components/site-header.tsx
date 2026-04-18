@@ -268,6 +268,27 @@ export function SiteHeader() {
 
             {/* 데스크탑 탭 (pill 스타일) */}
             <nav className="hidden lg:flex items-center gap-[4px]">
+              {!isLoggedIn && sessionLoaded ? (
+                <button
+                  type="button"
+                  onClick={() => router.push("/?view=intro")}
+                  className="inline-flex items-center whitespace-nowrap"
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: 10,
+                    background: isIntroActive ? "#FFF2E3" : "transparent",
+                    color: isIntroActive ? "#B2570F" : "#4A4037",
+                    fontSize: 16,
+                    fontWeight: isIntroActive ? 900 : 800,
+                    letterSpacing: "-0.01em",
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  소개
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => router.push("/?view=today")}
@@ -285,7 +306,7 @@ export function SiteHeader() {
                   fontFamily: "inherit",
                 }}
               >
-                오늘의 소식
+                오늘 소식
               </button>
               <button
                 type="button"
@@ -325,27 +346,6 @@ export function SiteHeader() {
               >
                 지난 소식
               </button>
-              {!isLoggedIn && sessionLoaded ? (
-                <button
-                  type="button"
-                  onClick={() => router.push("/?view=intro")}
-                  className="inline-flex items-center whitespace-nowrap"
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: 10,
-                    background: isIntroActive ? "#FFF2E3" : "transparent",
-                    color: isIntroActive ? "#B2570F" : "#4A4037",
-                    fontSize: 16,
-                    fontWeight: isIntroActive ? 900 : 800,
-                    letterSpacing: "-0.01em",
-                    border: "none",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  소개
-                </button>
-              ) : null}
             </nav>
 
             {/* 인라인 검색 (lg 이상) */}
@@ -456,12 +456,22 @@ export function SiteHeader() {
 
         {/* 모바일 탭 */}
         <div className="flex border-t border-gray-100 lg:hidden">
+          {!isLoggedIn && sessionLoaded ? (
+            <button
+              type="button"
+              onClick={() => router.push("/?view=intro")}
+              className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-extrabold tracking-[-0.01em] transition-colors ${isIntroActive ? "text-[#B2570F]" : "text-gray-600"}`}
+            >
+              소개
+              {isIntroActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#E57C23]" />}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => router.push("/?view=today")}
             className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-extrabold tracking-[-0.01em] transition-colors ${isTodayActive ? "text-[#B2570F]" : "text-gray-600"}`}
           >
-            오늘의 소식
+            오늘 소식
             {isTodayActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#E57C23]" />}
           </button>
           <button
@@ -480,16 +490,6 @@ export function SiteHeader() {
             지난 소식
             {isArchiveActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#E57C23]" />}
           </button>
-          {!isLoggedIn && sessionLoaded ? (
-            <button
-              type="button"
-              onClick={() => router.push("/?view=intro")}
-              className={`relative flex-1 inline-flex items-center justify-center min-h-[44px] text-[15px] font-extrabold tracking-[-0.01em] transition-colors ${isIntroActive ? "text-[#B2570F]" : "text-gray-600"}`}
-            >
-              소개
-              {isIntroActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#E57C23]" />}
-            </button>
-          ) : null}
         </div>
 
       </div>

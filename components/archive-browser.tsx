@@ -928,7 +928,7 @@ export function ArchiveBrowser({
                       </h2>
                       <p
                         style={{
-                          margin: "0 0 12px",
+                          margin: 0,
                           fontSize: 15,
                           lineHeight: 1.6,
                           color: "#4A4037",
@@ -937,24 +937,6 @@ export function ArchiveBrowser({
                       >
                         {item.short_summary}
                       </p>
-                      {item.action_line ? (
-                        <div
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            padding: "10px 14px",
-                            borderRadius: 12,
-                            background: "#FFF2E3",
-                            fontSize: 14,
-                            fontWeight: 800,
-                            color: "#B2570F",
-                            letterSpacing: "-0.01em",
-                          }}
-                        >
-                          ✓ {item.action_line}
-                        </div>
-                      ) : null}
                     </div>
                     {item.thumbnail_url ? (
                       <ContentThumbnail
@@ -968,6 +950,23 @@ export function ArchiveBrowser({
                       <CategoryPlaceholder cat={item.main_interest} size={96} />
                     )}
                   </div>
+                  {item.action_line ? (
+                    <div
+                      style={{
+                        display: "block",
+                        padding: "10px 14px",
+                        borderRadius: 12,
+                        background: "#FFF2E3",
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: "#B2570F",
+                        letterSpacing: "-0.01em",
+                        marginTop: 12,
+                      }}
+                    >
+                      ✓ {item.action_line}
+                    </div>
+                  ) : null}
                 </Link>
 
                 {/* 하단: 액션 버튼 */}
