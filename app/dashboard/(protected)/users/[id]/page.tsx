@@ -134,11 +134,9 @@ export default async function DashboardUserDetailPage({ params }: PageProps) {
               </tr>
               <tr className="border-t border-navy-100 align-top">
                 <th className="w-32 bg-sand px-3 py-3 text-xs font-semibold text-navy-700">관심사</th>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3" colSpan={3}>
                   <p className="text-navy-900">{detail.interests.length ? detail.interests.map((row) => row.sub_interest ? `${row.main_interest} · ${row.sub_interest}` : row.main_interest).join(", ") : "미설정"}</p>
                 </td>
-                <th className="w-32 bg-sand px-3 py-3 text-xs font-semibold text-navy-700">발송 시간</th>
-                <td className="px-4 py-3 text-navy-900">{user.delivery_time ?? "미설정"}</td>
               </tr>
               <tr className="border-t border-navy-100 align-top">
                 <th className="w-32 bg-sand px-3 py-3 text-xs font-semibold text-navy-700">상태</th>
@@ -163,13 +161,12 @@ export default async function DashboardUserDetailPage({ params }: PageProps) {
           <AccountInterestsForm
             initialInterests={selectedInterests}
             initialSubInterests={subInterests}
-            initialDeliveryTime={user.delivery_time ?? "08:00"}
             mainInterests={interestConfig.mainInterests}
             subInterestOptions={interestConfig.subInterests}
             interestLabels={interestConfig.labels}
             submitUrl={`/api/admin/users/${id}/preferences`}
             submitLabel="사용자 관심사 저장하기"
-            successMessage="사용자 관심사와 발송 시간이 저장되었습니다."
+            successMessage="사용자 관심사가 저장되었습니다."
           />
         </div>
       </section>

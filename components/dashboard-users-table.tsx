@@ -21,7 +21,6 @@ type UserRow = {
   nickname?: string | null;
   auth_provider?: string;
   created_at?: string;
-  delivery_time: string;
   is_active: boolean;
   user_interest_selections: Array<{ main_interest: string; sub_interest: string | null }>;
 };
@@ -132,7 +131,6 @@ export function DashboardUsersTable({ rows }: { rows: UserRow[] }) {
                 <th className="px-4 py-4">유형</th>
                 <th className="px-4 py-4">관심사</th>
                 <th className="px-4 py-4">가입일시</th>
-                <th className="px-4 py-4">발송 시간</th>
                 <th className="px-4 py-4">상태</th>
                 <th className="px-4 py-4">작업</th>
               </tr>
@@ -156,7 +154,6 @@ export function DashboardUsersTable({ rows }: { rows: UserRow[] }) {
                     {user.user_interest_selections.map((item) => `${item.main_interest}${item.sub_interest ? ` · ${item.sub_interest}` : ""}`).join(", ")}
                   </td>
                   <td className="px-4 py-4 text-navy-700">{user.created_at ? new Date(user.created_at).toLocaleString("ko-KR") : "-"}</td>
-                  <td className="px-4 py-4">{user.delivery_time}</td>
                   <td className="px-4 py-4">
                     <StatusBadge value={user.is_active ? "active" : "paused"} />
                   </td>
@@ -167,7 +164,7 @@ export function DashboardUsersTable({ rows }: { rows: UserRow[] }) {
               ))}
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-navy-500">
+                  <td colSpan={7} className="px-4 py-10 text-center text-navy-500">
                     조건에 맞는 사용자가 없습니다.
                   </td>
                 </tr>

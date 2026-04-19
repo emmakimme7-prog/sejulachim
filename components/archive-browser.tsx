@@ -916,7 +916,7 @@ export function ArchiveBrowser({
                       <h2
                         style={{
                           margin: 0,
-                          fontSize: 20,
+                          fontSize: "calc(20px * var(--font-scale, 1))",
                           fontWeight: 900,
                           color: "#1F1A14",
                           letterSpacing: "-0.03em",
@@ -929,7 +929,7 @@ export function ArchiveBrowser({
                       <p
                         style={{
                           margin: 0,
-                          fontSize: 15,
+                          fontSize: "calc(15px * var(--font-scale, 1))",
                           lineHeight: 1.6,
                           color: "#4A4037",
                           fontWeight: 500,
@@ -957,7 +957,7 @@ export function ArchiveBrowser({
                         padding: "10px 14px",
                         borderRadius: 12,
                         background: "#FFF2E3",
-                        fontSize: 14,
+                        fontSize: "calc(14px * var(--font-scale, 1))",
                         fontWeight: 800,
                         color: "#B2570F",
                         letterSpacing: "-0.01em",
@@ -999,15 +999,13 @@ export function ArchiveBrowser({
                   {(item.view_count ?? 0) > 0 ? (
                     <span style={{ fontSize: 12, color: "#9C907F", fontWeight: 600 }}>{(item.view_count ?? 0).toLocaleString()} 조회</span>
                   ) : null}
-                  {resolvedShareProfile ? (
-                    <FavoriteToggleButton
-                      slug={item.slug}
-                      contentItemId={item.id}
-                      initialFavorite={resolvedFavoriteIds.includes(item.slug)}
-                      label="저장"
-                      className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#7A6F62] hover:text-[#1F1A14] transition"
-                    />
-                  ) : null}
+                  <FavoriteToggleButton
+                    slug={item.slug}
+                    contentItemId={item.id}
+                    initialFavorite={resolvedFavoriteIds.includes(item.slug)}
+                    label="저장"
+                    className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#7A6F62] hover:text-[#1F1A14] transition"
+                  />
                 </div>
               </article>
               {hasFeedProducts ? (

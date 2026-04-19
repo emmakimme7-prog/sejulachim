@@ -31,7 +31,9 @@ export async function POST(request: NextRequest) {
 
     await addSecurityJobLog("account.preferences_update", "success", `user=${session.id}`);
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "설정을 저장하지 못했습니다." }, { status: 400 });
+  } catch (error) {
+    console.error("[/api/account/preferences] failed:", error);
+    const message = error instanceof Error ? error.message : "설정을 저장하지 못했습니다.";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

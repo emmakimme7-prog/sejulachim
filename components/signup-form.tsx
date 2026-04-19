@@ -147,7 +147,7 @@ export function SignupForm({
           interests: selectedInterests,
           subInterests,
           email,
-          deliveryTime: "08:00",
+          deliveryTime: "07:00",
           passwordEnabled: true,
           password,
           agreeToTerms: true,

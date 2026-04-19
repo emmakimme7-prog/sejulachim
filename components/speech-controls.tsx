@@ -416,12 +416,13 @@ export function SpeechPlayer() {
             maxWidth: 1280,
             margin: "0 auto",
             padding: "12px 32px",
-            display: "flex",
+            display: "grid",
+            gridTemplateColumns: "1fr auto 1fr",
             alignItems: "center",
             gap: 20,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0, flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
             <div
               style={{
                 width: 48,
@@ -461,7 +462,7 @@ export function SpeechPlayer() {
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
             {mediaMode ? (
               <button
                 type="button"
@@ -531,7 +532,7 @@ export function SpeechPlayer() {
             ) : null}
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
             <button
               type="button"
               onClick={cycleRate}

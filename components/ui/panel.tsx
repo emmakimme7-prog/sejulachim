@@ -47,5 +47,16 @@ export function PageIntro({
 }
 
 export function SoftCard({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-2xl border border-gray-200 bg-white p-6", className)}>{children}</div>;
+  return (
+    <div
+      className={cn("bg-white p-[18px]", className)}
+      style={{
+        borderRadius: 18,
+        border: "1.5px solid #F2E6D7",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+      }}
+    >
+      {children}
+    </div>
+  );
 }

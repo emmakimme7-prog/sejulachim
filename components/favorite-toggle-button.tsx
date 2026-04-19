@@ -23,6 +23,10 @@ export function FavoriteToggleButton({
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
+    setIsFavorite(initialFavorite);
+  }, [initialFavorite]);
+
+  useEffect(() => {
     if (!toast) {
       return;
     }
@@ -43,6 +47,10 @@ export function FavoriteToggleButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contentItemId, slug })
       });
+      if (response.status === 401) {
+        window.location.assign("/login");
+        return;
+      }
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "즐겨찾기 저장 실패");
@@ -68,7 +76,13 @@ export function FavoriteToggleButton({
             : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
         }`}
       >
-        <Heart className={className ? `h-4 w-4 ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"}` : `h-5 w-5 ${isFavorite ? "fill-current" : ""}`} />
+        {className ? (
+          <span className="inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center">
+            <Heart strokeWidth={2} className={`h-[18px] w-[18px] ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-500"}`} />
+          </span>
+        ) : (
+          <Heart className={`h-5 w-5 ${isFavorite ? "fill-current" : ""}`} />
+        )}
         {label ? <span className="ml-1">{label}</span> : null}
       </button>
       {toast ? <Toast message={toast} /> : null}

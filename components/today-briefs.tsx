@@ -114,7 +114,10 @@ export function TodayBriefs({
               <div className="md:flex md:items-stretch md:gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-stretch gap-3">
-                    <h3 className="flex-1 md:flex-none text-[1.22rem] font-bold leading-snug break-all text-gray-900 transition group-hover:text-orange-600">
+                    <h3
+                      className="flex-1 md:flex-none font-bold leading-snug break-all text-gray-900 transition group-hover:text-orange-600"
+                      style={{ fontSize: "calc(20px * var(--font-scale, 1))" }}
+                    >
                       {item.title}
                     </h3>
                     {item.thumbnail_url ? (
@@ -127,7 +130,10 @@ export function TodayBriefs({
                       />
                     ) : null}
                   </div>
-                  <p className="mt-2 text-sm leading-6 break-all text-gray-600">
+                  <p
+                    className="mt-2 leading-6 break-all text-gray-600"
+                    style={{ fontSize: "calc(14px * var(--font-scale, 1))" }}
+                  >
                     {item.short_summary}
                   </p>
                   {item.action_line ? (

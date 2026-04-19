@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 
-import { cn } from "@/lib/utils";
-
 export function AccountTabs({
   tabs
 }: {
@@ -12,21 +10,34 @@ export function AccountTabs({
   const [activeKey, setActiveKey] = useState(tabs[0]?.key ?? "profile");
 
   return (
-    <div className="space-y-6">
-      <div className="flex gap-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveKey(tab.key)}
-            className={cn(
-              "whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold transition",
-              activeKey === tab.key ? "bg-gray-900 text-white" : "border border-gray-300 bg-white text-gray-800"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
+    <div className="space-y-4">
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {tabs.map((tab) => {
+          const on = activeKey === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveKey(tab.key)}
+              style={{
+                flex: "0 0 auto",
+                minHeight: 48,
+                padding: "0 20px",
+                borderRadius: 12,
+                background: on ? "#1F1A14" : "#fff",
+                color: on ? "#fff" : "#4A4037",
+                border: on ? "none" : "1.5px solid #E8DCC7",
+                fontSize: 15,
+                fontWeight: 800,
+                letterSpacing: "-0.01em",
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       <div>

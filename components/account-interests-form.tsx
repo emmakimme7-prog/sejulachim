@@ -9,7 +9,9 @@ import { Notice } from "@/components/ui/notice";
 import { MAIN_INTERESTS, SUB_INTERESTS, type MainInterest } from "@/lib/content/sub-interests";
 import { cn } from "@/lib/utils";
 
-const deliveryTimes = ["07:00", "08:00", "09:00"] as const;
+// 발송 시간은 매일 오전 7:30 일괄 — 사용자 선택 UI는 제거. 서버 schema 호환을 위해 "07:00" 으로 전송.
+const FIXED_DELIVERY_TIME = "07:00";
+
 const INTEREST_ICON_COMPONENTS = {
   건강: Heart,
   돈: DollarSign,
@@ -21,17 +23,16 @@ const INTEREST_ICON_COMPONENTS = {
 export function AccountInterestsForm({
   initialInterests,
   initialSubInterests,
-  initialDeliveryTime,
   mainInterests = [...MAIN_INTERESTS],
   subInterestOptions = SUB_INTERESTS,
   interestLabels = Object.fromEntries(MAIN_INTERESTS.map((interest) => [interest, interest])) as Record<string, string>,
   submitUrl = "/api/account/preferences",
   submitLabel = "관심주제 저장하기",
-  successMessage = "관심주제와 발송 시간이 저장되었습니다."
+  successMessage = "관심주제가 저장되었습니다."
 }: {
   initialInterests: string[];
   initialSubInterests: Record<string, string>;
-  initialDeliveryTime: string;
+  initialDeliveryTime?: string;
   mainInterests?: string[];
   subInterestOptions?: Record<string, string[]>;
   interestLabels?: Record<string, string>;
@@ -41,9 +42,6 @@ export function AccountInterestsForm({
 }) {
   const [selectedInterests, setSelectedInterests] = useState<string[]>(initialInterests);
   const [subInterests, setSubInterests] = useState<Record<string, string>>(initialSubInterests);
-  const [deliveryTime, setDeliveryTime] = useState<(typeof deliveryTimes)[number]>(
-    deliveryTimes.includes(initialDeliveryTime as (typeof deliveryTimes)[number]) ? (initialDeliveryTime as (typeof deliveryTimes)[number]) : "08:00"
-  );
   const [status, setStatus] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -82,7 +80,7 @@ export function AccountInterestsForm({
         body: JSON.stringify({
           interests: selectedInterests,
           subInterests,
-          deliveryTime
+          deliveryTime: FIXED_DELIVERY_TIME
         })
       });
 
@@ -172,31 +170,7 @@ export function AccountInterestsForm({
         })}
       </div>
 
-      <FieldHint>관심사는 중복 없이 3개를 골라주세요.</FieldHint>
-
-      <div className="grid gap-3">
-        <span className="block text-sm font-semibold text-orange-500">소식 받아보실 시간</span>
-        <div className="grid w-full gap-3 sm:grid-cols-3">
-          {deliveryTimes.map((time) => {
-            const active = deliveryTime === time;
-            return (
-              <button
-                key={time}
-                type="button"
-                onClick={() => setDeliveryTime(time)}
-                className={cn(
-                  "min-h-14 rounded-3xl border px-5 py-4 text-left text-lg font-bold transition",
-                  active
-                    ? "border-orange-500 bg-orange-50 text-gray-900 shadow-[inset_0_0_0_1px_rgba(229,124,35,0.08)]"
-                    : "border-gray-200 bg-white text-gray-800 hover:border-gray-400 hover:bg-gray-50"
-                )}
-              >
-                오전 {time}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <FieldHint>관심사는 중복 없이 3개를 골라주세요. 소식은 매일 오전 7:30에 일괄 발송됩니다.</FieldHint>
 
       {status ? (
         <Notice tone={status.includes("저장") && !status.includes("못") ? "success" : "error"}>{status}</Notice>

@@ -351,39 +351,49 @@ export function SiteHeader() {
             {/* 인라인 검색 (lg 이상) */}
             <form
               onSubmit={handleHeaderSearchSubmit}
-              className="hidden lg:flex relative"
-              style={{ flex: "0 1 320px", marginLeft: "auto", marginRight: 12 }}
+              className="hidden lg:flex items-center relative"
+              style={{ flex: "0 1 360px", marginLeft: "auto", marginRight: 12, gap: 6 }}
             >
-              <div
-                style={{
-                  position: "absolute",
-                  left: 14,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  pointerEvents: "none",
-                  display: "flex",
-                }}
-              >
-                <Search style={{ width: 18, height: 18, color: "#9C907F" }} />
+              <div className="relative" style={{ flex: 1 }}>
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 14,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    pointerEvents: "none",
+                    display: "flex",
+                  }}
+                >
+                  <Search style={{ width: 18, height: 18, color: "#9C907F" }} />
+                </div>
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="지난 소식 검색"
+                  style={{
+                    width: "100%",
+                    height: 40,
+                    paddingLeft: 42,
+                    paddingRight: 16,
+                    borderRadius: 999,
+                    border: "1.5px solid #E8DCC7",
+                    background: "#FFFBF5",
+                    fontSize: 14,
+                    color: "#1F1A14",
+                    fontFamily: "inherit",
+                    outline: "none",
+                  }}
+                />
               </div>
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="지난 소식 검색"
-                style={{
-                  width: "100%",
-                  height: 40,
-                  paddingLeft: 42,
-                  paddingRight: 16,
-                  borderRadius: 999,
-                  border: "1.5px solid #E8DCC7",
-                  background: "#FFFBF5",
-                  fontSize: 14,
-                  color: "#1F1A14",
-                  fontFamily: "inherit",
-                  outline: "none",
-                }}
-              />
+              <button
+                type="submit"
+                aria-label="검색"
+                className="inline-flex shrink-0 items-center justify-center rounded-full bg-gray-900 text-white transition hover:bg-gray-800"
+                style={{ height: 40, minWidth: 40, padding: "0 12px" }}
+              >
+                <Search style={{ width: 16, height: 16 }} />
+              </button>
             </form>
 
             {/* 우측 액션 버튼 */}

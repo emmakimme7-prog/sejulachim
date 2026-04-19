@@ -144,7 +144,7 @@ async function handleCron(request: NextRequest) {
 
   const supabase = createAdminSupabaseClient();
   const resend = new Resend(env.RESEND_API_KEY);
-  const { date, hour } = getKstDateParts();
+  const { date } = getKstDateParts();
   const jobName = "send-daily-emails";
 
   try {
@@ -166,10 +166,10 @@ async function handleCron(request: NextRequest) {
       throw new Error("DAILY_PICK_MISSING");
     }
 
+    // 7:30 KST 일괄 발송 — 사용자별 delivery_time 필터 제거. 활성/구독 중인 모든 사용자에게 발송.
     const { data: users } = await supabase
       .from("users")
       .select("id, email")
-      .eq("delivery_time", hour)
       .eq("is_active", true)
       .is("unsubscribed_at", null);
 
@@ -258,7 +258,7 @@ async function handleCron(request: NextRequest) {
       }
     }
 
-    await logJob(jobName, "success", `${date} ${hour} sent=${sentCount}`);
+    await logJob(jobName, "success", `${date} 07:30KST sent=${sentCount}`);
     return NextResponse.json({ ok: true, sentCount });
   } catch (error) {
     const details = error instanceof Error ? error.message : "Unexpected send error";

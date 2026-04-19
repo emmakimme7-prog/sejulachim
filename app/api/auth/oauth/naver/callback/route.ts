@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     if (verified.mode === "signup" && verified.interests.length > 0) {
       const user = await upsertMongoSignup({
         email: profile.email,
-        deliveryTime: "08:00",
+        deliveryTime: "07:00",
         interests: verified.interests,
         subInterests: verified.subInterests,
         consentedAt: new Date().toISOString(),

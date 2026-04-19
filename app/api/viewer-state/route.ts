@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { getCurrentUserSession } from "@/lib/auth/user-session";
+import { getInterestConfig } from "@/lib/content/interest-config";
 import { listUserFavoriteContentSlugs } from "@/lib/mongodb/content-data";
-import { findUserById } from "@/lib/mongodb/user-data";
+import { findUserById, listUserInterestSelections } from "@/lib/mongodb/user-data";
 import { isAvatarKey } from "@/lib/profile";
 
 export async function GET() {
@@ -11,11 +12,22 @@ export async function GET() {
     return NextResponse.json({
       session: null,
       shareProfile: null,
-      favoriteIds: []
+      favoriteIds: [],
+      interests: []
     });
   }
 
-  const user = await findUserById(session.id);
+  const [user, favoriteIds, interestRows, interestConfig] = await Promise.all([
+    findUserById(session.id),
+    listUserFavoriteContentSlugs(session.id),
+    listUserInterestSelections(session.id),
+    getInterestConfig()
+  ]);
+
+  const interests = interestRows
+    .map((row) => row.main_interest)
+    .filter((v): v is string => typeof v === "string" && v.length > 0)
+    .filter((v) => interestConfig.mainInterests.includes(v));
 
   return NextResponse.json({
     session,
@@ -26,6 +38,7 @@ export async function GET() {
           : session.email.split("@")[0],
       avatarKey: isAvatarKey(user?.avatar_key) ? user.avatar_key : null
     },
-    favoriteIds: await listUserFavoriteContentSlugs(session.id)
+    favoriteIds,
+    interests
   });
 }

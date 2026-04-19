@@ -12,6 +12,7 @@ import { getMongoDb } from "@/lib/mongodb/client";
 import { getSlmCollections } from "@/lib/mongodb/collections";
 import { hashToken } from "@/lib/security/request";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { getDisplayMainInterest, getStoredCategoryForMainInterest } from "@/lib/content/sub-interests";
 
 function serializeUserId(value: ObjectId | string) {
   return typeof value === "string" ? value : value.toString();
@@ -86,21 +87,26 @@ export async function findUserById(userId: string) {
 }
 
 export async function listUserInterestSelections(userId: string) {
-  if (hasSupabaseServerEnv()) {
-    const supabase = createAdminSupabaseClient();
-    const { data } = await supabase
-      .from("user_interest_selections")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true });
+  const rows = await (async () => {
+    if (hasSupabaseServerEnv()) {
+      const supabase = createAdminSupabaseClient();
+      const { data } = await supabase
+        .from("user_interest_selections")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true });
+      return data ?? [];
+    }
+    const db = await getMongoDb();
+    const collections = getSlmCollections(db);
+    return collections.userInterestSelections.find({ user_id: userId }).toArray();
+  })();
 
-    return data ?? [];
-  }
-
-  const db = await getMongoDb();
-  const collections = getSlmCollections(db);
-
-  return collections.userInterestSelections.find({ user_id: userId }).toArray();
+  // DB는 옛 카테고리(취미/가족) 으로 저장됨 → 화면용 키(실생활/관계)로 매핑
+  return rows.map((row) => ({
+    ...row,
+    main_interest: getDisplayMainInterest(row.main_interest, row.sub_interest)
+  }));
 }
 
 export async function updateUserPreferences(input: {
@@ -113,25 +119,40 @@ export async function updateUserPreferences(input: {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
 
-    await supabase
+    const userUpdate = await supabase
       .from("users")
       .update({
         delivery_time: input.deliveryTime,
         updated_at: now
       })
       .eq("id", input.userId);
+    if (userUpdate.error) {
+      console.error("[updateUserPreferences] users.update failed:", userUpdate.error, "userId:", input.userId);
+      throw new Error(`USERS_UPDATE_FAILED: ${userUpdate.error.message}`);
+    }
 
-    await supabase.from("user_interest_selections").delete().eq("user_id", input.userId);
+    const deleteResult = await supabase
+      .from("user_interest_selections")
+      .delete()
+      .eq("user_id", input.userId);
+    if (deleteResult.error) {
+      console.error("[updateUserPreferences] interest_selections.delete failed:", deleteResult.error);
+      throw new Error(`INTERESTS_DELETE_FAILED: ${deleteResult.error.message}`);
+    }
 
     if (input.interests.length > 0) {
-      await supabase.from("user_interest_selections").insert(
+      const insertResult = await supabase.from("user_interest_selections").insert(
         input.interests.map((interest) => ({
           user_id: input.userId,
-          main_interest: interest,
+          main_interest: getStoredCategoryForMainInterest(interest),
           sub_interest: input.subInterests[interest] ?? null,
           created_at: now
         }))
       );
+      if (insertResult.error) {
+        console.error("[updateUserPreferences] interest_selections.insert failed:", insertResult.error, "payload:", JSON.stringify(input));
+        throw new Error(`INTERESTS_INSERT_FAILED: ${insertResult.error.message}`);
+      }
     }
 
     return;
@@ -162,7 +183,7 @@ export async function updateUserPreferences(input: {
     await collections.userInterestSelections.insertMany(
       input.interests.map((interest) => ({
         user_id: input.userId,
-        main_interest: interest,
+        main_interest: getStoredCategoryForMainInterest(interest),
         sub_interest: input.subInterests[interest] ?? null,
         created_at: now
       }))
@@ -411,7 +432,7 @@ export async function upsertSubscriberSignup(input: {
       await supabase.from("user_interest_selections").insert(
         input.interests.map((interest) => ({
           user_id: user.id,
-          main_interest: interest,
+          main_interest: getStoredCategoryForMainInterest(interest),
           sub_interest: input.subInterests[interest] ?? null,
           created_at: now
         }))
@@ -467,7 +488,7 @@ export async function upsertSubscriberSignup(input: {
     await collections.userInterestSelections.insertMany(
       input.interests.map((interest) => ({
         user_id: userId,
-        main_interest: interest,
+        main_interest: getStoredCategoryForMainInterest(interest),
         sub_interest: input.subInterests[interest] ?? null,
         created_at: now
       }))

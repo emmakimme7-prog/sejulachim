@@ -269,13 +269,13 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
             <h1
               style={{
                 margin: "0 0 14px",
-                fontSize: 28,
+                fontSize: "calc(28px * var(--font-scale, 1))",
                 fontWeight: 900,
                 color: "#1F1A14",
                 letterSpacing: "-0.035em",
                 lineHeight: 1.25,
               }}
-              className="md:!text-[38px] xl:!text-[44px]"
+              className="md:!text-[calc(38px*var(--font-scale,1))] xl:!text-[calc(44px*var(--font-scale,1))]"
             >
               {data.title}
             </h1>
@@ -320,76 +320,22 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
               )}
             </div>
 
-            {/* 큰 듣기 플레이어 */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 18,
-                padding: 20,
-                borderRadius: 18,
-                background: "#fff",
-                border: "2px solid #FFD1A3",
-                marginBottom: 16,
-                boxShadow: "0 2px 8px rgba(229, 124, 35, 0.08)",
-              }}
-            >
-              <div style={{ flexShrink: 0 }}>
-                <DetailListenButton
-                  text={listenText}
-                  title={data.title}
-                  iconOnly
-                  playIcon
-                  nextItems={relatedItems.map((item) => ({
-                    title: item.title,
-                    short_summary: "short_summary" in item ? item.short_summary : null,
-                    long_summary: "long_summary" in item ? item.long_summary : null,
-                    action_line: "action_line" in item ? item.action_line : null,
-                    slug: item.slug,
-                  }))}
-                  className="!w-[60px] !h-[60px] !min-h-0 !p-0 !rounded-full !bg-[#E57C23] hover:!bg-[#D16612] !border-0 !text-white !shadow-[0_6px_16px_rgba(229,124,35,0.35)] flex items-center justify-center"
-                />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    color: "#B2570F",
-                    letterSpacing: "0.05em",
-                    textTransform: "uppercase",
-                    marginBottom: 4,
-                  }}
-                >
-                  오디오로 듣기
-                </div>
-                <div
-                  style={{
-                    fontSize: 17,
-                    fontWeight: 900,
-                    color: "#1F1A14",
-                    letterSpacing: "-0.02em",
-                    marginBottom: 10,
-                  }}
-                >
-                  전체 내용 듣기
-                </div>
-                <div
-                  style={{
-                    height: 6,
-                    background: "#F5EEE2",
-                    borderRadius: 999,
-                    overflow: "hidden",
-                  }}
-                  aria-hidden="true"
-                >
-                  <div style={{ width: "0%", height: "100%", background: "#E57C23", transition: "width 0.2s" }} />
-                </div>
-              </div>
-            </div>
-
-            {/* 좋아요 / 공유 */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 20 }}>
+            {/* 듣기 + 좋아요 / 공유 */}
+            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12, marginBottom: 20 }}>
+              <DetailListenButton
+                text={listenText}
+                title={data.title}
+                iconOnly
+                playIcon
+                nextItems={relatedItems.map((item) => ({
+                  title: item.title,
+                  short_summary: "short_summary" in item ? item.short_summary : null,
+                  long_summary: "long_summary" in item ? item.long_summary : null,
+                  action_line: "action_line" in item ? item.action_line : null,
+                  slug: item.slug,
+                }))}
+                className="!w-[44px] !h-[44px] !min-h-0 !p-0 !rounded-full !bg-[#E57C23] hover:!bg-[#D16612] !border-0 !text-white !shadow-[0_4px_12px_rgba(229,124,35,0.35)] flex items-center justify-center"
+              />
               <DetailActionBar shareSlug={slug} shareTitle={data.title} />
             </div>
 
@@ -407,7 +353,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                 <p
                   style={{
                     margin: 0,
-                    fontSize: 18,
+                    fontSize: "calc(18px * var(--font-scale, 1))",
                     fontWeight: 700,
                     color: "#1F1A14",
                     letterSpacing: "-0.02em",
@@ -495,7 +441,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
             {detailParagraphs.length > 0 ? (
               <section
                 style={{
-                  fontSize: 17,
+                  fontSize: "calc(17px * var(--font-scale, 1))",
                   lineHeight: 1.85,
                   color: "#2A241D",
                   fontWeight: 500,

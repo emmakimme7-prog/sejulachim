@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { Play, Search, X } from "lucide-react";
 
 import { CompleteShareButton } from "@/components/complete-share-button";
 import { ContentThumbnail } from "@/components/content-thumbnail";
+import { playSpeech, setSpeechPlaylist } from "@/components/speech-controls";
 function CategoryPlaceholder({ cat, size = 96 }: { cat: string; size?: number }) {
   const m = CATEGORY_META[cat] ?? { emoji: "📄", color: "#7A6F62", bg: "#F5EEE2" };
   const stripe = `repeating-linear-gradient(135deg, ${m.color}14 0 8px, transparent 8px 16px)`;
@@ -109,6 +111,19 @@ export function LibraryBrowser({
   function toggleSlug(slug: string) {
     setSelectedSlugs((current) => (current.includes(slug) ? current.filter((s) => s !== slug) : [...current, slug]));
   }
+
+  const handlePlayAll = useCallback(() => {
+    const items = favorites.filter((it) => {
+      const matchesInterest = selectedInterest === "전체" || it.category === selectedInterest;
+      return matchesInterest;
+    });
+    if (items.length === 0) return;
+    const text = items
+      .map((it) => [it.title, it.short_summary, it.action_line].filter(Boolean).join(". "))
+      .join(". ");
+    setSpeechPlaylist(items.map((it) => ({ label: it.title })), 0);
+    playSpeech(text, items[0]?.title ?? "저장한 소식");
+  }, [favorites, selectedInterest]);
 
   const favoriteInterests = useMemo(
     () => ["전체", ...Array.from(new Set(favorites.map((item) => item.category).filter(Boolean)))],
@@ -262,48 +277,131 @@ export function LibraryBrowser({
             outline: "none",
           }}
         />
+        <button
+          type="button"
+          onClick={() => setQuery(query.trim())}
+          aria-label="검색"
+          style={{
+            height: 36,
+            minWidth: 36,
+            padding: "0 10px",
+            borderRadius: 10,
+            border: "none",
+            background: "#1F1A14",
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: 800,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 4,
+          }}
+        >
+          <Search style={{ width: 14, height: 14 }} />
+        </button>
       </div>
 
       {/* 선택 액션 바 */}
       {selectedSlugs.length > 0 ? (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 23,
-            left: 23,
-            zIndex: 40,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            borderRadius: 16,
-            background: "#1F1A14",
-            padding: "14px 20px",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.28)",
-          }}
-        >
-          <span style={{ fontSize: 17, fontWeight: 800, color: "#fff", letterSpacing: "-0.01em" }}>
-            {selectedSlugs.length}개 선택
-          </span>
-          <ListenButton
-            text={selectedListenText}
-            label="이어듣기"
-            mobileIconOnly
-            className="h-[52px] w-[52px] sm:w-auto sm:px-[18px] border-white/20 bg-white/10 text-white hover:bg-white/20"
-          />
-          <CompleteShareButton
-            shareSlugs={selectedSlugs}
-            interestSummary={selectedTitles}
-            buttonLabel="공유"
-            mobileIconOnly
-            modalTitle="선택한 소식을 공유해보세요."
-            triggerClassName="h-[52px] w-[52px] sm:w-auto sm:px-[18px] rounded-full !bg-orange-500 !border-0 !text-white hover:!bg-orange-400 text-[17px] font-bold"
-          />
+        <div className="fixed bottom-[34px] left-1/2 z-40 -translate-x-1/2 animate-in slide-in-from-bottom-4">
+          <div className="flex items-center gap-[8px] rounded-full border border-gray-300 bg-white pl-[16px] pr-[8px] py-[8px] shadow-[0_8px_40px_rgba(17,32,51,0.18)]">
+            <span className="whitespace-nowrap text-[14px] font-semibold text-gray-900">{selectedSlugs.length}개 선택</span>
+            <div className="h-[20px] w-px bg-gray-300" />
+            <ListenButton
+              text={selectedListenText}
+              speechTitle={`${selectedSlugs.length}개 선택`}
+              label="듣기"
+              mobileIconOnly
+              className="h-[36px] w-[36px] sm:w-auto sm:px-[12px] !border-gray-300 !bg-white !text-gray-700 hover:!bg-gray-50 !text-[13px]"
+            />
+            <CompleteShareButton
+              shareSlugs={selectedSlugs}
+              interestSummary={selectedTitles}
+              buttonLabel="공유"
+              mobileIconOnly
+              modalTitle="선택한 소식을 공유해보세요."
+              triggerClassName="h-[36px] w-[36px] sm:w-auto sm:px-[12px] rounded-full !bg-orange-500 !border-0 !text-white hover:!bg-orange-400 !text-[13px] font-semibold"
+            />
+            <button
+              type="button"
+              onClick={() => setSelectedSlugs([])}
+              className="inline-flex h-[36px] w-[36px] items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-200 hover:text-gray-700"
+              aria-label="선택 해제"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       ) : null}
 
       {/* 즐겨찾기 */}
       {activeTab === "favorites" ? (
         <div style={{ display: "grid", gap: 14 }}>
+          {filteredFavorites.length > 0 ? (
+            <div
+              style={{
+                background: "linear-gradient(135deg, #E57C23 0%, #D16612 100%)",
+                borderRadius: 18,
+                padding: 18,
+                color: "#fff",
+                boxShadow: "0 8px 22px rgba(229,124,35,0.25)",
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                    opacity: 0.9,
+                    marginBottom: 6,
+                  }}
+                >
+                  저장한 · {filteredFavorites.length}개 소식
+                </div>
+                <div
+                  style={{
+                    fontSize: 17,
+                    fontWeight: 900,
+                    lineHeight: 1.35,
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  바쁘시면, 귀로만 다시 들어보세요
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handlePlayAll}
+                style={{
+                  flexShrink: 0,
+                  minHeight: 48,
+                  padding: "0 18px",
+                  borderRadius: 12,
+                  border: "none",
+                  background: "#fff",
+                  color: "#B2570F",
+                  fontSize: 15,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  fontFamily: "inherit",
+                }}
+              >
+                <Play style={{ width: 16, height: 16, fill: "#B2570F" }} />
+                전체 다시 듣기
+              </button>
+            </div>
+          ) : null}
           {filteredFavorites.map((item) => (
             <article
               key={item.id}
@@ -336,7 +434,7 @@ export function LibraryBrowser({
                     <h2
                       style={{
                         margin: 0,
-                        fontSize: 19,
+                        fontSize: "calc(19px * var(--font-scale, 1))",
                         fontWeight: 900,
                         color: "#1F1A14",
                         letterSpacing: "-0.02em",
@@ -349,7 +447,7 @@ export function LibraryBrowser({
                     <p
                       style={{
                         margin: 0,
-                        fontSize: 14,
+                        fontSize: "calc(14px * var(--font-scale, 1))",
                         lineHeight: 1.6,
                         color: "#4A4037",
                         fontWeight: 500,
@@ -367,7 +465,7 @@ export function LibraryBrowser({
                           padding: "8px 12px",
                           borderRadius: 10,
                           background: "#FFF2E3",
-                          fontSize: 13,
+                          fontSize: "calc(13px * var(--font-scale, 1))",
                           fontWeight: 800,
                           color: "#B2570F",
                           letterSpacing: "-0.01em",

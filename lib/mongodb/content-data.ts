@@ -6,7 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { findRelatedContentThumbnail, type ContentThumbnail } from "@/lib/content/thumbnails";
 import { DEMO_ARCHIVE_ITEMS } from "@/lib/content/demo-data";
-import { getDisplayMainInterest } from "@/lib/content/sub-interests";
+import { getDisplayMainInterest, getStoredCategoryForMainInterest } from "@/lib/content/sub-interests";
 import { hasSupabaseServerEnv } from "@/lib/env";
 import { getMongoDb } from "@/lib/mongodb/client";
 import { getSlmCollections } from "@/lib/mongodb/collections";
@@ -62,7 +62,7 @@ export async function createManualContentItem(input: {
 
     await supabase.from("content_items").insert({
       title: input.title,
-      category: input.category,
+      category: getStoredCategoryForMainInterest(input.category),
       sub_interest: input.subInterest ?? null,
       long_summary: null,
       thumbnail_url: input.thumbnailUrl ?? null,
@@ -100,7 +100,7 @@ export async function createManualContentItem(input: {
 
   await collections.contentItems.insertOne({
     title: input.title,
-    category: input.category,
+    category: getStoredCategoryForMainInterest(input.category),
     sub_interest: input.subInterest ?? null,
     long_summary: null,
     thumbnail_url: input.thumbnailUrl ?? null,
