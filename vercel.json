@@ -10,7 +10,7 @@
       "schedule": "5 22 * * *"
     },
     {
-      "path": "/api/cron/repair-thumbnails?limit=30",
+      "path": "/api/cron/repair-thumbnails?limit=50",
       "schedule": "20 22 * * *"
     },
     {

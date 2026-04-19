@@ -389,38 +389,58 @@ export async function upsertSubscriberSignup(input: {
   consentedAt: string;
   password?: string;
   authProvider?: string;
+  phone?: string | null;
+  deliveryChannels?: { kakao?: boolean; email?: boolean };
 }) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
     const passwordHash = input.password ? hashPassword(input.password) : null;
+    // 신규 컬럼은 마이그레이션 009 적용 후에만 존재 — DB에 없으면 update시 supabase가 무시하지 않고 에러 던짐
+    // → optional chain으로 input에 값이 있을 때만 포함
+    const channelsPatch: Record<string, unknown> = {};
+    if (input.phone !== undefined) channelsPatch.phone = input.phone;
+    if (input.deliveryChannels?.kakao !== undefined) channelsPatch.delivery_kakao = input.deliveryChannels.kakao;
+    if (input.deliveryChannels?.email !== undefined) channelsPatch.delivery_email = input.deliveryChannels.email;
 
-    const { data: user, error } = await supabase
+    const baseUpsert = {
+      email: input.email,
+      delivery_time: input.deliveryTime,
+      is_active: true,
+      consented_at: input.consentedAt,
+      unsubscribed_at: null,
+      ...(input.password
+        ? {
+            has_password: true,
+            password_hash: passwordHash,
+            password_updated_at: now
+          }
+        : {}),
+      nickname: input.email.split("@")[0],
+      avatar_key: "sun",
+      font_size_preference: "medium",
+      auth_provider: input.authProvider ?? "email",
+      updated_at: now
+    };
+
+    // 1차 시도: 신규 컬럼(phone, delivery_kakao, delivery_email) 포함
+    let upsertResult = await supabase
       .from("users")
-      .upsert(
-        {
-          email: input.email,
-          delivery_time: input.deliveryTime,
-          is_active: true,
-          consented_at: input.consentedAt,
-          unsubscribed_at: null,
-          ...(input.password
-            ? {
-                has_password: true,
-                password_hash: passwordHash,
-                password_updated_at: now
-              }
-            : {}),
-          nickname: input.email.split("@")[0],
-          avatar_key: "sun",
-          font_size_preference: "medium",
-          auth_provider: input.authProvider ?? "email",
-          updated_at: now
-        },
-        { onConflict: "email", ignoreDuplicates: false }
-      )
+      .upsert({ ...baseUpsert, ...channelsPatch }, { onConflict: "email", ignoreDuplicates: false })
       .select("id,email")
       .single();
+
+    // 2차 폴백: 신규 컬럼이 DB에 없으면 (마이그레이션 009 미적용) 채널 정보 제외하고 재시도
+    if (upsertResult.error && /column .* does not exist/i.test(upsertResult.error.message ?? "")) {
+      console.warn("[upsertSubscriberSignup] new channel columns missing; retrying without phone/delivery_kakao/delivery_email. Apply migration 009 to enable.");
+      upsertResult = await supabase
+        .from("users")
+        .upsert(baseUpsert, { onConflict: "email", ignoreDuplicates: false })
+        .select("id,email")
+        .single();
+    }
+
+    const { data: user, error } = upsertResult;
 
     if (error || !user) {
       throw new Error("SUPABASE_USER_UPSERT_FAILED");

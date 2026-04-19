@@ -47,7 +47,9 @@ export async function POST(request: NextRequest) {
       interests: body.interests,
       subInterests: sanitizedSubInterests,
       consentedAt,
-      password: password || undefined
+      password: password || undefined,
+      phone: body.phone ?? null,
+      deliveryChannels: body.deliveryChannels ?? { kakao: false, email: true }
     });
 
     try {

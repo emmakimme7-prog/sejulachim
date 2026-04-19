@@ -71,6 +71,11 @@ export function SignupForm({
   const [toast, setToast] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
 
+  // 받는 방법: 카카오톡 알림톡(기본) + 선택적으로 이메일 추가
+  const [kakaoChannel, setKakaoChannel] = useState(true);
+  const [emailChannel, setEmailChannel] = useState(Boolean(defaultEmail));
+  const [phone, setPhone] = useState("");
+
   const [step, setStep] = useState<Step>(defaultEmail ? "auth" : "interests");
 
   useEffect(() => {
@@ -81,6 +86,19 @@ export function SignupForm({
 
   function isValidEmailClient(value: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+  }
+
+  // 010-1234-5678 형태로 자동 포맷팅 (한국 휴대폰)
+  function formatPhone(raw: string) {
+    const digits = raw.replace(/\D/g, "").slice(0, 11);
+    if (digits.length < 4) return digits;
+    if (digits.length < 8) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+  }
+
+  function isValidPhoneClient(value: string) {
+    const digits = value.replace(/\D/g, "");
+    return /^010\d{8}$/.test(digits);
   }
 
   function toggleInterest(interest: string) {
@@ -102,6 +120,18 @@ export function SignupForm({
   function handleNextToAuth() {
     if (selectedInterests.length !== 3) {
       setToast("관심사 3가지를 모두 선택해 주세요.");
+      return;
+    }
+    if (!kakaoChannel && !emailChannel) {
+      setToast("받는 방법을 1개 이상 선택해 주세요.");
+      return;
+    }
+    if (kakaoChannel && !isValidPhoneClient(phone)) {
+      setToast("올바른 휴대폰번호(010-XXXX-XXXX)를 입력해 주세요.");
+      return;
+    }
+    if (emailChannel && !isValidEmailClient(email)) {
+      setToast("올바른 이메일 주소를 입력해 주세요.");
       return;
     }
     setStep("auth");
@@ -153,6 +183,11 @@ export function SignupForm({
           agreeToTerms: true,
           agreeToPrivacy: true,
           honeypot,
+          phone: kakaoChannel ? phone.replace(/\D/g, "") : null,
+          deliveryChannels: {
+            kakao: kakaoChannel,
+            email: emailChannel,
+          },
         }),
       });
 
@@ -282,6 +317,147 @@ export function SignupForm({
                 </button>
               );
             })}
+          </div>
+
+          {/* 받는 방법 */}
+          <div style={{ marginTop: 28 }}>
+            <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.02em" }}>
+              어떻게 받으실래요?
+            </h2>
+            <p style={{ margin: "0 0 14px", fontSize: 14, color: "#7A6F62", fontWeight: 600, lineHeight: 1.55 }}>
+              매일 아침 7시 30분에 보내드립니다.
+            </p>
+
+            <div style={{ display: "grid", gap: 10 }}>
+              {/* 카카오톡 알림톡 */}
+              <div
+                style={{
+                  background: "#fff",
+                  border: kakaoChannel ? "2.5px solid #FEE500" : "2px solid #E8DCC7",
+                  borderRadius: 16,
+                  padding: 14,
+                  transition: "all 0.15s",
+                }}
+              >
+                <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={kakaoChannel}
+                    onChange={(e) => setKakaoChannel(e.target.checked)}
+                    style={{ width: 22, height: 22, accentColor: "#E57C23", flexShrink: 0 }}
+                  />
+                  <KakaoMark size={26} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.01em" }}>
+                      카카오톡으로 받기
+                    </div>
+                    <div style={{ fontSize: 12, color: "#7A6F62", fontWeight: 600, marginTop: 2 }}>
+                      알림톡으로 매일 아침 받아보세요 (추천)
+                    </div>
+                  </div>
+                </label>
+                {kakaoChannel ? (
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(formatPhone(e.target.value));
+                      setError("");
+                    }}
+                    placeholder="010-1234-5678"
+                    style={{
+                      width: "100%",
+                      minHeight: 50,
+                      padding: "0 16px",
+                      marginTop: 12,
+                      background: "#FFFBF5",
+                      border: "2px solid #E8DCC7",
+                      borderRadius: 12,
+                      fontSize: 16,
+                      fontWeight: 600,
+                      color: "#1F1A14",
+                      outline: "none",
+                      fontFamily: "inherit",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                ) : null}
+              </div>
+
+              {/* 이메일 */}
+              <div
+                style={{
+                  background: "#fff",
+                  border: emailChannel ? "2.5px solid #E57C23" : "2px solid #E8DCC7",
+                  borderRadius: 16,
+                  padding: 14,
+                  transition: "all 0.15s",
+                }}
+              >
+                <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={emailChannel}
+                    onChange={(e) => setEmailChannel(e.target.checked)}
+                    style={{ width: 22, height: 22, accentColor: "#E57C23", flexShrink: 0 }}
+                  />
+                  <div
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 8,
+                      background: "#FFF2E3",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 16,
+                      flexShrink: 0,
+                    }}
+                    aria-hidden="true"
+                  >
+                    📧
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.01em" }}>
+                      이메일로도 받기
+                    </div>
+                    <div style={{ fontSize: 12, color: "#7A6F62", fontWeight: 600, marginTop: 2 }}>
+                      카톡과 이메일 둘 다 받을 수 있어요
+                    </div>
+                  </div>
+                </label>
+                {emailChannel ? (
+                  <input
+                    type="text"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setError("");
+                    }}
+                    placeholder="example@email.com"
+                    style={{
+                      width: "100%",
+                      minHeight: 50,
+                      padding: "0 16px",
+                      marginTop: 12,
+                      background: "#FFFBF5",
+                      border: "2px solid #E8DCC7",
+                      borderRadius: 12,
+                      fontSize: 16,
+                      fontWeight: 600,
+                      color: "#1F1A14",
+                      outline: "none",
+                      fontFamily: "inherit",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                ) : null}
+              </div>
+            </div>
           </div>
 
           <button
