@@ -311,31 +311,23 @@ export function SignupForm({
                       {meta.desc}
                     </div>
                   </div>
-                  {active ? (
-                    <div onClick={(e) => e.stopPropagation()} style={{ width: 130, flexShrink: 0 }}>
-                      <CustomSelect
-                        value={subInterests[interest] ?? ""}
-                        onChange={(val) =>
-                          setSubInterests((prev) => ({ ...prev, [interest]: val }))
-                        }
-                        placeholder="세부 선택"
-                        options={(subInterestOptions[interest as MainInterest] ?? []).map((option) => ({
-                          value: option,
-                          label: option,
-                        }))}
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        width: 30,
-                        height: 30,
-                        borderRadius: 999,
-                        background: "#F5EEE2",
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
+                  <div
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 999,
+                      background: active ? "#E57C23" : "#F5EEE2",
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff",
+                      fontSize: 16,
+                      fontWeight: 900,
+                    }}
+                  >
+                    {active ? "✓" : ""}
+                  </div>
                 </button>
               );
             })}
