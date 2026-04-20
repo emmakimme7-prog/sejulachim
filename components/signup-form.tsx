@@ -82,9 +82,10 @@ export function SignupForm({
     setAgreedMarketing(v);
   };
 
-  // 가입 시엔 이메일만 받음. 카카오톡 알림톡 수신은 가입 이후 /account 에서 전화번호 등록 시 활성화.
-  const kakaoChannel = false;
-  const emailChannel = true;
+  // 수신 채널: 카카오톡 선택하면 step 3 에서 카카오 OAuth 강제 (알림톡 수신을 위해).
+  const [channel, setChannel] = useState<"kakao" | "email">(defaultEmail ? "email" : "kakao");
+  const kakaoChannel = channel === "kakao";
+  const emailChannel = channel === "email";
 
   const [step, setStep] = useState<Step>(defaultEmail ? "auth" : "interests");
 
@@ -136,7 +137,8 @@ export function SignupForm({
   }
 
   function handleNextToAuth() {
-    if (!isValidEmailClient(email)) {
+    // 이메일 채널 선택 시에만 이메일 주소 필수 입력. 카카오 채널은 OAuth로 가져옴.
+    if (emailChannel && !isValidEmailClient(email)) {
       setToast("올바른 이메일 주소를 입력해 주세요.");
       return;
     }
@@ -146,7 +148,8 @@ export function SignupForm({
   function buildOauthHref(provider: "google" | "kakao" | "naver") {
     const interestParam = encodeURIComponent(selectedInterests.join(","));
     const subParam = encodeURIComponent(JSON.stringify(subInterests));
-    const marketingParam = agreedMarketing ? "1" : "0";
+    // 카카오 채널 선택 시 OAuth 버튼 클릭 = 알림톡 수신 동의 간주 (UI 상 명시됨).
+    const marketingParam = (kakaoChannel && provider === "kakao") || agreedMarketing ? "1" : "0";
     return `/api/auth/oauth/${provider}/start?mode=signup&interests=${interestParam}&sub=${subParam}&m=${marketingParam}`;
   }
 
@@ -353,18 +356,14 @@ export function SignupForm({
         </div>
       ) : null}
 
-      {/* Step 2: 이메일 입력 */}
+      {/* Step 2: 받는 방법 (카카오톡 / 이메일) */}
       {step === "delivery" ? (
         <div>
           <h1 style={{ margin: "6px 0 8px", fontSize: 26, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.03em", lineHeight: 1.3 }}>
-            이메일로 받으실래요?
+            어떻게 받으실래요?
           </h1>
           <p style={{ margin: "0 0 20px", fontSize: 15, color: "#4A4037", lineHeight: 1.6, fontWeight: 500 }}>
-            매일 아침 7시 30분에 메일함으로 보내드립니다.
-            <br />
-            <span style={{ fontSize: 13, color: "#7A6F62" }}>
-              카카오톡으로 받고 싶으시면 가입 후 설정에서 전환할 수 있어요.
-            </span>
+            매일 아침 7시 30분에 보내드립니다.
           </p>
 
           <div
@@ -375,34 +374,116 @@ export function SignupForm({
               border: "1.5px solid #EAD9BF",
             }}
           >
-            <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#4A4037", marginBottom: 6, letterSpacing: "-0.01em" }}>
-              이메일
-            </label>
-            <input
-              type="text"
-              inputMode="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setError("");
-              }}
-              placeholder="example@email.com"
+            <div
+              role="radiogroup"
+              aria-label="받는 방법"
               style={{
-                width: "100%",
-                minHeight: 52,
-                padding: "0 16px",
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 6,
+                padding: 4,
+                borderRadius: 14,
                 background: "#fff",
-                border: "2px solid #E8DCC7",
-                borderRadius: 12,
-                fontSize: 16,
-                fontWeight: 600,
-                color: "#1F1A14",
-                outline: "none",
-                fontFamily: "inherit",
-                boxSizing: "border-box",
+                border: "1.5px solid #E8DCC7",
+                marginBottom: 14,
               }}
-            />
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={kakaoChannel}
+                onClick={() => { setChannel("kakao"); setError(""); }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  minHeight: 48,
+                  padding: "0 14px",
+                  borderRadius: 10,
+                  background: kakaoChannel ? "#FEE500" : "transparent",
+                  color: "#1F1A14",
+                  border: "none",
+                  fontSize: 15,
+                  fontWeight: kakaoChannel ? 900 : 700,
+                  letterSpacing: "-0.01em",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  transition: "background 0.15s, font-weight 0.15s",
+                }}
+              >
+                <KakaoMark size={20} />
+                카카오톡
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={emailChannel}
+                onClick={() => { setChannel("email"); setError(""); }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  minHeight: 48,
+                  padding: "0 14px",
+                  borderRadius: 10,
+                  background: emailChannel ? "#FFF2E3" : "transparent",
+                  color: "#1F1A14",
+                  border: "none",
+                  fontSize: 15,
+                  fontWeight: emailChannel ? 900 : 700,
+                  letterSpacing: "-0.01em",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  transition: "background 0.15s, font-weight 0.15s",
+                }}
+              >
+                <span style={{ fontSize: 16 }} aria-hidden="true">📧</span>
+                이메일
+              </button>
+            </div>
+
+            {kakaoChannel ? (
+              <p style={{ margin: 0, fontSize: 13, color: "#7A6F62", fontWeight: 600, lineHeight: 1.6 }}>
+                카카오톡 알림톡으로 매일 아침 받아보세요. <br />
+                다음 단계에서 <b style={{ color: "#1F1A14" }}>카카오 계정으로 회원가입</b> 하시면 됩니다.
+              </p>
+            ) : (
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#4A4037", marginBottom: 6, letterSpacing: "-0.01em" }}>
+                  이메일
+                </label>
+                <input
+                  type="text"
+                  inputMode="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setError("");
+                  }}
+                  placeholder="example@email.com"
+                  style={{
+                    width: "100%",
+                    minHeight: 52,
+                    padding: "0 16px",
+                    background: "#fff",
+                    border: "2px solid #E8DCC7",
+                    borderRadius: 12,
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: "#1F1A14",
+                    outline: "none",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: "#7A6F62", fontWeight: 600, lineHeight: 1.5 }}>
+                  메일함으로 매일 아침 보내드립니다.
+                </p>
+              </div>
+            )}
           </div>
 
           <button
@@ -454,15 +535,17 @@ export function SignupForm({
       {step === "auth" ? (
         <form onSubmit={handleEmailSubmit}>
           <h1 style={{ margin: "6px 0 8px", fontSize: 26, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.03em", lineHeight: 1.3 }}>
-            어디로 받아볼까요?
+            {kakaoChannel ? "카카오로 회원가입" : "어디로 받아볼까요?"}
           </h1>
           <p style={{ margin: "0 0 20px", fontSize: 15, color: "#4A4037", lineHeight: 1.6, fontWeight: 500 }}>
-            매일 아침 7시에 세 줄 브리핑을 보내드립니다.
+            {kakaoChannel
+              ? "카카오톡으로 매일 아침 알림톡을 받으시려면 카카오 계정으로 가입해주세요."
+              : "매일 아침 7시에 세 줄 브리핑을 보내드립니다."}
           </p>
 
           {/* 소셜 로그인 버튼 */}
-          {(kakaoEnabled || naverEnabled || googleEnabled) ? (
-            <div style={{ display: "grid", gap: 10, marginBottom: 22 }}>
+          {(kakaoEnabled || (!kakaoChannel && (naverEnabled || googleEnabled))) ? (
+            <div style={{ display: "grid", gap: 10, marginBottom: kakaoChannel ? 0 : 22 }}>
               {kakaoEnabled ? (
                 <a
                   href={buildOauthHref("kakao")}
@@ -482,10 +565,15 @@ export function SignupForm({
                   }}
                 >
                   <KakaoMark size={26} />
-                  <span style={{ flex: 1, textAlign: "center", paddingRight: 28 }}>카카오로 시작하기</span>
+                  <span style={{ flex: 1, textAlign: "center", paddingRight: 28 }}>{kakaoChannel ? "카카오로 회원가입" : "카카오로 시작하기"}</span>
                 </a>
               ) : null}
-              {naverEnabled ? (
+              {!kakaoChannel ? (
+                <>
+                  {null}
+                </>
+              ) : null}
+              {!kakaoChannel && naverEnabled ? (
                 <a
                   href={buildOauthHref("naver")}
                   style={{
@@ -523,7 +611,7 @@ export function SignupForm({
                   <span style={{ flex: 1, textAlign: "center", paddingRight: 28 }}>네이버로 시작하기</span>
                 </a>
               ) : null}
-              {googleEnabled ? (
+              {!kakaoChannel && googleEnabled ? (
                 <a
                   href={buildOauthHref("google")}
                   style={{
@@ -549,14 +637,18 @@ export function SignupForm({
             </div>
           ) : null}
 
-          {/* 구분선 */}
-          {(kakaoEnabled || naverEnabled || googleEnabled) ? (
+          {/* 구분선 (카카오 채널 선택 시 이메일 폼 숨김) */}
+          {!kakaoChannel && (kakaoEnabled || naverEnabled || googleEnabled) ? (
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
               <div style={{ flex: 1, height: 1, background: "#E8DCC7" }} />
               <span style={{ fontSize: 12, color: "#9C907F", fontWeight: 700 }}>또는 이메일로 가입</span>
               <div style={{ flex: 1, height: 1, background: "#E8DCC7" }} />
             </div>
           ) : null}
+
+          {!kakaoChannel ? (
+          <>
+          {/* 이메일 폼 시작 */}
 
           <label
             style={{
@@ -772,6 +864,28 @@ export function SignupForm({
           >
             {submitting ? "저장 중입니다..." : "가입 완료하기"}
           </button>
+          </>
+          ) : (
+            /* 카카오 채널: 3-체크박스 간단 요약 (카카오 OAuth 클릭 시 동의 간주) */
+            <div
+              style={{
+                marginTop: 16,
+                padding: "14px 14px",
+                borderRadius: 12,
+                background: "#FFFBF5",
+                border: "1.5px solid #E8DCC7",
+                fontSize: 12,
+                color: "#7A6F62",
+                lineHeight: 1.6,
+                fontWeight: 500,
+              }}
+            >
+              위 <b style={{ color: "#1F1A14" }}>카카오로 회원가입</b> 버튼을 누르시면
+              <a href="/terms" target="_blank" style={{ color: "#B2570F", fontWeight: 800, textDecoration: "underline", marginLeft: 4, marginRight: 2 }}>이용약관</a>과
+              <a href="/terms" target="_blank" style={{ color: "#B2570F", fontWeight: 800, textDecoration: "underline", marginLeft: 4, marginRight: 2 }}>개인정보 수집·이용</a>
+              에 동의하는 것으로 간주되며, 매일 아침 카카오톡 알림톡을 받으시는 것에 동의하는 것으로 처리됩니다.
+            </div>
+          )}
 
           <button
             type="button"
