@@ -73,13 +73,13 @@ export function SignupForm({
   const [toast, setToast] = useState<string | null>(null);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [agreedPrivacy, setAgreedPrivacy] = useState(false);
-  const [agreedMarketing, setAgreedMarketing] = useState(false);
-  // 필수만 충족하면 allAgreed 체크박스 상태는 3개 다 체크된 경우에만 true.
-  const allAgreed = agreedTerms && agreedPrivacy && agreedMarketing;
+  // 광고성 정보 수신 동의는 step 2 의 채널 선택(카카오톡/이메일/미수신) 자체가 동의 여부를 결정.
+  // 카카오톡 → step 2의 kakao bundle 체크박스 참조. 이메일 → 채널 선택 자체가 동의.
+  // 미수신 → 당연히 false.
+  const allAgreed = agreedTerms && agreedPrivacy;
   const setAllAgreed = (v: boolean) => {
     setAgreedTerms(v);
     setAgreedPrivacy(v);
-    setAgreedMarketing(v);
   };
 
   // 수신 채널. 카카오톡 선택 시 step 3 에서 카카오 OAuth 강제. 미수신이면 가입은 되지만 알림 발송 X.
@@ -157,7 +157,8 @@ export function SignupForm({
     const interestParam = encodeURIComponent(selectedInterests.join(","));
     const subParam = encodeURIComponent(JSON.stringify(subInterests));
     // 카카오 채널 선택 시 OAuth 버튼 클릭 = 알림톡 수신 동의 간주 (UI 상 명시됨).
-    const marketingParam = (kakaoChannel && provider === "kakao") || agreedMarketing ? "1" : "0";
+    // step 2 에서 카카오/이메일 채널 선택 = 광고성 수신 동의 간주. 미수신은 false.
+    const marketingParam = (kakaoChannel && provider === "kakao") || emailChannel ? "1" : "0";
     const channelParam = kakaoChannel ? "kakao" : "email";
     const phoneParam = kakaoChannel ? `&p=${encodeURIComponent(phone.replace(/\D/g, ""))}` : "";
     return `/api/auth/oauth/${provider}/start?mode=signup&interests=${interestParam}&sub=${subParam}&m=${marketingParam}&ch=${channelParam}${phoneParam}`;
@@ -203,7 +204,7 @@ export function SignupForm({
           password,
           agreeToTerms: agreedTerms,
           agreeToPrivacy: agreedPrivacy,
-          agreeToMarketing: agreedMarketing,
+          agreeToMarketing: emailChannel,
           honeypot,
           phone: null,
           deliveryChannels: {
@@ -506,9 +507,6 @@ export function SignupForm({
                     boxSizing: "border-box",
                   }}
                 />
-                <p style={{ margin: "8px 0 0", fontSize: 12, color: "#7A6F62", fontWeight: 600, lineHeight: 1.5 }}>
-                  이 번호로 매일 아침 알림톡이 도착합니다. 다음 단계에서 <b style={{ color: "#1F1A14" }}>카카오 계정으로 회원가입</b> 하시면 됩니다.
-                </p>
               </div>
             ) : (
               <div>
@@ -786,45 +784,64 @@ export function SignupForm({
           <>
           {/* 이메일 폼 시작 */}
 
-          <label
-            style={{
-              display: "block",
-              fontSize: 14,
-              fontWeight: 800,
-              color: "#1F1A14",
-              marginBottom: 8,
-              letterSpacing: "-0.01em",
-            }}
-          >
-            이메일 주소
-          </label>
-          <input
-            required
-            type="text"
-            inputMode="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setError("");
-            }}
-            placeholder="예) hong@naver.com"
-            style={{
-              width: "100%",
-              minHeight: 60,
-              padding: "0 18px",
-              background: "#fff",
-              border: "2px solid #E8DCC7",
-              borderRadius: 14,
-              fontSize: 17,
-              fontWeight: 600,
-              color: "#1F1A14",
-              outline: "none",
-              fontFamily: "inherit",
-              boxSizing: "border-box",
-              marginBottom: 16,
-            }}
-          />
+          {/* emailChannel 은 step 2에서 이미 이메일 받음 → 여기선 비번만 받음. noneChannel 은 여기서 이메일 입력. */}
+          {noneChannel ? (
+            <>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: "#1F1A14",
+                  marginBottom: 8,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                이메일 주소
+              </label>
+              <input
+                required
+                type="text"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError("");
+                }}
+                placeholder="예) hong@naver.com"
+                style={{
+                  width: "100%",
+                  minHeight: 60,
+                  padding: "0 18px",
+                  background: "#fff",
+                  border: "2px solid #E8DCC7",
+                  borderRadius: 14,
+                  fontSize: 17,
+                  fontWeight: 600,
+                  color: "#1F1A14",
+                  outline: "none",
+                  fontFamily: "inherit",
+                  boxSizing: "border-box",
+                  marginBottom: 16,
+                }}
+              />
+            </>
+          ) : (
+            <div
+              style={{
+                padding: "10px 14px",
+                background: "#F5EEE2",
+                borderRadius: 10,
+                fontSize: 13,
+                fontWeight: 600,
+                color: "#4A4037",
+                marginBottom: 16,
+              }}
+            >
+              📧 {email}
+            </div>
+          )}
 
           <label
             style={{
@@ -960,21 +977,6 @@ export function SignupForm({
               </span>
             </label>
 
-            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 8, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={agreedMarketing}
-                onChange={(e) => setAgreedMarketing(e.target.checked)}
-                style={{ marginTop: 3, width: 18, height: 18, accentColor: "#E57C23", flexShrink: 0 }}
-              />
-              <span>
-                <span style={{ color: "#7A6F62", fontWeight: 700, marginRight: 4 }}>[선택]</span>
-                <b>광고성 정보 수신</b>에 동의합니다.
-                <span style={{ display: "block", fontSize: 12, color: "#7A6F62", fontWeight: 500, marginTop: 3, lineHeight: 1.5 }}>
-                  매일 아침 7:30에 뉴스 요약과 제휴 상품 안내를 보내드립니다. 동의하지 않으시면 발송이 되지 않으며, 언제든 설정에서 변경할 수 있습니다.
-                </span>
-              </span>
-            </label>
           </div>
 
           {error ? <div style={{ marginTop: 16 }}><Notice tone="error">{error}</Notice></div> : null}
