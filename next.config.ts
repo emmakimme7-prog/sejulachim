@@ -31,7 +31,7 @@ const nextConfig: NextConfig = {
             value: [
               "default-src 'self'",
               "img-src 'self' data: https:",
-              "media-src 'self' blob: data:",
+              "media-src 'self' blob: data: https://*.supabase.co",
               "style-src 'self' 'unsafe-inline'",
               `script-src 'self' 'unsafe-inline' https://t1.kakaocdn.net${isDev ? " 'unsafe-eval'" : ""}`,
               "font-src 'self' https://fonts.gstatic.com",
