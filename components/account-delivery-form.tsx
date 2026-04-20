@@ -13,7 +13,7 @@ function KakaoMark({ size = 22 }: { size?: number }) {
   );
 }
 
-type Channel = "kakao" | "email";
+type Channel = "kakao" | "email" | "none";
 
 function formatPhone(raw: string) {
   const digits = raw.replace(/\D/g, "").slice(0, 11);
@@ -41,71 +41,47 @@ export function AccountDeliveryForm({
   initialEmail: string;
   initialMarketingConsent?: boolean;
 }) {
-  const [channel, setChannel] = useState<Channel>(initialChannel);
+  // marketing_consent 가 없으면 "미수신" 상태로 표시
+  const computedInitial: Channel = initialMarketingConsent === false ? "none" : initialChannel;
+  const [channel, setChannel] = useState<Channel>(computedInitial);
   const [phone, setPhone] = useState(initialPhone ? formatPhone(initialPhone) : "");
   const [email, setEmail] = useState(initialEmail);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<{ tone: "success" | "error"; message: string } | null>(null);
-  const [marketingConsent, setMarketingConsent] = useState<boolean>(initialMarketingConsent ?? true);
-  const [revoking, setRevoking] = useState(false);
 
   const kakaoChannel = channel === "kakao";
   const emailChannel = channel === "email";
-
-  async function handleRevokeMarketing() {
-    if (revoking) return;
-    const confirmed = window.confirm(
-      "광고성 정보 수신에 대한 동의를 철회하시면\n매일 아침 소식이 더 이상 발송되지 않습니다.\n\n정말 철회하시겠습니까?"
-    );
-    if (!confirmed) return;
-
-    setRevoking(true);
-    setStatus(null);
-    try {
-      const response = await fetch("/api/account/marketing-consent", { method: "DELETE" });
-      const payload = (await response.json()) as { ok?: boolean; error?: string };
-      if (!response.ok || !payload.ok) {
-        setStatus({ tone: "error", message: payload.error ?? "철회 요청을 처리하지 못했습니다." });
-        return;
-      }
-      setMarketingConsent(false);
-      setStatus({
-        tone: "success",
-        message: "광고성 정보 수신 동의를 철회했습니다. 더 이상 매일 소식이 발송되지 않습니다."
-      });
-    } catch {
-      setStatus({ tone: "error", message: "네트워크 문제로 철회하지 못했습니다." });
-    } finally {
-      setRevoking(false);
-    }
-  }
-
-  async function handleReconsent() {
-    if (revoking) return;
-    setRevoking(true);
-    setStatus(null);
-    try {
-      const response = await fetch("/api/account/marketing-consent", { method: "POST" });
-      const payload = (await response.json()) as { ok?: boolean; error?: string };
-      if (!response.ok || !payload.ok) {
-        setStatus({ tone: "error", message: payload.error ?? "재동의 요청을 처리하지 못했습니다." });
-        return;
-      }
-      setMarketingConsent(true);
-      setStatus({
-        tone: "success",
-        message: "광고성 정보 수신 동의가 재설정되었습니다. 내일 아침부터 소식을 받으실 수 있습니다."
-      });
-    } catch {
-      setStatus({ tone: "error", message: "네트워크 문제로 처리하지 못했습니다." });
-    } finally {
-      setRevoking(false);
-    }
-  }
+  const noneChannel = channel === "none";
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus(null);
+
+    // 미수신 선택 시 광고성 정보 수신 동의 철회 API 호출.
+    if (noneChannel) {
+      const confirmed = window.confirm(
+        "미수신으로 설정하시면 매일 아침 소식이 더 이상 발송되지 않습니다.\n\n계속하시겠습니까?"
+      );
+      if (!confirmed) return;
+      setSubmitting(true);
+      try {
+        const response = await fetch("/api/account/marketing-consent", { method: "DELETE" });
+        const payload = (await response.json()) as { ok?: boolean; error?: string };
+        if (!response.ok || !payload.ok) {
+          setStatus({ tone: "error", message: payload.error ?? "처리하지 못했습니다." });
+          return;
+        }
+        setStatus({
+          tone: "success",
+          message: "미수신으로 설정되었습니다. 다시 받고 싶으시면 카카오톡 또는 이메일을 선택하세요."
+        });
+      } catch {
+        setStatus({ tone: "error", message: "네트워크 문제로 처리하지 못했습니다." });
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
 
     if (kakaoChannel && !isValidPhoneClient(phone)) {
       setStatus({ tone: "error", message: "올바른 휴대폰번호(010-XXXX-XXXX)를 입력해주세요." });
@@ -118,6 +94,10 @@ export function AccountDeliveryForm({
 
     setSubmitting(true);
     try {
+      // 이전에 미수신 상태였을 수 있으므로 먼저 수신 동의 복구(marketing_consent_at 재세팅).
+      if (initialMarketingConsent === false) {
+        await fetch("/api/account/marketing-consent", { method: "POST" });
+      }
       const response = await fetch("/api/account/delivery", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -163,7 +143,7 @@ export function AccountDeliveryForm({
           aria-label="받는 방법 변경"
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "1fr 1fr 1fr",
             gap: 6,
             padding: 4,
             borderRadius: 14,
@@ -181,14 +161,14 @@ export function AccountDeliveryForm({
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 8,
+              gap: 6,
               minHeight: 48,
-              padding: "0 14px",
+              padding: "0 8px",
               borderRadius: 10,
               background: kakaoChannel ? "#FEE500" : "transparent",
               color: "#1F1A14",
               border: "none",
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: kakaoChannel ? 900 : 700,
               letterSpacing: "-0.01em",
               cursor: "pointer",
@@ -196,7 +176,7 @@ export function AccountDeliveryForm({
               transition: "background 0.15s, font-weight 0.15s",
             }}
           >
-            <KakaoMark size={20} />
+            <KakaoMark size={18} />
             카카오톡
           </button>
           <button
@@ -208,14 +188,14 @@ export function AccountDeliveryForm({
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 8,
+              gap: 6,
               minHeight: 48,
-              padding: "0 14px",
+              padding: "0 8px",
               borderRadius: 10,
               background: emailChannel ? "#FFF2E3" : "transparent",
               color: "#1F1A14",
               border: "none",
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: emailChannel ? 900 : 700,
               letterSpacing: "-0.01em",
               cursor: "pointer",
@@ -223,12 +203,44 @@ export function AccountDeliveryForm({
               transition: "background 0.15s, font-weight 0.15s",
             }}
           >
-            <span style={{ fontSize: 16 }} aria-hidden="true">📧</span>
+            <span style={{ fontSize: 14 }} aria-hidden="true">📧</span>
             이메일
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={noneChannel}
+            onClick={() => { setChannel("none"); setStatus(null); }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              minHeight: 48,
+              padding: "0 8px",
+              borderRadius: 10,
+              background: noneChannel ? "#E8DCC7" : "transparent",
+              color: noneChannel ? "#1F1A14" : "#7A6F62",
+              border: "none",
+              fontSize: 14,
+              fontWeight: noneChannel ? 900 : 700,
+              letterSpacing: "-0.01em",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              transition: "background 0.15s, font-weight 0.15s",
+            }}
+          >
+            <span style={{ fontSize: 14 }} aria-hidden="true">🔕</span>
+            미수신
           </button>
         </div>
 
-        {kakaoChannel ? (
+        {noneChannel ? (
+          <p style={{ margin: 0, fontSize: 13, color: "#7A6F62", fontWeight: 600, lineHeight: 1.6 }}>
+            미수신으로 설정하면 매일 아침 소식이 <b style={{ color: "#1F1A14" }}>발송되지 않습니다</b>.
+            저장하시면 광고성 정보 수신 동의가 철회됩니다.
+          </p>
+        ) : kakaoChannel ? (
           <div>
             <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#4A4037", marginBottom: 6, letterSpacing: "-0.01em" }}>
               휴대폰번호
@@ -304,83 +316,6 @@ export function AccountDeliveryForm({
       <Button type="submit" size="lg" fullWidth disabled={submitting}>
         {submitting ? "저장 중입니다..." : "알림 설정 저장하기"}
       </Button>
-
-      <div
-        style={{
-          marginTop: 4,
-          padding: "14px 16px",
-          borderRadius: 12,
-          background: marketingConsent ? "#FFF8EC" : "#F5F0E8",
-          border: `1px solid ${marketingConsent ? "#F2E6D7" : "#E8DCC7"}`,
-          fontSize: 13,
-          color: "#4A4037",
-          lineHeight: 1.6,
-          fontWeight: 500,
-        }}
-      >
-        <div style={{ fontSize: 13, fontWeight: 800, color: "#1F1A14", marginBottom: 6 }}>
-          📢 광고성 정보 수신 동의
-        </div>
-        {marketingConsent ? (
-          <>
-            <p style={{ margin: "0 0 10px", fontSize: 12, color: "#7A6F62", fontWeight: 500 }}>
-              매일 아침 7:30에 뉴스 요약과 제휴 상품 안내를 받아보시는 데 동의하셨습니다.
-              언제든 아래 버튼으로 수신을 해지할 수 있습니다.
-            </p>
-            <button
-              type="button"
-              onClick={handleRevokeMarketing}
-              disabled={revoking}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                minHeight: 36,
-                padding: "0 14px",
-                borderRadius: 8,
-                background: "#fff",
-                border: "1.5px solid #D9CDB8",
-                color: "#7A6F62",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: revoking ? "not-allowed" : "pointer",
-                opacity: revoking ? 0.6 : 1,
-                fontFamily: "inherit",
-              }}
-            >
-              {revoking ? "처리 중..." : "수신 동의 철회하기"}
-            </button>
-          </>
-        ) : (
-          <>
-            <p style={{ margin: "0 0 10px", fontSize: 12, color: "#7A6F62", fontWeight: 500 }}>
-              광고성 정보 수신 동의가 철회된 상태입니다. 매일 아침 소식이 발송되지 않습니다.
-              다시 받아보시려면 아래 버튼을 눌러주세요.
-            </p>
-            <button
-              type="button"
-              onClick={handleReconsent}
-              disabled={revoking}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                minHeight: 36,
-                padding: "0 14px",
-                borderRadius: 8,
-                background: "#E57C23",
-                border: "none",
-                color: "#fff",
-                fontSize: 13,
-                fontWeight: 800,
-                cursor: revoking ? "not-allowed" : "pointer",
-                opacity: revoking ? 0.6 : 1,
-                fontFamily: "inherit",
-              }}
-            >
-              {revoking ? "처리 중..." : "수신 다시 동의하기"}
-            </button>
-          </>
-        )}
-      </div>
     </form>
   );
 }

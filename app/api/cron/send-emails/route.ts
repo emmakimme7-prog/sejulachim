@@ -207,9 +207,10 @@ async function handleCron(request: NextRequest) {
 
     for (const user of users ?? []) {
       const userId = String(user.id);
-      const useKakao = kakaoEnabled && user.delivery_kakao === true && Boolean(user.phone) && Boolean(user.marketing_consent_at);
-      // delivery_kakao=true + delivery_email=false 인 유저는 이메일 skip. 그 외는 이메일도 발송.
-      const useEmail = user.delivery_kakao === true && user.delivery_email === false ? false : true;
+      const hasMarketingConsent = Boolean(user.marketing_consent_at);
+      // 광고성 수신 동의 없으면 어떤 채널로도 발송 안 함 (정보통신망법 대응 + "미수신" 가입자).
+      const useKakao = hasMarketingConsent && kakaoEnabled && user.delivery_kakao === true && Boolean(user.phone);
+      const useEmail = hasMarketingConsent && user.delivery_email === true;
 
       const { data: existingLog } = await supabase
         .from("email_logs")

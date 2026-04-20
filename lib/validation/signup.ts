@@ -57,13 +57,7 @@ export const signupSchema = signupPreferencesSchema.extend({
     });
   }
   const channels = value.deliveryChannels ?? { kakao: false, email: true };
-  if (!channels.kakao && !channels.email) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["deliveryChannels"],
-      message: "받는 방법을 1개 이상 선택해주세요."
-    });
-  }
+  // 둘 다 false 는 "미수신" 가입을 의미. 허용 (marketing consent 도 자동으로 false 처리).
   if (channels.kakao && !value.phone) {
     ctx.addIssue({
       code: "custom",

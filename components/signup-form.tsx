@@ -82,10 +82,11 @@ export function SignupForm({
     setAgreedMarketing(v);
   };
 
-  // 수신 채널: 카카오톡 선택하면 step 3 에서 카카오 OAuth 강제 (알림톡 수신을 위해).
-  const [channel, setChannel] = useState<"kakao" | "email">(defaultEmail ? "email" : "kakao");
+  // 수신 채널. 카카오톡 선택 시 step 3 에서 카카오 OAuth 강제. 미수신이면 가입은 되지만 알림 발송 X.
+  const [channel, setChannel] = useState<"kakao" | "email" | "none">(defaultEmail ? "email" : "kakao");
   const kakaoChannel = channel === "kakao";
   const emailChannel = channel === "email";
+  const noneChannel = channel === "none";
   // 카카오 채널 선택 시 step 2에서 번호 수집 (카카오 OAuth 는 기본 scope로 번호 못 받기 때문).
   const [phone, setPhone] = useState("");
   // 카카오 채널 가입 플로우용 일괄 동의 (필수): 이용약관·개인정보·광고성 수신.
@@ -207,7 +208,7 @@ export function SignupForm({
           phone: null,
           deliveryChannels: {
             kakao: kakaoChannel,
-            email: emailChannel,
+            email: emailChannel || noneChannel ? emailChannel : false,
           },
         }),
       });
@@ -388,7 +389,7 @@ export function SignupForm({
               aria-label="받는 방법"
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
+                gridTemplateColumns: "1fr 1fr 1fr",
                 gap: 6,
                 padding: 4,
                 borderRadius: 14,
@@ -406,14 +407,14 @@ export function SignupForm({
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 8,
+                  gap: 6,
                   minHeight: 48,
-                  padding: "0 14px",
+                  padding: "0 8px",
                   borderRadius: 10,
                   background: kakaoChannel ? "#FEE500" : "transparent",
                   color: "#1F1A14",
                   border: "none",
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: kakaoChannel ? 900 : 700,
                   letterSpacing: "-0.01em",
                   cursor: "pointer",
@@ -421,7 +422,7 @@ export function SignupForm({
                   transition: "background 0.15s, font-weight 0.15s",
                 }}
               >
-                <KakaoMark size={20} />
+                <KakaoMark size={18} />
                 카카오톡
               </button>
               <button
@@ -433,14 +434,14 @@ export function SignupForm({
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 8,
+                  gap: 6,
                   minHeight: 48,
-                  padding: "0 14px",
+                  padding: "0 8px",
                   borderRadius: 10,
                   background: emailChannel ? "#FFF2E3" : "transparent",
                   color: "#1F1A14",
                   border: "none",
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: emailChannel ? 900 : 700,
                   letterSpacing: "-0.01em",
                   cursor: "pointer",
@@ -448,12 +449,45 @@ export function SignupForm({
                   transition: "background 0.15s, font-weight 0.15s",
                 }}
               >
-                <span style={{ fontSize: 16 }} aria-hidden="true">📧</span>
+                <span style={{ fontSize: 14 }} aria-hidden="true">📧</span>
                 이메일
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={noneChannel}
+                onClick={() => { setChannel("none"); setError(""); }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  minHeight: 48,
+                  padding: "0 8px",
+                  borderRadius: 10,
+                  background: noneChannel ? "#E8DCC7" : "transparent",
+                  color: noneChannel ? "#1F1A14" : "#7A6F62",
+                  border: "none",
+                  fontSize: 14,
+                  fontWeight: noneChannel ? 900 : 700,
+                  letterSpacing: "-0.01em",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  transition: "background 0.15s, font-weight 0.15s",
+                }}
+              >
+                <span style={{ fontSize: 14 }} aria-hidden="true">🔕</span>
+                미수신
               </button>
             </div>
 
-            {kakaoChannel ? (
+            {noneChannel ? (
+              <p style={{ margin: 0, fontSize: 13, color: "#7A6F62", fontWeight: 600, lineHeight: 1.6 }}>
+                미수신을 선택하시면 매일 아침 소식이 <b style={{ color: "#1F1A14" }}>발송되지 않습니다</b>.
+                <br />
+                사이트는 이용하실 수 있지만 알림을 받지 않습니다. 언제든 설정에서 변경 가능합니다.
+              </p>
+            ) : kakaoChannel ? (
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#4A4037", marginBottom: 6, letterSpacing: "-0.01em" }}>
                   휴대폰번호
