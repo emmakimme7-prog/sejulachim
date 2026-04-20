@@ -551,10 +551,6 @@ export function SignupForm({
                   <span style={{ color: "#B2570F", fontWeight: 700, marginRight: 4 }}>[필수]</span>
                   매일 아침 <b style={{ color: "#1F1A14" }}>카카오톡 알림톡</b> 받기에 동의합니다.
                   <span style={{ display: "block", fontSize: 12, color: "#7A6F62", fontWeight: 500, marginTop: 4, lineHeight: 1.5 }}>
-                    <a href="/terms" target="_blank" style={{ color: "#B2570F", fontWeight: 700, textDecoration: "underline" }}>이용약관</a>
-                    {" · "}
-                    <a href="/terms" target="_blank" style={{ color: "#B2570F", fontWeight: 700, textDecoration: "underline" }}>개인정보 수집·이용</a>
-                    {" · "}
                     광고성 정보 수신에 동의합니다. 언제든 설정에서 철회할 수 있습니다.
                   </span>
                 </span>
