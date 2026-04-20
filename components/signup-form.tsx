@@ -88,6 +88,8 @@ export function SignupForm({
   const emailChannel = channel === "email";
   // 카카오 채널 선택 시 step 2에서 번호 수집 (카카오 OAuth 는 기본 scope로 번호 못 받기 때문).
   const [phone, setPhone] = useState("");
+  // 카카오 채널 가입 플로우용 일괄 동의 (필수): 이용약관·개인정보·광고성 수신.
+  const [agreedKakaoBundle, setAgreedKakaoBundle] = useState(false);
 
   const [step, setStep] = useState<Step>(defaultEmail ? "auth" : "interests");
 
@@ -520,38 +522,82 @@ export function SignupForm({
           </div>
 
           {kakaoChannel ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (!/^010\d{8}$/.test(phone.replace(/\D/g, ""))) {
-                  setToast("올바른 휴대폰번호(010-XXXX-XXXX)를 입력해 주세요.");
-                  return;
-                }
-                window.location.href = buildOauthHref("kakao");
-              }}
-              style={{
-                width: "100%",
-                minHeight: 60,
-                marginTop: 24,
-                background: "#FEE500",
-                color: "#3C1E1E",
-                border: "none",
-                borderRadius: 16,
-                fontSize: 18,
-                fontWeight: 900,
-                letterSpacing: "-0.01em",
-                boxShadow: "0 6px 16px rgba(254, 229, 0, 0.45)",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-              }}
-            >
-              <KakaoMark size={24} />
-              카카오톡으로 회원가입
-            </button>
+            <>
+              {/* 카카오 채널 일괄 동의 체크박스 */}
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  marginTop: 18,
+                  padding: "14px 14px",
+                  borderRadius: 12,
+                  background: "#fff",
+                  border: "1.5px solid #E8DCC7",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                  color: "#4A4037",
+                  fontWeight: 500,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={agreedKakaoBundle}
+                  onChange={(e) => setAgreedKakaoBundle(e.target.checked)}
+                  style={{ marginTop: 3, width: 20, height: 20, accentColor: "#E57C23", flexShrink: 0 }}
+                />
+                <span>
+                  <span style={{ color: "#B2570F", fontWeight: 700, marginRight: 4 }}>[필수]</span>
+                  매일 아침 <b style={{ color: "#1F1A14" }}>카카오톡 알림톡</b> 받기에 동의합니다.
+                  <span style={{ display: "block", fontSize: 12, color: "#7A6F62", fontWeight: 500, marginTop: 4, lineHeight: 1.5 }}>
+                    <a href="/terms" target="_blank" style={{ color: "#B2570F", fontWeight: 700, textDecoration: "underline" }}>이용약관</a>
+                    {" · "}
+                    <a href="/terms" target="_blank" style={{ color: "#B2570F", fontWeight: 700, textDecoration: "underline" }}>개인정보 수집·이용</a>
+                    {" · "}
+                    광고성 정보 수신에 동의합니다. 언제든 설정에서 철회할 수 있습니다.
+                  </span>
+                </span>
+              </label>
+
+              <button
+                type="button"
+                disabled={!agreedKakaoBundle}
+                onClick={() => {
+                  if (!/^010\d{8}$/.test(phone.replace(/\D/g, ""))) {
+                    setToast("올바른 휴대폰번호(010-XXXX-XXXX)를 입력해 주세요.");
+                    return;
+                  }
+                  if (!agreedKakaoBundle) {
+                    setToast("알림톡 수신 동의에 체크해 주세요.");
+                    return;
+                  }
+                  window.location.href = buildOauthHref("kakao");
+                }}
+                style={{
+                  width: "100%",
+                  minHeight: 60,
+                  marginTop: 16,
+                  background: agreedKakaoBundle ? "#FEE500" : "#F5EEE2",
+                  color: agreedKakaoBundle ? "#3C1E1E" : "#9C907F",
+                  border: "none",
+                  borderRadius: 16,
+                  fontSize: 18,
+                  fontWeight: 900,
+                  letterSpacing: "-0.01em",
+                  boxShadow: agreedKakaoBundle ? "0 6px 16px rgba(254, 229, 0, 0.45)" : "none",
+                  cursor: agreedKakaoBundle ? "pointer" : "not-allowed",
+                  fontFamily: "inherit",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                }}
+              >
+                <KakaoMark size={24} />
+                카카오톡으로 회원가입
+              </button>
+            </>
           ) : (
             <button
               type="button"

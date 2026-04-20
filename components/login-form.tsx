@@ -221,11 +221,8 @@ export function LoginForm({
             letterSpacing: "-0.01em",
           }}
         >
-          비밀번호 (선택)
+          비밀번호
         </label>
-        <div style={{ fontSize: 12, color: "#7A6F62", fontWeight: 600, marginBottom: 8 }}>
-          비밀번호를 설정하셨다면 입력해주세요
-        </div>
         <div style={{ position: "relative" }}>
           <input
             type={showPassword ? "text" : "password"}
