@@ -32,7 +32,7 @@ const listPublicContentItemsCached = unstable_cache(
     const supabase = createAdminSupabaseClient();
     const { data } = await supabase
       .from("content_items")
-      .select("id, title, short_summary, long_summary, action_line, source_name, source_url, sources, slug, published_at, summary_type, category, sub_interest, raw_text, thumbnail_url, thumbnail_alt, thumbnail_page_url, thumbnail_license")
+      .select("id, title, short_summary, long_summary, action_line, source_name, source_url, sources, slug, published_at, summary_type, category, sub_interest, raw_text, thumbnail_url, thumbnail_alt, thumbnail_page_url, thumbnail_license, audio_url")
       .eq("approval_status", "approved")
       .or("summary_status.eq.done,ai_status.eq.completed")
       .not("published_at", "is", null)
@@ -41,7 +41,7 @@ const listPublicContentItemsCached = unstable_cache(
 
     return (data ?? []).map((item) => normalizePublicItemCategory(item));
   },
-  ["public-content-list"],
+  ["public-content-list-v2"],
   { revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS }
 );
 
@@ -55,7 +55,7 @@ const getPublicContentItemBySlugCached = unstable_cache(
     const supabase = createAdminSupabaseClient();
     const { data } = await supabase
       .from("content_items")
-      .select("id, title, short_summary, long_summary, action_line, source_name, source_url, sources, slug, published_at, summary_type, category, sub_interest, raw_text, thumbnail_url, thumbnail_alt, thumbnail_page_url, thumbnail_license")
+      .select("id, title, short_summary, long_summary, action_line, source_name, source_url, sources, slug, published_at, summary_type, category, sub_interest, raw_text, thumbnail_url, thumbnail_alt, thumbnail_page_url, thumbnail_license, audio_url")
       .eq("slug", decodedSlug)
       .eq("approval_status", "approved")
       .or("summary_status.eq.done,ai_status.eq.completed")
@@ -63,7 +63,7 @@ const getPublicContentItemBySlugCached = unstable_cache(
 
     return data ? normalizePublicItemCategory(data) : null;
   },
-  ["public-content-detail"],
+  ["public-content-detail-v2"],
   { revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS }
 );
 

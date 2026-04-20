@@ -29,6 +29,7 @@ const serverEnvSchema = z.object({
   RESEND_FROM_EMAIL: z.string().min(1),
   OPENAI_API_KEY: z.string().min(1).optional(),
   PIXABAY_API_KEY: z.string().min(1).optional(),
+  GOOGLE_APPLICATION_CREDENTIALS_JSON: z.string().min(1).optional(),
   COUPANG_PARTNERS_ACCESS_KEY: z.string().min(1).optional(),
   COUPANG_PARTNERS_SECRET_KEY: z.string().min(1).optional(),
   CRON_SECRET: z.string().min(32),

@@ -17,6 +17,7 @@ type DetailListenButtonProps = {
   title: string;
   nextItems: NextItemInfo[];
   className?: string;
+  audioUrl?: string | null;
 };
 
 function registerChain(items: NextItemInfo[], idx: number) {
@@ -41,8 +42,10 @@ function registerChain(items: NextItemInfo[], idx: number) {
   });
 }
 
-export function DetailListenButton({ text, title, nextItems, className, iconOnly = false, playIcon = false }: DetailListenButtonProps) {
+export function DetailListenButton({ text, title, nextItems, className, iconOnly = false, playIcon = false, audioUrl }: DetailListenButtonProps) {
   function handlePlay() {
+    // MP3 캐시 재생 시에는 플레이리스트/자동재생 체인을 쓰지 않음
+    if (audioUrl?.trim()) return;
     const first = nextItems[0] ?? null;
     setSpeechPlaylist(
       [{ label: title }, ...(first ? [{ label: first.title }] : [])],
@@ -59,6 +62,7 @@ export function DetailListenButton({ text, title, nextItems, className, iconOnly
       label={iconOnly ? "" : "듣기"}
       playIcon={playIcon}
       onPlay={handlePlay}
+      audioUrl={audioUrl}
     />
   );
 }

@@ -239,6 +239,21 @@ export function skipToNext() {
 
 // ─── ListenButton ─────────────────────────────────────────────────────────────
 
+// 전역 HTMLAudio 재생 상태 (MP3 캐시 모드). 동시 재생 방지용.
+let currentAudioElement: HTMLAudioElement | null = null;
+let currentAudioOwner: string | null = null;
+const audioPlaybackSubs = new Set<(owner: string | null) => void>();
+
+function stopCurrentAudio() {
+  if (currentAudioElement) {
+    currentAudioElement.pause();
+    currentAudioElement.currentTime = 0;
+    currentAudioElement = null;
+  }
+  currentAudioOwner = null;
+  for (const fn of audioPlaybackSubs) fn(null);
+}
+
 type ListenButtonProps = {
   text: string;
   speechTitle?: string;
@@ -248,6 +263,7 @@ type ListenButtonProps = {
   mobileIconOnly?: boolean;
   onPlay?: () => void;
   playIcon?: boolean;
+  audioUrl?: string | null;
 };
 
 export function ListenButton({
@@ -259,10 +275,12 @@ export function ListenButton({
   mobileIconOnly = false,
   onPlay,
   playIcon = false,
+  audioUrl,
 }: ListenButtonProps) {
   const pathname = usePathname();
   const normalizedText = text.replace(/\s+/g, " ").trim();
-  const disabled = !normalizedText;
+  const hasAudioUrl = Boolean(audioUrl?.trim());
+  const disabled = !normalizedText && !hasAudioUrl;
   const [playing, setPlaying] = useState(false);
   const ownerId = useId();
   const showLabel = Boolean(label?.trim());
@@ -272,14 +290,18 @@ export function ListenButton({
       if (owner !== ownerId) setPlaying(false);
     };
     playbackSubs.add(handlePlayback);
+    audioPlaybackSubs.add(handlePlayback);
     return () => {
       playbackSubs.delete(handlePlayback);
+      audioPlaybackSubs.delete(handlePlayback);
       if (speechOwner === ownerId) stopAllSpeech();
+      if (currentAudioOwner === ownerId) stopCurrentAudio();
     };
   }, [ownerId]);
 
   useEffect(() => {
     if (speechOwner !== null) stopAllSpeech();
+    if (currentAudioOwner !== null) stopCurrentAudio();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
@@ -287,11 +309,35 @@ export function ListenButton({
     if (disabled) return;
 
     if (playing) {
-      stopAllSpeech();
+      if (currentAudioOwner === ownerId) stopCurrentAudio();
+      else stopAllSpeech();
       setPlaying(false);
       return;
     }
 
+    // MP3 캐시가 있으면 HTMLAudio로 재생 (Google TTS Neural2 음성)
+    if (hasAudioUrl && audioUrl) {
+      stopAllSpeech();
+      stopCurrentAudio();
+      const audio = new Audio(audioUrl);
+      audio.preload = "auto";
+      audio.onended = () => {
+        if (currentAudioElement === audio) stopCurrentAudio();
+      };
+      audio.onerror = () => {
+        if (currentAudioElement === audio) stopCurrentAudio();
+      };
+      currentAudioElement = audio;
+      currentAudioOwner = ownerId;
+      for (const fn of audioPlaybackSubs) fn(ownerId);
+      setPlaying(true);
+      audio.play().catch(() => {
+        if (currentAudioElement === audio) stopCurrentAudio();
+      });
+      return;
+    }
+
+    // 폴백: 브라우저 내장 Web Speech API
     speechFullText = normalizedText;
     speechDisplayTitle =
       speechTitle.trim() ||

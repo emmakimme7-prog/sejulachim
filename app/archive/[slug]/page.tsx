@@ -327,6 +327,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                 title={data.title}
                 iconOnly
                 playIcon
+                audioUrl={"audio_url" in data ? (data.audio_url as string | null) : null}
                 nextItems={relatedItems.map((item) => ({
                   title: item.title,
                   short_summary: "short_summary" in item ? item.short_summary : null,
