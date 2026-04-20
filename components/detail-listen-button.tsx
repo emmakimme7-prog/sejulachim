@@ -1,6 +1,8 @@
 "use client";
 
-import { ListenButton, playListenable, setAutoPlayNextFn, setSpeechPlaylist } from "@/components/speech-controls";
+import { useRouter } from "next/navigation";
+
+import { ListenButton, beginChainAdvance, playListenable, setAutoPlayNextFn, setSpeechPlaylist } from "@/components/speech-controls";
 
 type NextItemInfo = {
   title: string;
@@ -10,6 +12,8 @@ type NextItemInfo = {
   slug: string;
   audio_url?: string | null;
 };
+
+type Router = ReturnType<typeof useRouter>;
 
 type DetailListenButtonProps = {
   iconOnly?: boolean;
@@ -22,7 +26,7 @@ type DetailListenButtonProps = {
   trackSlug?: string | null;
 };
 
-function registerChain(items: NextItemInfo[], idx: number) {
+function registerChain(items: NextItemInfo[], idx: number, router: Router) {
   const item = items[idx];
   if (!item) {
     setAutoPlayNextFn(null);
@@ -31,7 +35,6 @@ function registerChain(items: NextItemInfo[], idx: number) {
   const upcoming = items[idx + 1] ?? null;
 
   setAutoPlayNextFn(() => {
-    // MP3 캐시가 있으면 제목+요약까지만 (상세 원문은 MP3에 없음). 없으면 full text로 Web Speech.
     const text = item.audio_url?.trim()
       ? [item.title, item.short_summary, item.action_line].filter(Boolean).join(". ")
       : (() => {
@@ -40,6 +43,11 @@ function registerChain(items: NextItemInfo[], idx: number) {
             : [];
           return [item.title, item.short_summary, item.action_line, ...detailParagraphs].filter(Boolean).join(". ");
         })();
+
+    // chain 이동이므로 NavigationStopper 가 재생을 중단하지 않도록 flag 세팅 후 라우팅
+    beginChainAdvance();
+    router.push(`/archive/${item.slug}`);
+
     setSpeechPlaylist(
       [{ label: item.title }, ...(upcoming ? [{ label: upcoming.title }] : [])],
       0
@@ -50,19 +58,20 @@ function registerChain(items: NextItemInfo[], idx: number) {
       audioUrl: item.audio_url,
       slug: item.slug,
     });
-    registerChain(items, idx + 1);
+    registerChain(items, idx + 1, router);
   });
 }
 
 export function DetailListenButton({ text, title, nextItems, className, iconOnly = false, playIcon = false, audioUrl, trackSlug }: DetailListenButtonProps) {
+  const router = useRouter();
   function handlePlay() {
-    // MP3/Web Speech 모두 chain 세팅 — 자동재생 ON이면 다음 관련글로 이어짐.
+    // MP3/Web Speech 모두 chain 세팅 — 자동재생 ON이면 다음 관련글로 이어짐 + 페이지도 이동.
     const first = nextItems[0] ?? null;
     setSpeechPlaylist(
       [{ label: title }, ...(first ? [{ label: first.title }] : [])],
       0
     );
-    registerChain(nextItems, 0);
+    registerChain(nextItems, 0, router);
   }
 
   return (

@@ -38,6 +38,18 @@ let currentAudio: HTMLAudioElement | null = null;
 let audioCurrentTime = 0;
 let audioDuration = 0;
 
+// chain 자동 이동 중이면 pathname 변경으로 인한 stopSpeech를 막는다.
+let chainAdvancing = false;
+export function beginChainAdvance(windowMs = 900) {
+  chainAdvancing = true;
+  setTimeout(() => {
+    chainAdvancing = false;
+  }, windowMs);
+}
+export function isChainAdvancing() {
+  return chainAdvancing;
+}
+
 // 자동재생
 let autoPlayEnabled = false;
 let autoPlayNextFn: (() => void) | null = null;
@@ -463,6 +475,7 @@ export function ListenButton({
   }, [ownerId]);
 
   useEffect(() => {
+    if (chainAdvancing) return;
     if (speechOwner !== null) stopAllSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
