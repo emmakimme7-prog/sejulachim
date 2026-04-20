@@ -335,6 +335,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                   long_summary: "long_summary" in item ? item.long_summary : null,
                   action_line: "action_line" in item ? item.action_line : null,
                   slug: item.slug,
+                  audio_url: "audio_url" in item ? (item.audio_url as string | null) : null,
                 }))}
                 className="!w-[44px] !h-[44px] !min-h-0 !p-0 !rounded-full !bg-[#E57C23] hover:!bg-[#D16612] !border-0 !text-white !shadow-[0_4px_12px_rgba(229,124,35,0.35)] flex items-center justify-center"
               />

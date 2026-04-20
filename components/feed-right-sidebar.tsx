@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { Play } from "lucide-react";
 
-import { playSpeech, setSpeechPlaylist } from "@/components/speech-controls";
+import { playListenable, setAutoPlayNextFn, setSpeechPlaylist } from "@/components/speech-controls";
 
 type Item = {
   title: string;
   short_summary: string;
   action_line?: string | null;
+  slug?: string;
+  audio_url?: string | null;
 };
 
 const CATEGORY_META: Record<string, { emoji: string; color: string; bg: string }> = {
@@ -27,17 +29,32 @@ export function FeedRightSidebar({
   items: Item[];
   interests?: string[];
 }) {
-  const handlePlayAll = useCallback(() => {
-    if (items.length === 0) return;
-    const text = items
-      .map((it) => [it.title, it.short_summary, it.action_line].filter(Boolean).join(". "))
-      .join(". ");
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  const playFromIdx = useCallback((idx: number) => {
+    const list = itemsRef.current;
+    const item = list[idx];
+    if (!item) return;
+    const nextItem = list[idx + 1];
+    const text = [item.title, item.short_summary, item.action_line].filter(Boolean).join(". ");
     setSpeechPlaylist(
-      items.map((it) => ({ label: it.title })),
+      list.slice(idx).map((it) => ({ label: it.title })),
       0
     );
-    playSpeech(text, items[0]?.title ?? "오늘의 소식");
-  }, [items]);
+    setAutoPlayNextFn(nextItem ? () => playFromIdx(idx + 1) : null);
+    playListenable({
+      text,
+      title: item.title,
+      audioUrl: item.audio_url ?? null,
+      slug: item.slug ?? null,
+    });
+  }, []);
+
+  const handlePlayAll = useCallback(() => {
+    if (items.length === 0) return;
+    playFromIdx(0);
+  }, [items.length, playFromIdx]);
 
   return (
     <div style={{ display: "grid", gap: 16 }}>

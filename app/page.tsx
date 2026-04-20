@@ -80,6 +80,8 @@ export default async function HomePage({
     title: it.title,
     short_summary: it.short_summary,
     action_line: it.action_line,
+    slug: it.slug,
+    audio_url: it.audio_url,
   }));
 
   // 로그인 사용자의 관심분야 (사이드바 위젯용)

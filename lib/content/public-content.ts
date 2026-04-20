@@ -78,7 +78,7 @@ const listRelatedPublicContentItemsCached = unstable_cache(
     const storedCategory = getStoredCategoryForMainInterest(category);
     const { data } = await supabase
       .from("content_items")
-      .select("title, short_summary, long_summary, action_line, slug, published_at, category, sub_interest, thumbnail_url, thumbnail_alt")
+      .select("title, short_summary, long_summary, action_line, slug, published_at, category, sub_interest, thumbnail_url, thumbnail_alt, audio_url")
       .eq("approval_status", "approved")
       .or("summary_status.eq.done,ai_status.eq.completed")
       .eq("category", storedCategory)
@@ -90,7 +90,7 @@ const listRelatedPublicContentItemsCached = unstable_cache(
       .filter((item) => item.slug !== decodedSlug)
       .map((item) => normalizePublicItemCategory(item));
   },
-  ["public-content-related"],
+  ["public-content-related-v2"],
   { revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS }
 );
 

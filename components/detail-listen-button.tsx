@@ -1,6 +1,6 @@
 "use client";
 
-import { ListenButton, playSpeech, setAutoPlayNextFn, setSpeechPlaylist } from "@/components/speech-controls";
+import { ListenButton, playListenable, setAutoPlayNextFn, setSpeechPlaylist } from "@/components/speech-controls";
 
 type NextItemInfo = {
   title: string;
@@ -8,6 +8,7 @@ type NextItemInfo = {
   long_summary?: string | null;
   action_line?: string | null;
   slug: string;
+  audio_url?: string | null;
 };
 
 type DetailListenButtonProps = {
@@ -30,27 +31,32 @@ function registerChain(items: NextItemInfo[], idx: number) {
   const upcoming = items[idx + 1] ?? null;
 
   setAutoPlayNextFn(() => {
-    const detailParagraphs = item.long_summary?.trim()
-      ? item.long_summary.split(/\n\n+/).map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean)
-      : [];
-    const text = [item.title, item.short_summary, item.action_line, ...detailParagraphs].filter(Boolean).join(". ");
+    // MP3 캐시가 있으면 제목+요약까지만 (상세 원문은 MP3에 없음). 없으면 full text로 Web Speech.
+    const text = item.audio_url?.trim()
+      ? [item.title, item.short_summary, item.action_line].filter(Boolean).join(". ")
+      : (() => {
+          const detailParagraphs = item.long_summary?.trim()
+            ? item.long_summary.split(/\n\n+/).map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean)
+            : [];
+          return [item.title, item.short_summary, item.action_line, ...detailParagraphs].filter(Boolean).join(". ");
+        })();
     setSpeechPlaylist(
       [{ label: item.title }, ...(upcoming ? [{ label: upcoming.title }] : [])],
       0
     );
-    playSpeech(text, item.title);
+    playListenable({
+      text,
+      title: item.title,
+      audioUrl: item.audio_url,
+      slug: item.slug,
+    });
     registerChain(items, idx + 1);
   });
 }
 
 export function DetailListenButton({ text, title, nextItems, className, iconOnly = false, playIcon = false, audioUrl, trackSlug }: DetailListenButtonProps) {
   function handlePlay() {
-    // MP3 캐시 재생: 단일 article 이므로 chain/playlist 를 명시적으로 비움 (이전 세션 잔재 제거)
-    if (audioUrl?.trim()) {
-      setSpeechPlaylist(null, 0);
-      setAutoPlayNextFn(null);
-      return;
-    }
+    // MP3/Web Speech 모두 chain 세팅 — 자동재생 ON이면 다음 관련글로 이어짐.
     const first = nextItems[0] ?? null;
     setSpeechPlaylist(
       [{ label: title }, ...(first ? [{ label: first.title }] : [])],
