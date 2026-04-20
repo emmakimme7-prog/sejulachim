@@ -387,6 +387,7 @@ export async function upsertSubscriberSignup(input: {
   interests: string[];
   subInterests: Record<string, string>;
   consentedAt: string;
+  marketingConsentedAt?: string | null;
   password?: string;
   authProvider?: string;
   phone?: string | null;
@@ -402,6 +403,7 @@ export async function upsertSubscriberSignup(input: {
     if (input.phone !== undefined) channelsPatch.phone = input.phone;
     if (input.deliveryChannels?.kakao !== undefined) channelsPatch.delivery_kakao = input.deliveryChannels.kakao;
     if (input.deliveryChannels?.email !== undefined) channelsPatch.delivery_email = input.deliveryChannels.email;
+    if (input.marketingConsentedAt !== undefined) channelsPatch.marketing_consent_at = input.marketingConsentedAt;
 
     const baseUpsert = {
       email: input.email,
@@ -430,9 +432,9 @@ export async function upsertSubscriberSignup(input: {
       .select("id,email")
       .single();
 
-    // 2차 폴백: 신규 컬럼이 DB에 없으면 (마이그레이션 009 미적용) 채널 정보 제외하고 재시도
+    // 2차 폴백: 신규 컬럼이 DB에 없으면 (마이그레이션 009/011 미적용) 채널 정보 제외하고 재시도
     if (upsertResult.error && /column .* does not exist/i.test(upsertResult.error.message ?? "")) {
-      console.warn("[upsertSubscriberSignup] new channel columns missing; retrying without phone/delivery_kakao/delivery_email. Apply migration 009 to enable.");
+      console.warn("[upsertSubscriberSignup] new channel columns missing; retrying without phone/delivery_kakao/delivery_email/marketing_consent_at. Apply migrations 009+011 to enable.");
       upsertResult = await supabase
         .from("users")
         .upsert(baseUpsert, { onConflict: "email", ignoreDuplicates: false })

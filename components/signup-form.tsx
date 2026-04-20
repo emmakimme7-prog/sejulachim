@@ -9,7 +9,9 @@ import { Toast } from "@/components/ui/toast";
 import { MAIN_INTERESTS, SUB_INTERESTS, type MainInterest } from "@/lib/content/sub-interests";
 import { encodeShareState } from "@/lib/share";
 
-type Step = "interests" | "auth";
+type Step = "interests" | "delivery" | "auth";
+const STEP_ORDER: Step[] = ["interests", "delivery", "auth"];
+const TOTAL_STEPS = STEP_ORDER.length;
 
 const INTEREST_META: Record<string, { emoji: string; color: string; bg: string; desc: string }> = {
   건강: { emoji: "💪", color: "#2E7D3F", bg: "#E8F5EC", desc: "혈압, 당뇨, 건강검진 등" },
@@ -69,11 +71,20 @@ export function SignupForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState<string | null>(null);
-  const [agreed, setAgreed] = useState(false);
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [agreedPrivacy, setAgreedPrivacy] = useState(false);
+  const [agreedMarketing, setAgreedMarketing] = useState(false);
+  const allAgreed = agreedTerms && agreedPrivacy && agreedMarketing;
+  const setAllAgreed = (v: boolean) => {
+    setAgreedTerms(v);
+    setAgreedPrivacy(v);
+    setAgreedMarketing(v);
+  };
 
-  // 받는 방법: 카카오톡 알림톡(기본) + 선택적으로 이메일 추가
-  const [kakaoChannel, setKakaoChannel] = useState(true);
-  const [emailChannel, setEmailChannel] = useState(Boolean(defaultEmail));
+  // 받는 방법: 카카오톡 또는 이메일 중 하나 (단일 선택)
+  const [channel, setChannel] = useState<"kakao" | "email">(defaultEmail ? "email" : "kakao");
+  const kakaoChannel = channel === "kakao";
+  const emailChannel = channel === "email";
   const [phone, setPhone] = useState("");
 
   const [step, setStep] = useState<Step>(defaultEmail ? "auth" : "interests");
@@ -117,15 +128,15 @@ export function SignupForm({
     });
   }
 
-  function handleNextToAuth() {
+  function handleNextToDelivery() {
     if (selectedInterests.length !== 3) {
       setToast("관심사 3가지를 모두 선택해 주세요.");
       return;
     }
-    if (!kakaoChannel && !emailChannel) {
-      setToast("받는 방법을 1개 이상 선택해 주세요.");
-      return;
-    }
+    setStep("delivery");
+  }
+
+  function handleNextToAuth() {
     if (kakaoChannel && !isValidPhoneClient(phone)) {
       setToast("올바른 휴대폰번호(010-XXXX-XXXX)를 입력해 주세요.");
       return;
@@ -163,8 +174,13 @@ export function SignupForm({
       setSubmitting(false);
       return;
     }
-    if (!agreed) {
-      setToast("이용약관 및 개인정보처리방침에 동의해 주세요.");
+    if (!agreedTerms || !agreedPrivacy) {
+      setToast("이용약관과 개인정보 수집·이용에 동의해 주세요.");
+      setSubmitting(false);
+      return;
+    }
+    if (!agreedMarketing) {
+      setToast("매일 아침 소식 수신 동의가 필요합니다. (서비스 핵심 기능)");
       setSubmitting(false);
       return;
     }
@@ -180,8 +196,9 @@ export function SignupForm({
           deliveryTime: "07:00",
           passwordEnabled: true,
           password,
-          agreeToTerms: true,
-          agreeToPrivacy: true,
+          agreeToTerms: agreedTerms,
+          agreeToPrivacy: agreedPrivacy,
+          agreeToMarketing: agreedMarketing,
           honeypot,
           phone: kakaoChannel ? phone.replace(/\D/g, "") : null,
           deliveryChannels: {
@@ -209,13 +226,13 @@ export function SignupForm({
     }
   }
 
-  const stepNumber = step === "interests" ? 1 : 2;
+  const stepNumber = STEP_ORDER.indexOf(step) + 1;
 
   return (
     <div style={{ background: "#FFFBF5", borderRadius: 24, padding: "28px 22px 40px", border: "1.5px solid #F2E6D7", maxWidth: 560, margin: "0 auto" }}>
       {/* 진행 표시 */}
       <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-        {[1, 2].map((n) => (
+        {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((n) => (
           <div
             key={n}
             style={{
@@ -229,7 +246,7 @@ export function SignupForm({
         ))}
       </div>
       <div style={{ fontSize: 13, color: "#7A6F62", fontWeight: 700, marginBottom: 8 }}>
-        {stepNumber}/2 단계
+        {stepNumber}/{TOTAL_STEPS} 단계
       </div>
 
       {/* Step 1: 관심사 */}
@@ -319,151 +336,10 @@ export function SignupForm({
             })}
           </div>
 
-          {/* 받는 방법 */}
-          <div style={{ marginTop: 28 }}>
-            <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.02em" }}>
-              어떻게 받으실래요?
-            </h2>
-            <p style={{ margin: "0 0 14px", fontSize: 14, color: "#7A6F62", fontWeight: 600, lineHeight: 1.55 }}>
-              매일 아침 7시 30분에 보내드립니다.
-            </p>
-
-            <div style={{ display: "grid", gap: 10 }}>
-              {/* 카카오톡 알림톡 */}
-              <div
-                style={{
-                  background: "#fff",
-                  border: kakaoChannel ? "2.5px solid #FEE500" : "2px solid #E8DCC7",
-                  borderRadius: 16,
-                  padding: 14,
-                  transition: "all 0.15s",
-                }}
-              >
-                <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={kakaoChannel}
-                    onChange={(e) => setKakaoChannel(e.target.checked)}
-                    style={{ width: 22, height: 22, accentColor: "#E57C23", flexShrink: 0 }}
-                  />
-                  <KakaoMark size={26} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.01em" }}>
-                      카카오톡으로 받기
-                    </div>
-                    <div style={{ fontSize: 12, color: "#7A6F62", fontWeight: 600, marginTop: 2 }}>
-                      알림톡으로 매일 아침 받아보세요 (추천)
-                    </div>
-                  </div>
-                </label>
-                {kakaoChannel ? (
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete="tel"
-                    value={phone}
-                    onChange={(e) => {
-                      setPhone(formatPhone(e.target.value));
-                      setError("");
-                    }}
-                    placeholder="010-1234-5678"
-                    style={{
-                      width: "100%",
-                      minHeight: 50,
-                      padding: "0 16px",
-                      marginTop: 12,
-                      background: "#FFFBF5",
-                      border: "2px solid #E8DCC7",
-                      borderRadius: 12,
-                      fontSize: 16,
-                      fontWeight: 600,
-                      color: "#1F1A14",
-                      outline: "none",
-                      fontFamily: "inherit",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                ) : null}
-              </div>
-
-              {/* 이메일 */}
-              <div
-                style={{
-                  background: "#fff",
-                  border: emailChannel ? "2.5px solid #E57C23" : "2px solid #E8DCC7",
-                  borderRadius: 16,
-                  padding: 14,
-                  transition: "all 0.15s",
-                }}
-              >
-                <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={emailChannel}
-                    onChange={(e) => setEmailChannel(e.target.checked)}
-                    style={{ width: 22, height: 22, accentColor: "#E57C23", flexShrink: 0 }}
-                  />
-                  <div
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: 8,
-                      background: "#FFF2E3",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 16,
-                      flexShrink: 0,
-                    }}
-                    aria-hidden="true"
-                  >
-                    📧
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.01em" }}>
-                      이메일로도 받기
-                    </div>
-                    <div style={{ fontSize: 12, color: "#7A6F62", fontWeight: 600, marginTop: 2 }}>
-                      카톡과 이메일 둘 다 받을 수 있어요
-                    </div>
-                  </div>
-                </label>
-                {emailChannel ? (
-                  <input
-                    type="text"
-                    inputMode="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      setError("");
-                    }}
-                    placeholder="example@email.com"
-                    style={{
-                      width: "100%",
-                      minHeight: 50,
-                      padding: "0 16px",
-                      marginTop: 12,
-                      background: "#FFFBF5",
-                      border: "2px solid #E8DCC7",
-                      borderRadius: 12,
-                      fontSize: 16,
-                      fontWeight: 600,
-                      color: "#1F1A14",
-                      outline: "none",
-                      fontFamily: "inherit",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                ) : null}
-              </div>
-            </div>
-          </div>
-
           <button
             type="button"
             disabled={selectedInterests.length !== 3}
-            onClick={handleNextToAuth}
+            onClick={handleNextToDelivery}
             style={{
               width: "100%",
               minHeight: 60,
@@ -481,6 +357,213 @@ export function SignupForm({
             }}
           >
             다음
+          </button>
+        </div>
+      ) : null}
+
+      {/* Step 2: 받는 방법 */}
+      {step === "delivery" ? (
+        <div>
+          <h1 style={{ margin: "6px 0 8px", fontSize: 26, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.03em", lineHeight: 1.3 }}>
+            어떻게 받으실래요?
+          </h1>
+          <p style={{ margin: "0 0 20px", fontSize: 15, color: "#4A4037", lineHeight: 1.6, fontWeight: 500 }}>
+            매일 아침 7시 30분에 보내드립니다.
+          </p>
+
+          {/* 받는 방법 — depth 분리된 카드, 단일 선택 토글 */}
+          <div
+            style={{
+              padding: 18,
+              borderRadius: 20,
+              background: "#F5EEE2",
+              border: "1.5px solid #EAD9BF",
+            }}
+          >
+            {/* 세그먼티드 토글 (radiogroup) */}
+            <div
+              role="radiogroup"
+              aria-label="받는 방법"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 6,
+                padding: 4,
+                borderRadius: 14,
+                background: "#fff",
+                border: "1.5px solid #E8DCC7",
+                marginBottom: 14,
+              }}
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={kakaoChannel}
+                onClick={() => { setChannel("kakao"); setError(""); }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  minHeight: 48,
+                  padding: "0 14px",
+                  borderRadius: 10,
+                  background: kakaoChannel ? "#FEE500" : "transparent",
+                  color: "#1F1A14",
+                  border: "none",
+                  fontSize: 15,
+                  fontWeight: kakaoChannel ? 900 : 700,
+                  letterSpacing: "-0.01em",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  transition: "background 0.15s, font-weight 0.15s",
+                }}
+              >
+                <KakaoMark size={20} />
+                카카오톡
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={emailChannel}
+                onClick={() => { setChannel("email"); setError(""); }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  minHeight: 48,
+                  padding: "0 14px",
+                  borderRadius: 10,
+                  background: emailChannel ? "#FFF2E3" : "transparent",
+                  color: "#1F1A14",
+                  border: "none",
+                  fontSize: 15,
+                  fontWeight: emailChannel ? 900 : 700,
+                  letterSpacing: "-0.01em",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  transition: "background 0.15s, font-weight 0.15s",
+                }}
+              >
+                <span style={{ fontSize: 16 }} aria-hidden="true">📧</span>
+                이메일
+              </button>
+            </div>
+
+            {/* 선택된 채널의 입력 */}
+            {kakaoChannel ? (
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#4A4037", marginBottom: 6, letterSpacing: "-0.01em" }}>
+                  휴대폰번호
+                </label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(formatPhone(e.target.value));
+                    setError("");
+                  }}
+                  placeholder="010-1234-5678"
+                  style={{
+                    width: "100%",
+                    minHeight: 52,
+                    padding: "0 16px",
+                    background: "#fff",
+                    border: "2px solid #E8DCC7",
+                    borderRadius: 12,
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: "#1F1A14",
+                    outline: "none",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: "#7A6F62", fontWeight: 600, lineHeight: 1.5 }}>
+                  알림톡으로 매일 아침 받아보세요. 광고 메시지는 보내지 않아요.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#4A4037", marginBottom: 6, letterSpacing: "-0.01em" }}>
+                  이메일
+                </label>
+                <input
+                  type="text"
+                  inputMode="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setError("");
+                  }}
+                  placeholder="example@email.com"
+                  style={{
+                    width: "100%",
+                    minHeight: 52,
+                    padding: "0 16px",
+                    background: "#fff",
+                    border: "2px solid #E8DCC7",
+                    borderRadius: 12,
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: "#1F1A14",
+                    outline: "none",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: "#7A6F62", fontWeight: 600, lineHeight: 1.5 }}>
+                  메일함으로 매일 아침 보내드립니다.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleNextToAuth}
+            style={{
+              width: "100%",
+              minHeight: 60,
+              marginTop: 24,
+              background: "#E57C23",
+              color: "#fff",
+              border: "none",
+              borderRadius: 16,
+              fontSize: 18,
+              fontWeight: 900,
+              letterSpacing: "-0.01em",
+              boxShadow: "0 6px 16px rgba(229, 124, 35, 0.35)",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            다음
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStep("interests")}
+            style={{
+              display: "block",
+              margin: "16px auto 0",
+              padding: "8px 12px",
+              background: "transparent",
+              border: "none",
+              color: "#7A6F62",
+              fontSize: 14,
+              fontWeight: 700,
+              textDecoration: "underline",
+              textUnderlineOffset: 4,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            관심사 다시 선택하기
           </button>
         </div>
       ) : null}
@@ -710,40 +793,79 @@ export function SignupForm({
             />
           </label>
 
-          <label
+          <div
             style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 10,
               marginTop: 18,
-              padding: "12px 14px",
+              padding: "14px 14px 10px",
               borderRadius: 12,
               background: "#fff",
               border: "1.5px solid #E8DCC7",
               fontSize: 14,
               lineHeight: 1.6,
               color: "#4A4037",
-              cursor: "pointer",
               fontWeight: 500,
             }}
           >
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-              style={{ marginTop: 3, width: 20, height: 20, accentColor: "#E57C23", flexShrink: 0 }}
-            />
-            <span>
-              <a href="/terms" target="_blank" style={{ color: "#E57C23", fontWeight: 800, textDecoration: "underline", textUnderlineOffset: 3 }}>
-                이용약관
-              </a>
-              {" "}및{" "}
-              <a href="/terms" target="_blank" style={{ color: "#E57C23", fontWeight: 800, textDecoration: "underline", textUnderlineOffset: 3 }}>
-                개인정보처리방침
-              </a>
-              에 동의합니다.
-            </span>
-          </label>
+            <label
+              style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 10, borderBottom: "1px solid #F5EEE2", cursor: "pointer", fontWeight: 700 }}
+            >
+              <input
+                type="checkbox"
+                checked={allAgreed}
+                onChange={(e) => setAllAgreed(e.target.checked)}
+                style={{ width: 20, height: 20, accentColor: "#E57C23", flexShrink: 0 }}
+              />
+              <span>모두 동의합니다 (필수)</span>
+            </label>
+
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 10, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={agreedTerms}
+                onChange={(e) => setAgreedTerms(e.target.checked)}
+                style={{ marginTop: 3, width: 18, height: 18, accentColor: "#E57C23", flexShrink: 0 }}
+              />
+              <span>
+                <span style={{ color: "#B2570F", fontWeight: 700, marginRight: 4 }}>[필수]</span>
+                <a href="/terms" target="_blank" style={{ color: "#E57C23", fontWeight: 800, textDecoration: "underline", textUnderlineOffset: 3 }}>
+                  이용약관
+                </a>
+                에 동의합니다.
+              </span>
+            </label>
+
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 8, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={agreedPrivacy}
+                onChange={(e) => setAgreedPrivacy(e.target.checked)}
+                style={{ marginTop: 3, width: 18, height: 18, accentColor: "#E57C23", flexShrink: 0 }}
+              />
+              <span>
+                <span style={{ color: "#B2570F", fontWeight: 700, marginRight: 4 }}>[필수]</span>
+                <a href="/terms" target="_blank" style={{ color: "#E57C23", fontWeight: 800, textDecoration: "underline", textUnderlineOffset: 3 }}>
+                  개인정보 수집·이용
+                </a>
+                에 동의합니다.
+              </span>
+            </label>
+
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 8, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={agreedMarketing}
+                onChange={(e) => setAgreedMarketing(e.target.checked)}
+                style={{ marginTop: 3, width: 18, height: 18, accentColor: "#E57C23", flexShrink: 0 }}
+              />
+              <span>
+                <span style={{ color: "#B2570F", fontWeight: 700, marginRight: 4 }}>[필수]</span>
+                <b>광고성 정보 수신</b>에 동의합니다.
+                <span style={{ display: "block", fontSize: 12, color: "#7A6F62", fontWeight: 500, marginTop: 3, lineHeight: 1.5 }}>
+                  매일 아침 7:30에 뉴스 요약과 제휴 상품 안내를 보내드립니다. 언제든 설정에서 철회할 수 있습니다.
+                </span>
+              </span>
+            </label>
+          </div>
 
           {error ? <div style={{ marginTop: 16 }}><Notice tone="error">{error}</Notice></div> : null}
 
@@ -771,7 +893,7 @@ export function SignupForm({
 
           <button
             type="button"
-            onClick={() => setStep("interests")}
+            onClick={() => setStep("delivery")}
             style={{
               display: "block",
               margin: "16px auto 0",
@@ -787,7 +909,7 @@ export function SignupForm({
               fontFamily: "inherit",
             }}
           >
-            관심사 다시 선택하기
+            받는 방법 다시 고르기
           </button>
         </form>
       ) : null}

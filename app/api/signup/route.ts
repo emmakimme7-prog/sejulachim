@@ -47,20 +47,25 @@ export async function POST(request: NextRequest) {
       interests: body.interests,
       subInterests: sanitizedSubInterests,
       consentedAt,
+      marketingConsentedAt: body.agreeToMarketing ? consentedAt : null,
       password: password || undefined,
       phone: body.phone ?? null,
       deliveryChannels: body.deliveryChannels ?? { kakao: false, email: true }
     });
 
-    try {
-      await sendSignupPreviewEmail({
-        email: normalizedEmail,
-        userId: user.id,
-        interests: body.interests
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "unknown";
-      await addSecurityJobLog("signup.preview_email", "failed", `user=${user.id}; error=${message}`);
+    // 이메일 채널 선택자에게만 첫 브리핑 메일 발송 (카카오 채널은 알림톡 어댑터 구현 전까지 발송 없음)
+    const channelEmail = body.deliveryChannels?.email ?? true;
+    if (channelEmail) {
+      try {
+        await sendSignupPreviewEmail({
+          email: normalizedEmail,
+          userId: user.id,
+          interests: body.interests
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "unknown";
+        await addSecurityJobLog("signup.preview_email", "failed", `user=${user.id}; error=${message}`);
+      }
     }
 
     // 가입 완료 후 자동 로그인 — 세션 쿠키 발급

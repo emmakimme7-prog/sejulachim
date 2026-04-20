@@ -31,7 +31,8 @@ export const signupSchema = signupPreferencesSchema.extend({
   passwordEnabled: z.boolean().optional().default(false),
   password: z.string().trim().max(200).optional().or(z.literal("")),
   agreeToTerms: z.boolean().refine((value) => value, "이용약관에 동의해주세요."),
-  agreeToPrivacy: z.boolean().refine((value) => value, "개인정보처리방침에 동의해주세요."),
+  agreeToPrivacy: z.boolean().refine((value) => value, "개인정보 수집·이용에 동의해주세요."),
+  agreeToMarketing: z.boolean().refine((value) => value, "광고성 정보 수신에 동의해주세요. (매일 아침 소식 발송 필수)"),
   // 받는 방법 (카카오톡 알림톡 + 이메일). 한쪽만 선택해도 됨, 단 1개 이상 필수.
   phone: z
     .string()
