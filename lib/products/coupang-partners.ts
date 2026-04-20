@@ -559,11 +559,12 @@ export async function fetchPopularProductsForContent(
     }
   }
 
-  // 1단계: 제목 키워드 — 상품명에 키워드가 포함된 것만 (minScore=3)
+  // 1단계: 제목 키워드 — 브랜드명(예: "드리미")이 상품명에 포함되면 통과하도록 minScore 완화 (3→1)
+  // 이유: 쿠팡 상품명이 "[드리미] X10 울트라 로봇청소기" 같은 형태라도 최소 점수 통과 가능
   for (const keyword of titleKws) {
     if (results.length >= limit) break;
     try {
-      const items = await requestTopSearchProducts(keyword, limit * 3, 3, effectiveCacheOnly);
+      const items = await requestTopSearchProducts(keyword, limit * 3, 1, effectiveCacheOnly);
       addItems(items, keyword);
     } catch {
       // 실패 시 다음 키워드 시도

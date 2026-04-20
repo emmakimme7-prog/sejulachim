@@ -10,54 +10,103 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SpeechSearchButton } from "@/components/speech-controls";
 import { fontSizeOptions, useFontSize } from "@/components/font-size-provider";
 
-function FontSizePills() {
+function FontSizePicker() {
   const { fontSize, setFontSize } = useFontSize();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleOutside(event: globalThis.MouseEvent) {
+      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function handleEsc(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("mousedown", handleOutside);
+    window.addEventListener("keydown", handleEsc);
+    return () => {
+      window.removeEventListener("mousedown", handleOutside);
+      window.removeEventListener("keydown", handleEsc);
+    };
+  }, []);
+
+  const currentFontSize = fontSize === "large" ? 19 : fontSize === "small" ? 13 : 16;
   const sizes: { value: typeof fontSize; size: number }[] = [
     { value: "small", size: 13 },
     { value: "medium", size: 16 },
     { value: "large", size: 19 },
   ];
+
   return (
-    <div
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        background: "#F5EEE2",
-        borderRadius: 999,
-        padding: 3,
-        gap: 2,
-      }}
-    >
-      {sizes.map((opt) => {
-        const active = fontSize === opt.value;
-        const label = fontSizeOptions.find((o) => o.value === opt.value)?.label ?? "";
-        return (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => setFontSize(opt.value)}
-            aria-label={`${label} 글씨 크기`}
-            aria-pressed={active}
-            style={{
-              minWidth: 32,
-              height: 30,
-              padding: "0 8px",
-              border: "none",
-              borderRadius: 999,
-              background: active ? "#1F1A14" : "transparent",
-              color: active ? "#fff" : "#4A4037",
-              fontWeight: active ? 900 : 700,
-              fontSize: opt.size,
-              letterSpacing: "-0.02em",
-              cursor: "pointer",
-              transition: "all 0.15s",
-              fontFamily: "inherit",
-            }}
-          >
-            가
-          </button>
-        );
-      })}
+    <div ref={ref} className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-label="글씨 크기 설정"
+        aria-expanded={open}
+        className="inline-flex h-[40px] w-[40px] items-center justify-center rounded-full text-gray-700 transition hover:bg-gray-100"
+      >
+        <span
+          style={{
+            fontWeight: 900,
+            fontSize: currentFontSize,
+            lineHeight: 1,
+            letterSpacing: "-0.02em",
+            color: "#1F1A14",
+          }}
+        >
+          가
+        </span>
+      </button>
+      {open ? (
+        <div
+          role="radiogroup"
+          aria-label="글씨 크기"
+          className="absolute right-0 top-full z-50 mt-[8px] inline-flex"
+          style={{
+            background: "#F5EEE2",
+            borderRadius: 999,
+            padding: 3,
+            gap: 2,
+            boxShadow: "0 10px 30px rgba(15,23,42,0.14)",
+          }}
+        >
+          {sizes.map((opt) => {
+            const active = fontSize === opt.value;
+            const label = fontSizeOptions.find((o) => o.value === opt.value)?.label ?? "";
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                aria-label={`${label} 글씨 크기`}
+                onClick={() => {
+                  setFontSize(opt.value);
+                  setOpen(false);
+                }}
+                style={{
+                  minWidth: 34,
+                  height: 32,
+                  padding: "0 10px",
+                  border: "none",
+                  borderRadius: 999,
+                  background: active ? "#1F1A14" : "transparent",
+                  color: active ? "#fff" : "#4A4037",
+                  fontWeight: active ? 900 : 700,
+                  fontSize: opt.size,
+                  letterSpacing: "-0.02em",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  fontFamily: "inherit",
+                }}
+              >
+                가
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -398,9 +447,7 @@ export function SiteHeader() {
 
             {/* 우측 액션 버튼 */}
             <div className="flex items-center gap-[6px] sm:gap-[10px]">
-              <div className="hidden lg:block">
-                <FontSizePills />
-              </div>
+              <FontSizePicker />
               <button
                 data-search-toggle
                 type="button"

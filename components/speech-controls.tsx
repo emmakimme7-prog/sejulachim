@@ -33,6 +33,10 @@ let speechCharOffset = 0;
 let speechRate = 1.0;
 let speechPaused = false;
 let currentUtterance: SpeechSynthesisUtterance | null = null;
+// MP3 캐시 재생 (Google TTS). speechOwner 활성 중에 currentAudio가 non-null이면 MP3 모드.
+let currentAudio: HTMLAudioElement | null = null;
+let audioCurrentTime = 0;
+let audioDuration = 0;
 
 // 자동재생
 let autoPlayEnabled = false;
@@ -127,12 +131,86 @@ function startSpeechFrom(charOffset: number, rate: number, ownerId: string) {
   window.speechSynthesis.speak(utterance);
 }
 
+function startAudioFrom(url: string, title: string, rate: number, ownerId: string) {
+  currentUtterance = null;
+  window.speechSynthesis?.cancel();
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
+
+  speechOwner = ownerId;
+  speechDisplayTitle = title;
+  speechSegments = null;
+  speechFullText = "";
+  speechCharIndex = 0;
+  speechCharOffset = 0;
+  speechPaused = false;
+  speechRate = rate;
+  audioCurrentTime = 0;
+  audioDuration = 0;
+
+  const audio = new Audio(url);
+  audio.preload = "auto";
+  audio.playbackRate = rate;
+
+  audio.onloadedmetadata = () => {
+    if (currentAudio !== audio) return;
+    audioDuration = Number.isFinite(audio.duration) ? audio.duration : 0;
+    notifyState();
+  };
+  audio.ontimeupdate = () => {
+    if (currentAudio !== audio) return;
+    audioCurrentTime = audio.currentTime;
+    notifyState();
+  };
+  audio.onended = () => {
+    if (currentAudio !== audio) return;
+    currentAudio = null;
+    audioCurrentTime = 0;
+    audioDuration = 0;
+    if (autoPlayEnabled && autoPlayNextFn) {
+      notifyState();
+      setTimeout(autoPlayNextFn, 100);
+    } else {
+      speechOwner = null;
+      notifyPlayback();
+      notifyState();
+    }
+  };
+  audio.onerror = () => {
+    if (currentAudio !== audio) return;
+    currentAudio = null;
+    speechOwner = null;
+    notifyPlayback();
+    notifyState();
+  };
+
+  currentAudio = audio;
+  notifyPlayback();
+  notifyState();
+  audio.play().catch(() => {
+    if (currentAudio === audio) {
+      currentAudio = null;
+      speechOwner = null;
+      notifyPlayback();
+      notifyState();
+    }
+  });
+}
+
 function stopAllSpeech() {
   currentUtterance = null;
   speechPaused = false;
   speechPlaylist = null;
   speechPlaylistCurrentIdx = 0;
   window.speechSynthesis?.cancel();
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
+  audioCurrentTime = 0;
+  audioDuration = 0;
   speechOwner = null;
   notifyPlayback();
   notifyState();
@@ -154,6 +232,23 @@ export type SpeechSnapshot = {
 };
 
 export function getSpeechSnapshot(): SpeechSnapshot {
+  // MP3 모드: audio 재생 시간 기반 진행률
+  if (currentAudio) {
+    const progress = audioDuration > 0 ? Math.min(100, (audioCurrentTime / audioDuration) * 100) : 0;
+    return {
+      active: speechOwner !== null,
+      paused: speechPaused,
+      title: speechDisplayTitle,
+      segments: null,
+      currentSegmentIndex: 0,
+      playlist: speechPlaylist,
+      playlistCurrentIdx: speechPlaylistCurrentIdx,
+      progress,
+      rate: speechRate,
+      autoPlay: autoPlayEnabled,
+    };
+  }
+
   const total = speechFullText.length;
   const done = speechCharOffset + speechCharIndex;
   let currentSegmentIndex = 0;
@@ -199,6 +294,12 @@ export function subscribeSpeechState(fn: () => void): () => void {
 
 export function changeSpeechRate(newRate: number) {
   if (!speechOwner) return;
+  speechRate = newRate;
+  if (currentAudio) {
+    currentAudio.playbackRate = newRate;
+    notifyState();
+    return;
+  }
   const offset = speechCharOffset + speechCharIndex;
   const ownerId = speechOwner;
   startSpeechFrom(offset, newRate, ownerId);
@@ -210,7 +311,15 @@ export function stopSpeech() {
 
 export function togglePauseSpeech() {
   if (!speechOwner) return;
-  if (speechPaused) {
+  if (currentAudio) {
+    if (speechPaused) {
+      currentAudio.play().catch(() => undefined);
+      speechPaused = false;
+    } else {
+      currentAudio.pause();
+      speechPaused = true;
+    }
+  } else if (speechPaused) {
     window.speechSynthesis.resume();
     speechPaused = false;
   } else {
@@ -238,21 +347,6 @@ export function skipToNext() {
 }
 
 // ─── ListenButton ─────────────────────────────────────────────────────────────
-
-// 전역 HTMLAudio 재생 상태 (MP3 캐시 모드). 동시 재생 방지용.
-let currentAudioElement: HTMLAudioElement | null = null;
-let currentAudioOwner: string | null = null;
-const audioPlaybackSubs = new Set<(owner: string | null) => void>();
-
-function stopCurrentAudio() {
-  if (currentAudioElement) {
-    currentAudioElement.pause();
-    currentAudioElement.currentTime = 0;
-    currentAudioElement = null;
-  }
-  currentAudioOwner = null;
-  for (const fn of audioPlaybackSubs) fn(null);
-}
 
 type ListenButtonProps = {
   text: string;
@@ -290,18 +384,14 @@ export function ListenButton({
       if (owner !== ownerId) setPlaying(false);
     };
     playbackSubs.add(handlePlayback);
-    audioPlaybackSubs.add(handlePlayback);
     return () => {
       playbackSubs.delete(handlePlayback);
-      audioPlaybackSubs.delete(handlePlayback);
       if (speechOwner === ownerId) stopAllSpeech();
-      if (currentAudioOwner === ownerId) stopCurrentAudio();
     };
   }, [ownerId]);
 
   useEffect(() => {
     if (speechOwner !== null) stopAllSpeech();
-    if (currentAudioOwner !== null) stopCurrentAudio();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
@@ -309,39 +399,25 @@ export function ListenButton({
     if (disabled) return;
 
     if (playing) {
-      if (currentAudioOwner === ownerId) stopCurrentAudio();
-      else stopAllSpeech();
+      stopAllSpeech();
       setPlaying(false);
       return;
     }
 
-    // MP3 캐시가 있으면 HTMLAudio로 재생 (Google TTS Neural2 음성)
+    const title =
+      speechTitle.trim() ||
+      (normalizedText.length > 30 ? normalizedText.slice(0, 30) + "…" : normalizedText);
+
+    // MP3 캐시가 있으면 HTMLAudio로 재생 (Google TTS Neural2 음성) — SpeechPlayer UI와 통합
     if (hasAudioUrl && audioUrl) {
-      stopAllSpeech();
-      stopCurrentAudio();
-      const audio = new Audio(audioUrl);
-      audio.preload = "auto";
-      audio.onended = () => {
-        if (currentAudioElement === audio) stopCurrentAudio();
-      };
-      audio.onerror = () => {
-        if (currentAudioElement === audio) stopCurrentAudio();
-      };
-      currentAudioElement = audio;
-      currentAudioOwner = ownerId;
-      for (const fn of audioPlaybackSubs) fn(ownerId);
       setPlaying(true);
-      audio.play().catch(() => {
-        if (currentAudioElement === audio) stopCurrentAudio();
-      });
+      startAudioFrom(audioUrl, title, speechRate, ownerId);
       return;
     }
 
     // 폴백: 브라우저 내장 Web Speech API
     speechFullText = normalizedText;
-    speechDisplayTitle =
-      speechTitle.trim() ||
-      (normalizedText.length > 30 ? normalizedText.slice(0, 30) + "…" : normalizedText);
+    speechDisplayTitle = title;
     speechSegments = segments ?? null;
     if (!segments) {
       speechPlaylist = null;
