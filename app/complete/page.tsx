@@ -1,43 +1,28 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import Link from "next/link";
 
-import { CompleteShareButton } from "@/components/complete-share-button";
+import { CompletePhoneForm } from "@/components/complete-phone-form";
 import { getCurrentUserSession } from "@/lib/auth/user-session";
 import { findUserById } from "@/lib/mongodb/user-data";
-import { isAvatarKey } from "@/lib/profile";
-import { decodeShareState, encodeShareState, formatInterestSummary } from "@/lib/share";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type PageProps = {
-  searchParams: Promise<{ interest?: string | string[]; sub?: string | string[]; nickname?: string | string[]; avatar?: string | string[] }>;
-};
-
-export default async function CompletePage({ searchParams }: PageProps) {
-  const headerList = await headers();
-  const host = headerList.get("x-forwarded-host") ?? headerList.get("host") ?? "localhost:3100";
-  const protocol = headerList.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
+export default async function CompletePage() {
   const session = await getCurrentUserSession();
   const user = session ? await findUserById(session.id) : null;
-  const profileUser = user as
+  const channelUser = user as
     | (typeof user & {
-        avatar_key?: string | null;
-        nickname?: string | null;
+        delivery_kakao?: boolean | null;
+        delivery_email?: boolean | null;
+        phone?: string | null;
       })
     | null;
-  const shareState = decodeShareState(await searchParams);
-  const nickname = typeof profileUser?.nickname === "string" && profileUser.nickname.trim() ? profileUser.nickname : undefined;
-  const avatarKey = isAvatarKey(profileUser?.avatar_key) ? profileUser.avatar_key : undefined;
-  const enrichedShareState = {
-    ...shareState,
-    profile: nickname ? { nickname, avatarKey } : shareState.profile,
-  };
-  const shareQuery = encodeShareState(enrichedShareState);
-  const shareUrl = new URL(shareQuery ? `/invite?${shareQuery}` : "/invite", `${protocol}://${host}`).toString();
-  const interestSummary = formatInterestSummary(enrichedShareState);
+  const isKakaoChannel = Boolean(channelUser?.delivery_kakao) && !channelUser?.delivery_email;
+  const phoneDisplay = channelUser?.phone
+    ? channelUser.phone.replace(/^(010)(\d{4})(\d{4})$/, "$1-$2-$3")
+    : null;
 
   return (
     <div style={{ background: "#F0EEE9", minHeight: "100vh", padding: "60px 20px 80px" }}>
@@ -110,44 +95,38 @@ export default async function CompletePage({ searchParams }: PageProps) {
             fontWeight: 500,
           }}
         >
-          오늘의 첫 브리핑을 방금 메일로 보냈습니다.
-          <br />
-          선택하신 시간은 <b style={{ color: "#1F1A14" }}>내일부터</b> 적용돼요.
+          {isKakaoChannel ? (
+            <>
+              <b style={{ color: "#1F1A14" }}>내일 아침 7시 30분</b>부터
+              <br />
+              카카오톡으로 보내드릴게요.
+            </>
+          ) : (
+            <>
+              오늘의 첫 브리핑을 방금 메일로 보냈어요.
+              <br />
+              <b style={{ color: "#1F1A14" }}>내일 아침 7시 30분</b>부터 매일 보내드려요.
+            </>
+          )}
         </p>
-        <p style={{ margin: "0 0 22px", fontSize: 14, color: "#7A6F62", fontWeight: 500 }}>
-          메일이 보이지 않으면 프로모션함이나 스팸함도 확인해주세요.
+        <p style={{ margin: "0 0 28px", fontSize: 14, color: "#7A6F62", fontWeight: 500 }}>
+          {isKakaoChannel
+            ? phoneDisplay
+              ? `${phoneDisplay}로 알림톡이 도착해요.`
+              : "알림톡 받을 번호를 아래에 입력해주세요."
+            : "메일이 보이지 않으면 프로모션함이나 스팸함도 확인해주세요."}
         </p>
 
-        {interestSummary ? (
-          <div
-            style={{
-              background: "#fff",
-              border: "1.5px solid #F2E6D7",
-              borderRadius: 16,
-              padding: 16,
-              marginBottom: 24,
-              fontSize: 14,
-              color: "#4A4037",
-              fontWeight: 600,
-              lineHeight: 1.6,
-              textAlign: "left",
-            }}
-          >
-            <div style={{ fontSize: 12, fontWeight: 800, color: "#7A6F62", letterSpacing: "0.05em", marginBottom: 6, textTransform: "uppercase" }}>
-              공유 링크 정보
-            </div>
-            <div>
-              {interestSummary} 주제가 공유 링크에 함께 담겨 전달됩니다.
-            </div>
-          </div>
+        {isKakaoChannel && !phoneDisplay && session ? (
+          <CompletePhoneForm email={session.email} />
         ) : null}
 
-        <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
           <Link
             href="/"
             style={{
               minHeight: 56,
-              padding: "0 24px",
+              padding: "0 28px",
               borderRadius: 14,
               background: "#E57C23",
               color: "#fff",
@@ -162,7 +141,6 @@ export default async function CompletePage({ searchParams }: PageProps) {
           >
             오늘의 소식 보기
           </Link>
-          <CompleteShareButton shareUrl={shareUrl} interestSummary={interestSummary} />
         </div>
       </div>
     </div>

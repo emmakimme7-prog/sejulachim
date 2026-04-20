@@ -150,7 +150,8 @@ export function SignupForm({
     const subParam = encodeURIComponent(JSON.stringify(subInterests));
     // 카카오 채널 선택 시 OAuth 버튼 클릭 = 알림톡 수신 동의 간주 (UI 상 명시됨).
     const marketingParam = (kakaoChannel && provider === "kakao") || agreedMarketing ? "1" : "0";
-    return `/api/auth/oauth/${provider}/start?mode=signup&interests=${interestParam}&sub=${subParam}&m=${marketingParam}`;
+    const channelParam = kakaoChannel ? "kakao" : "email";
+    return `/api/auth/oauth/${provider}/start?mode=signup&interests=${interestParam}&sub=${subParam}&m=${marketingParam}&ch=${channelParam}`;
   }
 
   async function handleEmailSubmit(event: React.FormEvent<HTMLFormElement>) {

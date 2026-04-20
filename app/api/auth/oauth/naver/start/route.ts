@@ -15,7 +15,8 @@ function parseSignupData(request: NextRequest) {
     try { subInterests = JSON.parse(subRaw); } catch { /* ignore */ }
   }
   const marketingConsent = request.nextUrl.searchParams.get("m") === "1";
-  return interests.length ? { interests, subInterests, marketingConsent } : undefined;
+  const channel: "kakao" | "email" = request.nextUrl.searchParams.get("ch") === "kakao" ? "kakao" : "email";
+  return interests.length ? { interests, subInterests, marketingConsent, channel } : undefined;
 }
 
 export async function GET(request: NextRequest) {

@@ -86,6 +86,7 @@ export type OauthSignupData = {
   interests?: string[];
   subInterests?: Record<string, string>;
   marketingConsent?: boolean;
+  channel?: "kakao" | "email";
 };
 
 function createOauthState(provider: SupportedOauthProvider, mode: "login" | "signup", signupData?: OauthSignupData) {
@@ -101,6 +102,7 @@ function createOauthState(provider: SupportedOauthProvider, mode: "login" | "sig
       ...(signupData?.interests ? { interests: signupData.interests } : {}),
       ...(signupData?.subInterests ? { subInterests: signupData.subInterests } : {}),
       ...(signupData?.marketingConsent !== undefined ? { marketingConsent: signupData.marketingConsent } : {}),
+      ...(signupData?.channel ? { channel: signupData.channel } : {}),
     }),
     state,
   };
@@ -130,7 +132,7 @@ function verifyOauthState(raw: string | undefined, expectedState: string, provid
     throw new Error(`${label} 로그인 상태가 만료되었습니다. 다시 시도해주세요.`);
   }
 
-  let parsed: { provider?: string; mode?: string; state?: string; signature?: string; interests?: string[]; subInterests?: Record<string, string>; marketingConsent?: boolean };
+  let parsed: { provider?: string; mode?: string; state?: string; signature?: string; interests?: string[]; subInterests?: Record<string, string>; marketingConsent?: boolean; channel?: "kakao" | "email" };
   try {
     parsed = JSON.parse(raw);
   } catch {
@@ -152,6 +154,7 @@ function verifyOauthState(raw: string | undefined, expectedState: string, provid
     interests: Array.isArray(parsed.interests) ? parsed.interests : [],
     subInterests: parsed.subInterests && typeof parsed.subInterests === "object" ? parsed.subInterests : {},
     marketingConsent: parsed.marketingConsent === true,
+    channel: parsed.channel === "kakao" ? "kakao" : "email",
   };
 }
 
