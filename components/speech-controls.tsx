@@ -64,6 +64,30 @@ export function playSpeech(text: string, title: string) {
   startSpeechFrom(0, speechRate, `auto-${Date.now()}`);
 }
 
+/**
+ * MP3 audio_url이 있으면 HTMLAudio 재생, 없으면 Web Speech 폴백.
+ * chain(playlist/autoPlayNextFn)은 호출 직전에 setSpeechPlaylist/setAutoPlayNextFn 로 세팅.
+ */
+export function playListenable(params: {
+  text: string;
+  title: string;
+  audioUrl?: string | null;
+  slug?: string | null;
+}) {
+  const ownerId = `auto-${Date.now()}`;
+  if (params.audioUrl?.trim()) {
+    startAudioFrom(params.audioUrl, params.title, speechRate, ownerId, params.slug ?? undefined);
+  } else {
+    if (params.slug) markSlugAsListened(params.slug);
+    const normalizedText = params.text.replace(/\s+/g, " ").trim();
+    if (!normalizedText) return;
+    speechFullText = normalizedText;
+    speechDisplayTitle = params.title;
+    speechSegments = null;
+    startSpeechFrom(0, speechRate, ownerId);
+  }
+}
+
 const playbackSubs = new Set<(owner: string | null) => void>();
 const stateSubs = new Set<() => void>();
 
@@ -149,10 +173,9 @@ function startAudioFrom(url: string, title: string, rate: number, ownerId: strin
   speechRate = rate;
   audioCurrentTime = 0;
   audioDuration = 0;
-  // MP3 모드는 단일 재생. 이전 세션의 chain/playlist 잔재 정리.
-  speechPlaylist = null;
-  speechPlaylistCurrentIdx = 0;
-  autoPlayNextFn = null;
+  // NOTE: playlist/autoPlayNextFn은 리셋하지 않음 — chain을 사용하는 호출자(archive-browser 등)가
+  // 본 함수 호출 직전에 setSpeechPlaylist/setAutoPlayNextFn 으로 세팅하기 때문.
+  // chain이 필요 없는 단일 재생(detail 페이지 등)은 호출자가 명시적으로 null 세팅해야 함.
 
   if (slug?.trim()) markSlugAsListened(slug);
 
@@ -459,6 +482,8 @@ export function ListenButton({
 
     // MP3 캐시가 있으면 HTMLAudio로 재생 (Google TTS Neural2 음성) — SpeechPlayer UI와 통합
     if (hasAudioUrl && audioUrl) {
+      // onPlay를 먼저 호출해 parent가 playlist/autoPlayNextFn을 세팅할 기회 제공
+      onPlay?.();
       setPlaying(true);
       startAudioFrom(audioUrl, title, speechRate, ownerId, trackSlug);
       return;

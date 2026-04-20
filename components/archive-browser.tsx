@@ -8,7 +8,7 @@ import { CompleteShareButton } from "@/components/complete-share-button";
 import { ContentThumbnail } from "@/components/content-thumbnail";
 import { type ResolvedAffiliateProduct } from "@/lib/products/catalog";
 import { FavoriteToggleButton } from "@/components/favorite-toggle-button";
-import { ListenButton, playSpeech, setAutoPlayNextFn, setSpeechPlaylist, SpeechSearchButton } from "@/components/speech-controls";
+import { ListenButton, playListenable, setAutoPlayNextFn, setSpeechPlaylist, SpeechSearchButton } from "@/components/speech-controls";
 import { type ContentSource, normalizeSources } from "@/lib/content/sources";
 import { type AvatarKey } from "@/lib/profile";
 import { MAIN_INTERESTS, SUB_INTERESTS } from "@/lib/content/sub-interests";
@@ -33,6 +33,7 @@ type ArchiveItem = {
   thumbnail_alt?: string | null;
   thumbnail_page_url?: string | null;
   thumbnail_license?: string | null;
+  audio_url?: string | null;
 };
 
 const CATEGORY_STYLE: Record<string, string> = {
@@ -437,8 +438,8 @@ export function ArchiveBrowser({
       [{ label: item.title }, ...(nextItem ? [{ label: nextItem.title }] : [])],
       0
     );
-    playSpeech(text, item.title);
     setAutoPlayNextFn(nextItem ? () => playFromIdx(idx + 1) : null);
+    playListenable({ text, title: item.title, audioUrl: item.audio_url, slug: item.slug });
   }, []);
 
   // 카드 ListenButton의 onPlay: 플레이리스트 설정 + 다음 자동재생 등록
@@ -987,6 +988,8 @@ export function ArchiveBrowser({
                     className="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[13px] !font-semibold !text-[#7A6F62] hover:!text-[#1F1A14] !shadow-none"
                     label="듣기"
                     onPlay={() => handleCardPlay(idx)}
+                    audioUrl={item.audio_url}
+                    trackSlug={item.slug}
                   />
                   <CompleteShareButton
                     shareSlugs={[item.slug]}

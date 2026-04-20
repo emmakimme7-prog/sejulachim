@@ -45,8 +45,12 @@ function registerChain(items: NextItemInfo[], idx: number) {
 
 export function DetailListenButton({ text, title, nextItems, className, iconOnly = false, playIcon = false, audioUrl, trackSlug }: DetailListenButtonProps) {
   function handlePlay() {
-    // MP3 캐시 재생 시에는 플레이리스트/자동재생 체인을 쓰지 않음
-    if (audioUrl?.trim()) return;
+    // MP3 캐시 재생: 단일 article 이므로 chain/playlist 를 명시적으로 비움 (이전 세션 잔재 제거)
+    if (audioUrl?.trim()) {
+      setSpeechPlaylist(null, 0);
+      setAutoPlayNextFn(null);
+      return;
+    }
     const first = nextItems[0] ?? null;
     setSpeechPlaylist(
       [{ label: title }, ...(first ? [{ label: first.title }] : [])],

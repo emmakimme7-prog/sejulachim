@@ -30,6 +30,7 @@ type TodayBriefItem = {
   thumbnail_alt?: string | null;
   thumbnail_page_url?: string | null;
   thumbnail_license?: string | null;
+  audio_url?: string | null;
 };
 
 export function TodayBriefs({
@@ -175,6 +176,7 @@ export function TodayBriefs({
                 className="h-8 px-3 text-xs"
                 label="듣기"
                 mobileIconOnly
+                audioUrl={item.audio_url}
                 trackSlug={item.slug}
               />
             </div>

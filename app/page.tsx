@@ -44,6 +44,7 @@ export default async function HomePage({
     thumbnail_license?: string | null;
     view_count?: number | null;
     main_interest?: string;
+    audio_url?: string | null;
   }>;
   // 피드 상품 카드용 데이터 — DB 캐시만 조회 (API 호출 없음 → 빠르고 제한 안 걸림)
   const feedProductMap: Record<string, Awaited<ReturnType<typeof fetchPopularProductsForContent>>> = {};
@@ -71,7 +72,8 @@ export default async function HomePage({
       thumbnail_alt: "thumbnail_alt" in item ? item.thumbnail_alt ?? null : null,
       thumbnail_page_url: "thumbnail_page_url" in item ? item.thumbnail_page_url ?? null : null,
       thumbnail_license: "thumbnail_license" in item ? item.thumbnail_license ?? null : null,
-      view_count: "view_count" in item ? item.view_count ?? 0 : 0
+      view_count: "view_count" in item ? item.view_count ?? 0 : 0,
+      audio_url: item.audio_url ?? null
     }));
 
   const sidebarItems = archiveItems.slice(0, 20).map((it) => ({
