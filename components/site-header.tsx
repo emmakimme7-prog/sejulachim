@@ -2,7 +2,7 @@
 
 import type { FormEvent, MouseEvent } from "react";
 
-import { Bell, LibraryBig, Search, User } from "lucide-react";
+import { Bell, LibraryBig, Search, Type, User } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -44,19 +44,13 @@ function FontSizePicker() {
         onClick={() => setOpen((prev) => !prev)}
         aria-label="글씨 크기 설정"
         aria-expanded={open}
-        className="inline-flex h-[40px] w-[40px] items-center justify-center rounded-full text-gray-700 transition hover:bg-gray-100"
+        className={`inline-flex h-[40px] w-[40px] items-center justify-center rounded-full border transition ${
+          open
+            ? "border-[#1F1A14] bg-[#1F1A14] text-white shadow-[0_4px_12px_rgba(31,26,20,0.18)]"
+            : "border-[#E8DCC7] bg-[#FFFBF5] text-[#1F1A14] hover:border-[#D9CDB8] hover:bg-[#F5EEE2]"
+        }`}
       >
-        <span
-          style={{
-            fontWeight: 900,
-            fontSize: currentFontSize,
-            lineHeight: 1,
-            letterSpacing: "-0.02em",
-            color: "#1F1A14",
-          }}
-        >
-          가
-        </span>
+        <Type className="h-[18px] w-[18px]" strokeWidth={2.5} />
       </button>
       {open ? (
         <div

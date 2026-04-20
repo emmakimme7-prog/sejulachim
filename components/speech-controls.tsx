@@ -131,7 +131,7 @@ function startSpeechFrom(charOffset: number, rate: number, ownerId: string) {
   window.speechSynthesis.speak(utterance);
 }
 
-function startAudioFrom(url: string, title: string, rate: number, ownerId: string) {
+function startAudioFrom(url: string, title: string, rate: number, ownerId: string, slug?: string | null) {
   currentUtterance = null;
   window.speechSynthesis?.cancel();
   if (currentAudio) {
@@ -149,6 +149,12 @@ function startAudioFrom(url: string, title: string, rate: number, ownerId: strin
   speechRate = rate;
   audioCurrentTime = 0;
   audioDuration = 0;
+  // MP3 모드는 단일 재생. 이전 세션의 chain/playlist 잔재 정리.
+  speechPlaylist = null;
+  speechPlaylistCurrentIdx = 0;
+  autoPlayNextFn = null;
+
+  if (slug?.trim()) markSlugAsListened(slug);
 
   const audio = new Audio(url);
   audio.preload = "auto";
@@ -204,6 +210,7 @@ function stopAllSpeech() {
   speechPaused = false;
   speechPlaylist = null;
   speechPlaylistCurrentIdx = 0;
+  autoPlayNextFn = null;
   window.speechSynthesis?.cancel();
   if (currentAudio) {
     currentAudio.pause();
@@ -214,6 +221,46 @@ function stopAllSpeech() {
   speechOwner = null;
   notifyPlayback();
   notifyState();
+}
+
+// ─── Listened tracking (localStorage) ──────────────────────────────────────────
+const LISTENED_KEY = "sj-listened-slugs";
+const listenedSubs = new Set<() => void>();
+
+function readListenedSet(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(LISTENED_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr.filter((v) => typeof v === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function markSlugAsListened(slug: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const set = readListenedSet();
+    if (set.has(slug)) return;
+    set.add(slug);
+    window.localStorage.setItem(LISTENED_KEY, JSON.stringify([...set]));
+    for (const fn of listenedSubs) fn();
+  } catch {
+    // ignore
+  }
+}
+
+export function getListenedSlugs(): Set<string> {
+  return readListenedSet();
+}
+
+export function subscribeListenedSlugs(fn: () => void): () => void {
+  listenedSubs.add(fn);
+  return () => {
+    listenedSubs.delete(fn);
+  };
 }
 
 // ─── Exported for SpeechPlayer ────────────────────────────────────────────────
@@ -358,6 +405,7 @@ type ListenButtonProps = {
   onPlay?: () => void;
   playIcon?: boolean;
   audioUrl?: string | null;
+  trackSlug?: string | null;
 };
 
 export function ListenButton({
@@ -370,6 +418,7 @@ export function ListenButton({
   onPlay,
   playIcon = false,
   audioUrl,
+  trackSlug,
 }: ListenButtonProps) {
   const pathname = usePathname();
   const normalizedText = text.replace(/\s+/g, " ").trim();
@@ -411,7 +460,7 @@ export function ListenButton({
     // MP3 캐시가 있으면 HTMLAudio로 재생 (Google TTS Neural2 음성) — SpeechPlayer UI와 통합
     if (hasAudioUrl && audioUrl) {
       setPlaying(true);
-      startAudioFrom(audioUrl, title, speechRate, ownerId);
+      startAudioFrom(audioUrl, title, speechRate, ownerId, trackSlug);
       return;
     }
 

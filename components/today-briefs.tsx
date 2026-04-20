@@ -1,11 +1,11 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Headphones } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ContentThumbnail } from "@/components/content-thumbnail";
-import { ListenButton } from "@/components/speech-controls";
+import { ListenButton, getListenedSlugs, subscribeListenedSlugs } from "@/components/speech-controls";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 
@@ -57,6 +57,12 @@ export function TodayBriefs({
     [activeTab, items]
   );
 
+  const [listened, setListened] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    setListened(getListenedSlugs());
+    return subscribeListenedSlugs(() => setListened(getListenedSlugs()));
+  }, []);
+
   if (items.length === 0) {
     return null;
   }
@@ -104,6 +110,12 @@ export function TodayBriefs({
                 {interestLabels[item.main_interest] ?? item.main_interest}
                 {item.sub_interest ? ` · ${item.sub_interest}` : ""}
               </span>
+              {listened.has(item.slug) ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-bold text-gray-600">
+                  <Headphones className="h-3 w-3" aria-hidden="true" />
+                  들었어요
+                </span>
+              ) : null}
               <span className="ml-auto text-xs text-gray-500">
                 {item.published_at ? formatDate(item.published_at) : "오늘"}
               </span>
@@ -163,6 +175,7 @@ export function TodayBriefs({
                 className="h-8 px-3 text-xs"
                 label="듣기"
                 mobileIconOnly
+                trackSlug={item.slug}
               />
             </div>
           </article>

@@ -1,11 +1,21 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-import { SpeechPlayer } from "@/components/speech-controls";
+import { SpeechPlayer, stopSpeech } from "@/components/speech-controls";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+
+function NavigationStopper() {
+  const pathname = usePathname();
+  useEffect(() => {
+    // 라우트 이동 시 재생 중인 오디오/음성 정지 (listen 버튼별 cleanup 만으로는
+    // 동적 세그먼트 재사용 시 놓치는 경우가 있어 글로벌 안전망 추가).
+    stopSpeech();
+  }, [pathname]);
+  return null;
+}
 
 export function AppChrome({ slot }: { slot: "top" | "bottom" }) {
   const pathname = usePathname();
@@ -18,6 +28,7 @@ export function AppChrome({ slot }: { slot: "top" | "bottom" }) {
   if (slot === "top") {
     return (
       <>
+        <NavigationStopper />
         <Suspense fallback={null}>
           <SiteHeader />
         </Suspense>
