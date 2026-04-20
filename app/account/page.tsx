@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+import { AccountDeliveryForm } from "@/components/account-delivery-form";
 import { AccountInterestsForm } from "@/components/account-interests-form";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel, TextInput } from "@/components/ui/field";
@@ -59,8 +60,16 @@ export default async function AccountPage({ searchParams }: PageProps) {
         avatar_data_url?: string | null;
         nickname?: string | null;
         font_size_preference?: string | null;
+        delivery_kakao?: boolean | null;
+        delivery_email?: boolean | null;
+        phone?: string | null;
+        marketing_consent_at?: string | null;
       })
     | null;
+  const initialChannel: "kakao" | "email" =
+    profileUser?.delivery_kakao && !profileUser?.delivery_email ? "kakao" : "email";
+  const initialPhone = typeof profileUser?.phone === "string" ? profileUser.phone : "";
+  const hasMarketingConsent = Boolean(profileUser?.marketing_consent_at);
   const interestRows = await listUserInterestSelections(session.id);
   const interestConfig = await getInterestConfig();
   const { status, error } = await searchParams;
@@ -175,6 +184,20 @@ export default async function AccountPage({ searchParams }: PageProps) {
                       mainInterests={interestConfig.mainInterests}
                       subInterestOptions={interestConfig.subInterests}
                       interestLabels={interestConfig.labels}
+                    />
+                  </SoftCard>
+                )
+              },
+              {
+                key: "delivery",
+                label: "알림",
+                content: (
+                  <SoftCard className="space-y-5">
+                    <AccountDeliveryForm
+                      initialChannel={initialChannel}
+                      initialPhone={initialPhone}
+                      initialEmail={session.email}
+                      initialMarketingConsent={hasMarketingConsent}
                     />
                   </SoftCard>
                 )

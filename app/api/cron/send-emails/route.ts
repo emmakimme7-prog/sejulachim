@@ -7,8 +7,34 @@ import { getBrandedFromEmail, getEmailLogoUrl } from "@/lib/email/brand";
 import { renderDailyBriefEmail } from "@/lib/email/template";
 import { createUnsubscribeToken } from "@/lib/mongodb/user-data";
 import { isAuthorizedCronRequest } from "@/lib/security/request";
+import { hasKakaoConfig, sendKakaoAlimtalk } from "@/lib/solapi/kakao";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { getKstDateParts } from "@/lib/utils";
+
+// 카카오톡 플랫폼 자기홍보로 심사 반려될 수 있어 치환.
+function sanitizeForKakao(text: string): string {
+  return text.replace(/카카오톡/g, "메신저").replace(/카카오 채널/g, "SNS 채널");
+}
+
+function buildKakaoVariables(user: { id: string; email: string }, cards: EmailCard[]): Record<string, string> {
+  const nickname = user.email?.split("@")[0] ?? "회원";
+  const [c1, c2, c3] = cards;
+  return {
+    "#{nickname}": nickname,
+    "#{category1}": c1?.mainInterest ?? "소식",
+    "#{title1}": c1?.title ?? "",
+    "#{summary1}": sanitizeForKakao(c1?.shortSummary ?? ""),
+    "#{action1}": sanitizeForKakao(c1?.actionLine ?? ""),
+    "#{category2}": c2?.mainInterest ?? "소식",
+    "#{title2}": c2?.title ?? "",
+    "#{summary2}": sanitizeForKakao(c2?.shortSummary ?? ""),
+    "#{action2}": sanitizeForKakao(c2?.actionLine ?? ""),
+    "#{category3}": c3?.mainInterest ?? "소식",
+    "#{title3}": c3?.title ?? "",
+    "#{summary3}": sanitizeForKakao(c3?.shortSummary ?? ""),
+    "#{action3}": sanitizeForKakao(c3?.actionLine ?? "")
+  };
+}
 
 type EmailCard = {
   title: string;
@@ -166,16 +192,25 @@ async function handleCron(request: NextRequest) {
       throw new Error("DAILY_PICK_MISSING");
     }
 
-    // 7:30 KST 일괄 발송 — 사용자별 delivery_time 필터 제거. 활성/구독 중인 모든 사용자에게 발송.
+    // 7:30 KST 일괄 발송 — 활성/구독 중인 모든 사용자.
+    // 채널 컬럼(delivery_kakao, delivery_email, phone, marketing_consent_at)은 DB에 있으면 가져옴
     const { data: users } = await supabase
       .from("users")
-      .select("id, email")
+      .select("id, email, phone, delivery_kakao, delivery_email, marketing_consent_at")
       .eq("is_active", true)
       .is("unsubscribed_at", null);
 
-    let sentCount = 0;
+    const kakaoEnabled = hasKakaoConfig();
+    let sentEmailCount = 0;
+    let sentKakaoCount = 0;
+    let skippedKakaoCount = 0;
+
     for (const user of users ?? []) {
       const userId = String(user.id);
+      const useKakao = kakaoEnabled && user.delivery_kakao === true && Boolean(user.phone) && Boolean(user.marketing_consent_at);
+      // delivery_kakao=true + delivery_email=false 인 유저는 이메일 skip. 그 외는 이메일도 발송.
+      const useEmail = user.delivery_kakao === true && user.delivery_email === false ? false : true;
+
       const { data: existingLog } = await supabase
         .from("email_logs")
         .select("id")
@@ -183,21 +218,80 @@ async function handleCron(request: NextRequest) {
         .eq("daily_pick_id", dailyPick.id)
         .maybeSingle();
 
-      if (existingLog) {
+      const cards = await buildUserCards(userId);
+      if (cards.length !== 3) {
+        if (!existingLog) {
+          await supabase.from("email_logs").insert({
+            user_id: userId,
+            daily_pick_id: dailyPick.id,
+            status: "failed",
+            provider_message_id: null,
+            sent_at: new Date().toISOString(),
+            mode: "daily",
+            created_at: new Date().toISOString()
+          });
+        }
         continue;
       }
 
-      const cards = await buildUserCards(userId);
-      if (cards.length !== 3) {
-        await supabase.from("email_logs").insert({
-          user_id: userId,
-          daily_pick_id: dailyPick.id,
-          status: "failed",
-          provider_message_id: null,
-          sent_at: new Date().toISOString(),
-          mode: "daily",
-          created_at: new Date().toISOString()
-        });
+      // === KAKAO 발송 ===
+      if (useKakao && user.phone) {
+        const { data: existingKakaoLog } = await supabase
+          .from("kakao_logs")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("daily_pick_id", dailyPick.id)
+          .eq("mode", "daily")
+          .maybeSingle();
+
+        if (!existingKakaoLog) {
+          const { data: pendingKakaoLog } = await supabase
+            .from("kakao_logs")
+            .insert({
+              user_id: userId,
+              daily_pick_id: dailyPick.id,
+              status: "pending",
+              mode: "daily",
+              created_at: now
+            })
+            .select("id")
+            .single();
+
+          const variables = buildKakaoVariables({ id: userId, email: user.email }, cards);
+          const result = await sendKakaoAlimtalk({ to: String(user.phone), variables });
+
+          if (result.ok) {
+            if (pendingKakaoLog?.id) {
+              await supabase
+                .from("kakao_logs")
+                .update({
+                  status: "sent",
+                  provider_group_id: result.groupId,
+                  provider_message_id: result.messageId,
+                  sent_at: new Date().toISOString()
+                })
+                .eq("id", pendingKakaoLog.id);
+            }
+            sentKakaoCount += 1;
+          } else {
+            console.warn("[cron:send-emails] kakao send failed", { userId, reason: result.reason, detail: result.detail });
+            if (pendingKakaoLog?.id) {
+              await supabase
+                .from("kakao_logs")
+                .update({
+                  status: "failed",
+                  error_detail: `${result.reason}:${result.detail ?? ""}`.slice(0, 500),
+                  sent_at: new Date().toISOString()
+                })
+                .eq("id", pendingKakaoLog.id);
+            }
+            skippedKakaoCount += 1;
+          }
+        }
+      }
+
+      // === EMAIL 발송 ===
+      if (!useEmail || existingLog) {
         continue;
       }
 
@@ -254,12 +348,16 @@ async function handleCron(request: NextRequest) {
             })
             .eq("id", pendingLog.id);
         }
-        sentCount += 1;
+        sentEmailCount += 1;
       }
     }
 
-    await logJob(jobName, "success", `${date} 07:30KST sent=${sentCount}`);
-    return NextResponse.json({ ok: true, sentCount });
+    await logJob(
+      jobName,
+      "success",
+      `${date} 07:30KST email=${sentEmailCount} kakao=${sentKakaoCount} kakao_fail=${skippedKakaoCount}`
+    );
+    return NextResponse.json({ ok: true, sentEmailCount, sentKakaoCount, skippedKakaoCount });
   } catch (error) {
     const details = error instanceof Error ? error.message : "Unexpected send error";
     await logJob(jobName, "failed", details);

@@ -34,19 +34,74 @@ export function AccountDeliveryForm({
   initialChannel,
   initialPhone,
   initialEmail,
+  initialMarketingConsent,
 }: {
   initialChannel: Channel;
   initialPhone: string;
   initialEmail: string;
+  initialMarketingConsent?: boolean;
 }) {
   const [channel, setChannel] = useState<Channel>(initialChannel);
   const [phone, setPhone] = useState(initialPhone ? formatPhone(initialPhone) : "");
   const [email, setEmail] = useState(initialEmail);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<{ tone: "success" | "error"; message: string } | null>(null);
+  const [marketingConsent, setMarketingConsent] = useState<boolean>(initialMarketingConsent ?? true);
+  const [revoking, setRevoking] = useState(false);
 
   const kakaoChannel = channel === "kakao";
   const emailChannel = channel === "email";
+
+  async function handleRevokeMarketing() {
+    if (revoking) return;
+    const confirmed = window.confirm(
+      "광고성 정보 수신에 대한 동의를 철회하시면\n매일 아침 소식이 더 이상 발송되지 않습니다.\n\n정말 철회하시겠습니까?"
+    );
+    if (!confirmed) return;
+
+    setRevoking(true);
+    setStatus(null);
+    try {
+      const response = await fetch("/api/account/marketing-consent", { method: "DELETE" });
+      const payload = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !payload.ok) {
+        setStatus({ tone: "error", message: payload.error ?? "철회 요청을 처리하지 못했습니다." });
+        return;
+      }
+      setMarketingConsent(false);
+      setStatus({
+        tone: "success",
+        message: "광고성 정보 수신 동의를 철회했습니다. 더 이상 매일 소식이 발송되지 않습니다."
+      });
+    } catch {
+      setStatus({ tone: "error", message: "네트워크 문제로 철회하지 못했습니다." });
+    } finally {
+      setRevoking(false);
+    }
+  }
+
+  async function handleReconsent() {
+    if (revoking) return;
+    setRevoking(true);
+    setStatus(null);
+    try {
+      const response = await fetch("/api/account/marketing-consent", { method: "POST" });
+      const payload = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !payload.ok) {
+        setStatus({ tone: "error", message: payload.error ?? "재동의 요청을 처리하지 못했습니다." });
+        return;
+      }
+      setMarketingConsent(true);
+      setStatus({
+        tone: "success",
+        message: "광고성 정보 수신 동의가 재설정되었습니다. 내일 아침부터 소식을 받으실 수 있습니다."
+      });
+    } catch {
+      setStatus({ tone: "error", message: "네트워크 문제로 처리하지 못했습니다." });
+    } finally {
+      setRevoking(false);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -253,22 +308,78 @@ export function AccountDeliveryForm({
       <div
         style={{
           marginTop: 4,
-          padding: "12px 14px",
-          borderRadius: 10,
-          background: "#FFF8EC",
-          border: "1px solid #F2E6D7",
-          fontSize: 12,
-          color: "#7A6F62",
+          padding: "14px 16px",
+          borderRadius: 12,
+          background: marketingConsent ? "#FFF8EC" : "#F5F0E8",
+          border: `1px solid ${marketingConsent ? "#F2E6D7" : "#E8DCC7"}`,
+          fontSize: 13,
+          color: "#4A4037",
           lineHeight: 1.6,
           fontWeight: 500,
         }}
       >
-        📢 <b>광고성 정보 수신 동의 상태</b> — 매일 뉴스와 제휴 상품 안내를 받으시는 데 동의하셨습니다.
-        수신을 원하지 않으시면{" "}
-        <a href="/account?tab=delete" style={{ color: "#B2570F", fontWeight: 800, textDecoration: "underline" }}>
-          구독 해지
-        </a>
-        하거나 이메일 하단의 수신거부 링크를 사용해 주세요.
+        <div style={{ fontSize: 13, fontWeight: 800, color: "#1F1A14", marginBottom: 6 }}>
+          📢 광고성 정보 수신 동의
+        </div>
+        {marketingConsent ? (
+          <>
+            <p style={{ margin: "0 0 10px", fontSize: 12, color: "#7A6F62", fontWeight: 500 }}>
+              매일 아침 7:30에 뉴스 요약과 제휴 상품 안내를 받아보시는 데 동의하셨습니다.
+              언제든 아래 버튼으로 수신을 해지할 수 있습니다.
+            </p>
+            <button
+              type="button"
+              onClick={handleRevokeMarketing}
+              disabled={revoking}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                minHeight: 36,
+                padding: "0 14px",
+                borderRadius: 8,
+                background: "#fff",
+                border: "1.5px solid #D9CDB8",
+                color: "#7A6F62",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: revoking ? "not-allowed" : "pointer",
+                opacity: revoking ? 0.6 : 1,
+                fontFamily: "inherit",
+              }}
+            >
+              {revoking ? "처리 중..." : "수신 동의 철회하기"}
+            </button>
+          </>
+        ) : (
+          <>
+            <p style={{ margin: "0 0 10px", fontSize: 12, color: "#7A6F62", fontWeight: 500 }}>
+              광고성 정보 수신 동의가 철회된 상태입니다. 매일 아침 소식이 발송되지 않습니다.
+              다시 받아보시려면 아래 버튼을 눌러주세요.
+            </p>
+            <button
+              type="button"
+              onClick={handleReconsent}
+              disabled={revoking}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                minHeight: 36,
+                padding: "0 14px",
+                borderRadius: 8,
+                background: "#E57C23",
+                border: "none",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 800,
+                cursor: revoking ? "not-allowed" : "pointer",
+                opacity: revoking ? 0.6 : 1,
+                fontFamily: "inherit",
+              }}
+            >
+              {revoking ? "처리 중..." : "수신 다시 동의하기"}
+            </button>
+          </>
+        )}
       </div>
     </form>
   );
