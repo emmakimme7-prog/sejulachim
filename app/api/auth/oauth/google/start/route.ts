@@ -16,7 +16,9 @@ function parseSignupData(request: NextRequest) {
   }
   const marketingConsent = request.nextUrl.searchParams.get("m") === "1";
   const channel: "kakao" | "email" = request.nextUrl.searchParams.get("ch") === "kakao" ? "kakao" : "email";
-  return interests.length ? { interests, subInterests, marketingConsent, channel } : undefined;
+  const rawPhone = (request.nextUrl.searchParams.get("p") || "").replace(/\D/g, "");
+  const phone = /^010\d{8}$/.test(rawPhone) ? rawPhone : null;
+  return interests.length ? { interests, subInterests, marketingConsent, channel, phone } : undefined;
 }
 
 export async function GET(request: NextRequest) {

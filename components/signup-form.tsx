@@ -86,6 +86,8 @@ export function SignupForm({
   const [channel, setChannel] = useState<"kakao" | "email">(defaultEmail ? "email" : "kakao");
   const kakaoChannel = channel === "kakao";
   const emailChannel = channel === "email";
+  // 카카오 채널 선택 시 step 2에서 번호 수집 (카카오 OAuth 는 기본 scope로 번호 못 받기 때문).
+  const [phone, setPhone] = useState("");
 
   const [step, setStep] = useState<Step>(defaultEmail ? "auth" : "interests");
 
@@ -137,9 +139,12 @@ export function SignupForm({
   }
 
   function handleNextToAuth() {
-    // 이메일 채널 선택 시에만 이메일 주소 필수 입력. 카카오 채널은 OAuth로 가져옴.
     if (emailChannel && !isValidEmailClient(email)) {
       setToast("올바른 이메일 주소를 입력해 주세요.");
+      return;
+    }
+    if (kakaoChannel && !/^010\d{8}$/.test(phone.replace(/\D/g, ""))) {
+      setToast("올바른 휴대폰번호(010-XXXX-XXXX)를 입력해 주세요.");
       return;
     }
     setStep("auth");
@@ -151,7 +156,8 @@ export function SignupForm({
     // 카카오 채널 선택 시 OAuth 버튼 클릭 = 알림톡 수신 동의 간주 (UI 상 명시됨).
     const marketingParam = (kakaoChannel && provider === "kakao") || agreedMarketing ? "1" : "0";
     const channelParam = kakaoChannel ? "kakao" : "email";
-    return `/api/auth/oauth/${provider}/start?mode=signup&interests=${interestParam}&sub=${subParam}&m=${marketingParam}&ch=${channelParam}`;
+    const phoneParam = kakaoChannel ? `&p=${encodeURIComponent(phone.replace(/\D/g, ""))}` : "";
+    return `/api/auth/oauth/${provider}/start?mode=signup&interests=${interestParam}&sub=${subParam}&m=${marketingParam}&ch=${channelParam}${phoneParam}`;
   }
 
   async function handleEmailSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -446,10 +452,36 @@ export function SignupForm({
             </div>
 
             {kakaoChannel ? (
-              <p style={{ margin: 0, fontSize: 13, color: "#7A6F62", fontWeight: 600, lineHeight: 1.6 }}>
-                카카오톡 알림톡으로 매일 아침 받아보세요. <br />
-                다음 단계에서 <b style={{ color: "#1F1A14" }}>카카오 계정으로 회원가입</b> 하시면 됩니다.
-              </p>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#4A4037", marginBottom: 6, letterSpacing: "-0.01em" }}>
+                  휴대폰번호
+                </label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(e) => { setPhone(formatPhone(e.target.value)); setError(""); }}
+                  placeholder="010-1234-5678"
+                  style={{
+                    width: "100%",
+                    minHeight: 52,
+                    padding: "0 16px",
+                    background: "#fff",
+                    border: "2px solid #E8DCC7",
+                    borderRadius: 12,
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: "#1F1A14",
+                    outline: "none",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: "#7A6F62", fontWeight: 600, lineHeight: 1.5 }}>
+                  이 번호로 매일 아침 알림톡이 도착합니다. 다음 단계에서 <b style={{ color: "#1F1A14" }}>카카오 계정으로 회원가입</b> 하시면 됩니다.
+                </p>
+              </div>
             ) : (
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#4A4037", marginBottom: 6, letterSpacing: "-0.01em" }}>
@@ -487,27 +519,62 @@ export function SignupForm({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={handleNextToAuth}
-            style={{
-              width: "100%",
-              minHeight: 60,
-              marginTop: 24,
-              background: "#E57C23",
-              color: "#fff",
-              border: "none",
-              borderRadius: 16,
-              fontSize: 18,
-              fontWeight: 900,
-              letterSpacing: "-0.01em",
-              boxShadow: "0 6px 16px rgba(229, 124, 35, 0.35)",
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            다음
-          </button>
+          {kakaoChannel ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (!/^010\d{8}$/.test(phone.replace(/\D/g, ""))) {
+                  setToast("올바른 휴대폰번호(010-XXXX-XXXX)를 입력해 주세요.");
+                  return;
+                }
+                window.location.href = buildOauthHref("kakao");
+              }}
+              style={{
+                width: "100%",
+                minHeight: 60,
+                marginTop: 24,
+                background: "#FEE500",
+                color: "#3C1E1E",
+                border: "none",
+                borderRadius: 16,
+                fontSize: 18,
+                fontWeight: 900,
+                letterSpacing: "-0.01em",
+                boxShadow: "0 6px 16px rgba(254, 229, 0, 0.45)",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+              }}
+            >
+              <KakaoMark size={24} />
+              카카오톡으로 회원가입
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleNextToAuth}
+              style={{
+                width: "100%",
+                minHeight: 60,
+                marginTop: 24,
+                background: "#E57C23",
+                color: "#fff",
+                border: "none",
+                borderRadius: 16,
+                fontSize: 18,
+                fontWeight: 900,
+                letterSpacing: "-0.01em",
+                boxShadow: "0 6px 16px rgba(229, 124, 35, 0.35)",
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              다음
+            </button>
+          )}
 
           <button
             type="button"

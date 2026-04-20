@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
         consentedAt,
         marketingConsentedAt: verified.marketingConsent ? consentedAt : null,
         deliveryChannels: { kakao: isKakaoChannel, email: !isKakaoChannel },
+        phone: isKakaoChannel ? verified.phone ?? null : null,
         authProvider: "kakao",
       });
       await createUserSession({ userId: user.id, email: profile.email, rememberMe: true });
