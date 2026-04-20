@@ -14,7 +14,8 @@ function parseSignupData(request: NextRequest) {
   if (subRaw) {
     try { subInterests = JSON.parse(subRaw); } catch { /* ignore */ }
   }
-  return interests.length ? { interests, subInterests } : undefined;
+  const marketingConsent = request.nextUrl.searchParams.get("m") === "1";
+  return interests.length ? { interests, subInterests, marketingConsent } : undefined;
 }
 
 export async function GET(request: NextRequest) {

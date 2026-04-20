@@ -56,12 +56,14 @@ export async function GET(request: NextRequest) {
 
     // 가입 모드 + 관심사 있으면 자동 가입
     if (verified.mode === "signup" && verified.interests.length > 0) {
+      const consentedAt = new Date().toISOString();
       const user = await upsertMongoSignup({
         email: profile.email,
         deliveryTime: "07:00",
         interests: verified.interests,
         subInterests: verified.subInterests,
-        consentedAt: new Date().toISOString(),
+        consentedAt,
+        marketingConsentedAt: verified.marketingConsent ? consentedAt : null,
         authProvider: "kakao",
       });
       await createUserSession({ userId: user.id, email: profile.email, rememberMe: true });

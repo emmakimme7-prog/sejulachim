@@ -54,12 +54,14 @@ export async function GET(request: NextRequest) {
     }
 
     if (verified.mode === "signup" && verified.interests.length > 0) {
+      const consentedAt = new Date().toISOString();
       const user = await upsertMongoSignup({
         email: profile.email,
         deliveryTime: "07:00",
         interests: verified.interests,
         subInterests: verified.subInterests,
-        consentedAt: new Date().toISOString(),
+        consentedAt,
+        marketingConsentedAt: verified.marketingConsent ? consentedAt : null,
         authProvider: "google",
       });
       await createUserSession({ userId: user.id, email: profile.email, rememberMe: true });
