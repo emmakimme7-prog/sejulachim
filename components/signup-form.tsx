@@ -1250,27 +1250,7 @@ export function SignupForm({
             </>
           )}
           </>
-          ) : (
-            /* 카카오 채널: 3-체크박스 간단 요약 (카카오 OAuth 클릭 시 동의 간주) */
-            <div
-              style={{
-                marginTop: 16,
-                padding: "14px 14px",
-                borderRadius: 12,
-                background: "#FFFBF5",
-                border: "1.5px solid #E8DCC7",
-                fontSize: 12,
-                color: "#7A6F62",
-                lineHeight: 1.6,
-                fontWeight: 500,
-              }}
-            >
-              위 <b style={{ color: "#1F1A14" }}>카카오로 회원가입</b> 버튼을 누르시면
-              <a href="/terms" target="_blank" style={{ color: "#B2570F", fontWeight: 800, textDecoration: "underline", marginLeft: 4, marginRight: 2 }}>이용약관</a>과
-              <a href="/terms" target="_blank" style={{ color: "#B2570F", fontWeight: 800, textDecoration: "underline", marginLeft: 4, marginRight: 2 }}>개인정보 수집·이용</a>
-              에 동의하는 것으로 간주되며, 매일 아침 카카오톡 알림톡을 받으시는 것에 동의하는 것으로 처리됩니다.
-            </div>
-          )}
+          ) : null}
 
           <button
             type="button"
