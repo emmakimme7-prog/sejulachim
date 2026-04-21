@@ -1,5 +1,6 @@
 import "server-only";
 
+import { generateAndStoreContentAudio } from "@/lib/content/audio";
 import { summarizeContentItem } from "@/lib/content/summarize";
 import { MAIN_INTERESTS, SUB_INTERESTS, getStoredCategoryForMainInterest } from "@/lib/content/sub-interests";
 import type { SourceType } from "@/lib/content/sources";
@@ -525,9 +526,30 @@ export async function generateDailyContentForDate(date = getKstDateParts().date)
   }
 
   if (rows.length > 0) {
-    const { error } = await supabase.from("content_items").upsert(rows, { onConflict: "slug" });
+    const { data: inserted, error } = await supabase
+      .from("content_items")
+      .upsert(rows, { onConflict: "slug" })
+      .select("id, audio_url");
     if (error) {
       throw error;
+    }
+
+    // TTS 자동 생성 (audio_url 이 아직 없는 것만). 승인은 이미 upsert 로 됐음.
+    // fire-and-forget — 실패해도 cron 결과에 영향 X. 여러 건이라 병렬 최대 3개로 제한.
+    const toGenerate = (inserted ?? []).filter((row) => !row.audio_url).map((row) => String(row.id));
+    if (toGenerate.length > 0) {
+      void (async () => {
+        const CONCURRENCY = 3;
+        for (let i = 0; i < toGenerate.length; i += CONCURRENCY) {
+          await Promise.all(
+            toGenerate.slice(i, i + CONCURRENCY).map((id) =>
+              generateAndStoreContentAudio(id).catch((error) => {
+                console.warn("[auto-generate] audio failed", { id, error: (error as Error).message });
+              })
+            )
+          );
+        }
+      })();
     }
   }
 

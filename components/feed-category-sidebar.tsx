@@ -20,6 +20,10 @@ export function FeedCategorySidebar({
 }) {
   const searchParams = useSearchParams();
   const current = searchParams.get("category") ?? "";
+  const view = searchParams.get("view") ?? "";
+  // 오늘 소식 / 지난 소식 탭에서 카테고리를 눌러도 현재 탭 유지.
+  const viewSuffix = view ? `&view=${encodeURIComponent(view)}` : "";
+  const allHref = view ? `/?view=${encodeURIComponent(view)}` : "/";
 
   return (
     <div
@@ -44,7 +48,7 @@ export function FeedCategorySidebar({
       </div>
       <div style={{ display: "grid", gap: 4 }}>
         <Link
-          href="/"
+          href={allHref}
           style={{
             display: "flex",
             alignItems: "center",
@@ -70,7 +74,7 @@ export function FeedCategorySidebar({
           return (
             <Link
               key={cat}
-              href={`/?category=${encodeURIComponent(cat)}`}
+              href={`/?category=${encodeURIComponent(cat)}${viewSuffix}`}
               style={{
                 display: "flex",
                 alignItems: "center",
