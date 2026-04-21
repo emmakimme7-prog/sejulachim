@@ -91,6 +91,10 @@ export function SignupForm({
   const [phone, setPhone] = useState("");
   // 카카오 채널 가입 플로우용 일괄 동의 (필수): 이용약관·개인정보·광고성 수신.
   const [agreedKakaoBundle, setAgreedKakaoBundle] = useState(false);
+  // 이메일 채널 step 2 동의 (필수): 광고성 수신.
+  const [agreedEmailConsent, setAgreedEmailConsent] = useState(false);
+  // 카카오 번호 중복 체크 상태
+  const [phoneCheckStatus, setPhoneCheckStatus] = useState<"idle" | "checking" | "duplicate" | "ok">("idle");
 
   const [step, setStep] = useState<Step>(defaultEmail ? "auth" : "interests");
 
@@ -144,6 +148,10 @@ export function SignupForm({
   function handleNextToAuth() {
     if (emailChannel && !isValidEmailClient(email)) {
       setToast("올바른 이메일 주소를 입력해 주세요.");
+      return;
+    }
+    if (emailChannel && !agreedEmailConsent) {
+      setToast("매일 아침 이메일 받기 수신 동의에 체크해 주세요.");
       return;
     }
     if (kakaoChannel && !/^010\d{8}$/.test(phone.replace(/\D/g, ""))) {
@@ -490,7 +498,7 @@ export function SignupForm({
                   inputMode="numeric"
                   autoComplete="tel"
                   value={phone}
-                  onChange={(e) => { setPhone(formatPhone(e.target.value)); setError(""); }}
+                  onChange={(e) => { setPhone(formatPhone(e.target.value)); setError(""); setPhoneCheckStatus("idle"); }}
                   placeholder="010-1234-5678"
                   style={{
                     width: "100%",
@@ -538,12 +546,67 @@ export function SignupForm({
                     boxSizing: "border-box",
                   }}
                 />
-                <p style={{ margin: "8px 0 0", fontSize: 12, color: "#7A6F62", fontWeight: 600, lineHeight: 1.5 }}>
-                  메일함으로 매일 아침 보내드립니다.
-                </p>
               </div>
             )}
           </div>
+
+          {/* 이메일 채널 동의 체크박스 */}
+          {emailChannel ? (
+            <label
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 10,
+                marginTop: 16,
+                padding: "14px 14px",
+                borderRadius: 12,
+                background: "#fff",
+                border: "1.5px solid #E8DCC7",
+                cursor: "pointer",
+                fontSize: 14,
+                lineHeight: 1.6,
+                color: "#4A4037",
+                fontWeight: 500,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={agreedEmailConsent}
+                onChange={(e) => setAgreedEmailConsent(e.target.checked)}
+                style={{ marginTop: 3, width: 20, height: 20, accentColor: "#E57C23", flexShrink: 0 }}
+              />
+              <span>
+                <span style={{ color: "#B2570F", fontWeight: 700, marginRight: 4 }}>[필수]</span>
+                매일 아침 <b style={{ color: "#1F1A14" }}>이메일</b>로 소식 받기에 동의합니다.
+                <span style={{ display: "block", fontSize: 12, color: "#7A6F62", fontWeight: 500, marginTop: 4, lineHeight: 1.5 }}>
+                  광고성 정보 수신에 동의합니다. 언제든 설정에서 철회할 수 있습니다.
+                </span>
+              </span>
+            </label>
+          ) : null}
+
+          {kakaoChannel && phoneCheckStatus === "duplicate" ? (
+            <div
+              style={{
+                marginTop: 14,
+                padding: "14px 16px",
+                borderRadius: 12,
+                background: "#FDE8EF",
+                border: "1.5px solid #F2B8D0",
+                fontSize: 13,
+                color: "#A6124B",
+                fontWeight: 600,
+                lineHeight: 1.6,
+              }}
+            >
+              ⚠️ 이미 등록된 번호입니다.
+              <br />
+              <a href="mailto:hello@studiobyyou.kr" style={{ color: "#C2185B", fontWeight: 800, textDecoration: "underline" }}>
+                고객센터 (hello@studiobyyou.kr)
+              </a>
+              로 문의해 주세요.
+            </div>
+          ) : null}
 
           {kakaoChannel ? (
             <>
@@ -582,9 +645,10 @@ export function SignupForm({
 
               <button
                 type="button"
-                disabled={!agreedKakaoBundle}
-                onClick={() => {
-                  if (!/^010\d{8}$/.test(phone.replace(/\D/g, ""))) {
+                disabled={!agreedKakaoBundle || phoneCheckStatus === "checking" || phoneCheckStatus === "duplicate"}
+                onClick={async () => {
+                  const digits = phone.replace(/\D/g, "");
+                  if (!/^010\d{8}$/.test(digits)) {
                     setToast("올바른 휴대폰번호(010-XXXX-XXXX)를 입력해 주세요.");
                     return;
                   }
@@ -592,21 +656,38 @@ export function SignupForm({
                     setToast("알림톡 수신 동의에 체크해 주세요.");
                     return;
                   }
-                  window.location.href = buildOauthHref("kakao");
+                  setPhoneCheckStatus("checking");
+                  try {
+                    const response = await fetch("/api/signup/check-phone", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ phone: digits }),
+                    });
+                    const payload = (await response.json()) as { available?: boolean; error?: string };
+                    if (!payload.available) {
+                      setPhoneCheckStatus("duplicate");
+                      return;
+                    }
+                    setPhoneCheckStatus("ok");
+                    window.location.href = buildOauthHref("kakao");
+                  } catch {
+                    setPhoneCheckStatus("idle");
+                    setToast("번호 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+                  }
                 }}
                 style={{
                   width: "100%",
                   minHeight: 60,
                   marginTop: 16,
-                  background: agreedKakaoBundle ? "#FEE500" : "#F5EEE2",
-                  color: agreedKakaoBundle ? "#3C1E1E" : "#9C907F",
+                  background: agreedKakaoBundle && phoneCheckStatus !== "duplicate" ? "#FEE500" : "#F5EEE2",
+                  color: agreedKakaoBundle && phoneCheckStatus !== "duplicate" ? "#3C1E1E" : "#9C907F",
                   border: "none",
                   borderRadius: 16,
                   fontSize: 18,
                   fontWeight: 900,
                   letterSpacing: "-0.01em",
-                  boxShadow: agreedKakaoBundle ? "0 6px 16px rgba(254, 229, 0, 0.45)" : "none",
-                  cursor: agreedKakaoBundle ? "pointer" : "not-allowed",
+                  boxShadow: agreedKakaoBundle && phoneCheckStatus !== "duplicate" ? "0 6px 16px rgba(254, 229, 0, 0.45)" : "none",
+                  cursor: agreedKakaoBundle && phoneCheckStatus !== "duplicate" ? "pointer" : "not-allowed",
                   fontFamily: "inherit",
                   display: "inline-flex",
                   alignItems: "center",
@@ -615,7 +696,7 @@ export function SignupForm({
                 }}
               >
                 <KakaoMark size={24} />
-                카카오톡으로 회원가입
+                {phoneCheckStatus === "checking" ? "번호 확인 중..." : "카카오톡으로 회원가입"}
               </button>
             </>
           ) : (
