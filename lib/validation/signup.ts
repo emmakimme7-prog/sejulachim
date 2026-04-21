@@ -34,6 +34,8 @@ export const signupSchema = signupPreferencesSchema.extend({
   agreeToPrivacy: z.boolean().refine((value) => value, "개인정보 수집·이용에 동의해주세요."),
   // 광고성 정보 수신은 선택 — 체크 안 하면 매일 아침 소식 발송 대상에서 제외.
   agreeToMarketing: z.boolean().optional().default(false),
+  // 이메일 가입 시 6자리 인증번호 (OAuth 가입은 서버측 콜백에서 직접 생성하므로 필요 없음).
+  verificationCode: z.string().trim().regex(/^\d{6}$/u, "6자리 숫자를 입력해주세요.").optional(),
   // 받는 방법 (카카오톡 알림톡 + 이메일). 한쪽만 선택해도 됨, 단 1개 이상 필수.
   phone: z
     .string()

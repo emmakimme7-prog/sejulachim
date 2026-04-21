@@ -95,6 +95,11 @@ export function SignupForm({
   const [agreedEmailConsent, setAgreedEmailConsent] = useState(false);
   // 카카오 번호 중복 체크 상태
   const [phoneCheckStatus, setPhoneCheckStatus] = useState<"idle" | "checking" | "duplicate" | "ok">("idle");
+  // 이메일 가입 확장/인증 상태
+  const [emailFormExpanded, setEmailFormExpanded] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [sendingCode, setSendingCode] = useState(false);
 
   const [step, setStep] = useState<Step>(defaultEmail ? "auth" : "interests");
 
@@ -213,6 +218,7 @@ export function SignupForm({
           agreeToTerms: agreedTerms,
           agreeToPrivacy: agreedPrivacy,
           agreeToMarketing: emailChannel,
+          verificationCode: verificationCode.trim() || undefined,
           honeypot,
           phone: null,
           deliveryChannels: {
@@ -861,7 +867,40 @@ export function SignupForm({
             </div>
           ) : null}
 
-          {!kakaoChannel ? (
+          {!kakaoChannel && !emailFormExpanded ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (noneChannel && !isValidEmailClient(email)) {
+                  // noneChannel 사용자는 여기서 이메일 입력부터 해야 함 → expand 하되 폼 보여줌
+                }
+                setEmailFormExpanded(true);
+              }}
+              style={{
+                width: "100%",
+                minHeight: 60,
+                marginTop: 0,
+                background: "#E57C23",
+                color: "#fff",
+                border: "none",
+                borderRadius: 14,
+                fontSize: 16,
+                fontWeight: 900,
+                letterSpacing: "-0.01em",
+                boxShadow: "0 6px 16px rgba(229, 124, 35, 0.35)",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+              }}
+            >
+              📧 이메일로 시작하기
+            </button>
+          ) : null}
+
+          {!kakaoChannel && emailFormExpanded ? (
           <>
           {/* 이메일 폼 시작 */}
 
@@ -1062,27 +1101,154 @@ export function SignupForm({
 
           {error ? <div style={{ marginTop: 16 }}><Notice tone="error">{error}</Notice></div> : null}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            style={{
-              width: "100%",
-              minHeight: 60,
-              marginTop: 20,
-              background: submitting ? "#E8DCC7" : "#E57C23",
-              color: "#fff",
-              border: "none",
-              borderRadius: 16,
-              fontSize: 18,
-              fontWeight: 900,
-              letterSpacing: "-0.01em",
-              boxShadow: submitting ? "none" : "0 6px 16px rgba(229, 124, 35, 0.35)",
-              cursor: submitting ? "not-allowed" : "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            {submitting ? "저장 중입니다..." : "가입 완료하기"}
-          </button>
+          {!verificationSent ? (
+            <button
+              type="button"
+              disabled={sendingCode}
+              onClick={async () => {
+                if (!isValidEmailClient(email)) {
+                  setError("올바른 이메일 주소를 입력해 주세요.");
+                  return;
+                }
+                if (password.length < 8) {
+                  setError("비밀번호는 8자 이상이어야 합니다.");
+                  return;
+                }
+                if (!agreedTerms || !agreedPrivacy) {
+                  setError("이용약관과 개인정보 수집·이용에 동의해 주세요.");
+                  return;
+                }
+                setSendingCode(true);
+                setError("");
+                try {
+                  const res = await fetch("/api/signup/email-verify", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email }),
+                  });
+                  const payload = (await res.json()) as { ok?: boolean; error?: string };
+                  if (!res.ok || !payload.ok) {
+                    setError(payload.error ?? "인증번호 발송에 실패했습니다.");
+                    return;
+                  }
+                  setVerificationSent(true);
+                } catch {
+                  setError("네트워크 문제로 인증번호를 보내지 못했습니다.");
+                } finally {
+                  setSendingCode(false);
+                }
+              }}
+              style={{
+                width: "100%",
+                minHeight: 60,
+                marginTop: 20,
+                background: sendingCode ? "#E8DCC7" : "#E57C23",
+                color: "#fff",
+                border: "none",
+                borderRadius: 16,
+                fontSize: 18,
+                fontWeight: 900,
+                letterSpacing: "-0.01em",
+                boxShadow: sendingCode ? "none" : "0 6px 16px rgba(229, 124, 35, 0.35)",
+                cursor: sendingCode ? "not-allowed" : "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              {sendingCode ? "발송 중..." : "이메일 인증번호 받기"}
+            </button>
+          ) : (
+            <>
+              <div style={{ marginTop: 20 }}>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 800, color: "#1F1A14", marginBottom: 4, letterSpacing: "-0.01em" }}>
+                  인증번호
+                </label>
+                <div style={{ fontSize: 12, color: "#7A6F62", fontWeight: 600, marginBottom: 8 }}>
+                  {email} 로 보낸 6자리 숫자를 입력해주세요 (10분 유효)
+                </div>
+                <input
+                  required
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={verificationCode}
+                  onChange={(e) => { setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }}
+                  placeholder="123456"
+                  style={{
+                    width: "100%",
+                    minHeight: 60,
+                    padding: "0 18px",
+                    background: "#fff",
+                    border: "2px solid #E8DCC7",
+                    borderRadius: 14,
+                    fontSize: 20,
+                    fontWeight: 800,
+                    color: "#1F1A14",
+                    outline: "none",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                    letterSpacing: "0.4em",
+                    textAlign: "center",
+                  }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={submitting || verificationCode.length !== 6}
+                style={{
+                  width: "100%",
+                  minHeight: 60,
+                  marginTop: 16,
+                  background: submitting || verificationCode.length !== 6 ? "#E8DCC7" : "#E57C23",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 16,
+                  fontSize: 18,
+                  fontWeight: 900,
+                  letterSpacing: "-0.01em",
+                  boxShadow: submitting || verificationCode.length !== 6 ? "none" : "0 6px 16px rgba(229, 124, 35, 0.35)",
+                  cursor: submitting || verificationCode.length !== 6 ? "not-allowed" : "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {submitting ? "처리 중..." : "인증하고 가입 완료하기"}
+              </button>
+              <button
+                type="button"
+                disabled={sendingCode}
+                onClick={async () => {
+                  setSendingCode(true);
+                  setError("");
+                  setVerificationCode("");
+                  try {
+                    await fetch("/api/signup/email-verify", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email }),
+                    });
+                  } finally {
+                    setSendingCode(false);
+                  }
+                }}
+                style={{
+                  display: "block",
+                  margin: "12px auto 0",
+                  padding: "8px 12px",
+                  background: "transparent",
+                  border: "none",
+                  color: "#7A6F62",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  textDecoration: "underline",
+                  textUnderlineOffset: 4,
+                  cursor: sendingCode ? "not-allowed" : "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {sendingCode ? "재발송 중..." : "인증번호 다시 받기"}
+              </button>
+            </>
+          )}
           </>
           ) : (
             /* 카카오 채널: 3-체크박스 간단 요약 (카카오 OAuth 클릭 시 동의 간주) */

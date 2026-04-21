@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 
 import { isStrongEnoughPassword } from "@/lib/auth/passwords";
 import { createUserSession } from "@/lib/auth/user-session";
+import { verifyEmailVerificationCode } from "@/lib/email/verification";
 import { hasSupabaseServerEnv } from "@/lib/env";
 import { addSecurityJobLog, findUserByEmail } from "@/lib/mongodb/user-data";
 import { sendSignupPreviewEmail, upsertMongoSignup } from "@/lib/mongodb/signup";
@@ -27,6 +28,23 @@ export async function POST(request: NextRequest) {
 
     if (body.passwordEnabled && !isStrongEnoughPassword(password, normalizedEmail)) {
       return NextResponse.json({ error: "비밀번호 규칙을 확인해 주세요." }, { status: 400 });
+    }
+
+    // 이메일 직접 가입은 6자리 인증번호 필수.
+    if (!body.verificationCode) {
+      return NextResponse.json({ error: "이메일 인증번호를 입력해주세요." }, { status: 400 });
+    }
+    const verifyResult = await verifyEmailVerificationCode(normalizedEmail, body.verificationCode);
+    if (!verifyResult.ok) {
+      const message =
+        verifyResult.reason === "EXPIRED"
+          ? "인증번호가 만료되었습니다. 다시 요청해주세요."
+          : verifyResult.reason === "TOO_MANY_ATTEMPTS"
+          ? "시도 횟수를 초과했습니다. 인증번호를 다시 요청해주세요."
+          : verifyResult.reason === "MISMATCH"
+          ? "인증번호가 일치하지 않습니다."
+          : "인증번호 확인에 실패했습니다. 다시 요청해주세요.";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
 
     if (!hasSupabaseServerEnv()) {
