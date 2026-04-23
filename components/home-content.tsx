@@ -1,16 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { LandingHero } from "@/components/landing-hero";
 
-type PreviewItem = { category: string; title: string; slug: string; short_summary?: string };
-
-function checkHeroUrl() {
-  if (typeof window === "undefined") return false;
-  const params = new URLSearchParams(window.location.search);
-  return params.get("view") === "intro";
-}
+type PreviewItem = {
+  category: string;
+  title: string;
+  slug: string;
+  short_summary?: string;
+  action_line?: string;
+  audio_url?: string;
+};
 
 export function HomeContent({
   children,
@@ -19,31 +21,24 @@ export function HomeContent({
   children: React.ReactNode;
   previews: PreviewItem[];
 }) {
+  const searchParams = useSearchParams();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
-  const [heroVisible, setHeroVisible] = useState(true);
-
-  const syncHero = useCallback(() => setHeroVisible(checkHeroUrl()), []);
+  const heroVisible = useMemo(() => searchParams.get("view") === "intro", [searchParams]);
 
   useEffect(() => {
-    // 초기 URL 체크
-    syncHero();
+    const controller = new AbortController();
 
-    fetch("/api/auth/session", { credentials: "same-origin", cache: "no-store" })
+    fetch("/api/auth/session", { credentials: "same-origin", cache: "no-store", signal: controller.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setIsLoggedIn(!!data?.session))
-      .catch(() => setIsLoggedIn(false));
-  }, [syncHero]);
+      .catch((error: unknown) => {
+        if ((error as { name?: string } | undefined)?.name !== "AbortError") {
+          setIsLoggedIn(false);
+        }
+      });
 
-  // shallowNav(pushState)에 반응하여 히어로 표시 여부 갱신
-  useEffect(() => {
-    window.addEventListener("popstate", syncHero);
-    const origPushState = history.pushState.bind(history);
-    history.pushState = (...args) => { origPushState(...args); syncHero(); };
-    return () => {
-      window.removeEventListener("popstate", syncHero);
-      history.pushState = origPushState;
-    };
-  }, [syncHero]);
+    return () => controller.abort();
+  }, []);
 
   const showHero = isLoggedIn === false && heroVisible;
 

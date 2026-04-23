@@ -121,7 +121,7 @@ const listTodayPreviewCached = unstable_cache(
     // 먼저 오늘 콘텐츠 조회
     const { data } = await supabase
       .from("content_items")
-      .select("title, slug, category, sub_interest, short_summary")
+      .select("title, slug, category, sub_interest, short_summary, action_line, audio_url")
       .eq("approval_status", "approved")
       .or("summary_status.eq.done,ai_status.eq.completed")
       .gte("published_at", todayStart.toISOString())
@@ -134,7 +134,7 @@ const listTodayPreviewCached = unstable_cache(
     if (items.length < 5) {
       const { data: fallbackData } = await supabase
         .from("content_items")
-        .select("title, slug, category, sub_interest, short_summary")
+        .select("title, slug, category, sub_interest, short_summary, action_line, audio_url")
         .eq("approval_status", "approved")
         .or("summary_status.eq.done,ai_status.eq.completed")
         .not("published_at", "is", null)
@@ -152,7 +152,14 @@ const listTodayPreviewCached = unstable_cache(
     }
 
     const categories = ["건강", "돈", "실생활", "뉴스", "관계"];
-    const result: { category: string; title: string; slug: string; short_summary?: string }[] = [];
+    const result: {
+      category: string;
+      title: string;
+      slug: string;
+      short_summary?: string;
+      action_line?: string;
+      audio_url?: string;
+    }[] = [];
 
     for (const cat of categories) {
       const catItems = items.filter((item) => item.category === cat);
@@ -160,13 +167,20 @@ const listTodayPreviewCached = unstable_cache(
       catItems.sort((a, b) => b.title.length - a.title.length);
       const pick = catItems[0];
       if (pick) {
-        result.push({ category: cat, title: pick.title, slug: pick.slug, short_summary: pick.short_summary ?? undefined });
+        result.push({
+          category: cat,
+          title: pick.title,
+          slug: pick.slug,
+          short_summary: pick.short_summary ?? undefined,
+          action_line: (pick as { action_line?: string | null }).action_line ?? undefined,
+          audio_url: (pick as { audio_url?: string | null }).audio_url ?? undefined,
+        });
       }
     }
 
     return result;
   },
-  ["today-preview"],
+  ["today-preview-v2"],
   { revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS }
 );
 

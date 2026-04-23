@@ -1,63 +1,73 @@
 "use client";
 
 import { Volume2, Square } from "lucide-react";
-import { useEffect, useId, useState } from "react";
-import { playSpeech, setAutoPlayNextFn, setSpeechPlaylist } from "@/components/speech-controls";
+import { useEffect, useMemo, useState } from "react";
+
+import {
+  getSpeechSnapshot,
+  playListenable,
+  setAutoPlayNextFn,
+  setSpeechPlaylist,
+  stopSpeech,
+  subscribeSpeechState
+} from "@/components/speech-controls";
 
 type PreviewItem = {
   category: string;
   title: string;
   slug: string;
   short_summary?: string;
+  action_line?: string;
+  audio_url?: string;
 };
 
-// Global speech owner tracking (simplified from speech-controls)
-let heroSpeechOwner: string | null = null;
-const heroPlaybackSubs = new Set<(owner: string | null) => void>();
-
 export function HeroListenButton({ previews }: { previews: PreviewItem[] }) {
-  const [playing, setPlaying] = useState(false);
-  const ownerId = useId();
+  const [playing, setPlaying] = useState(() => getSpeechSnapshot().active);
+  const items = useMemo(
+    () =>
+      previews.map((preview, index) => ({
+        label: `${index + 1}. ${preview.category}`,
+        title: preview.title,
+        slug: preview.slug,
+        audioUrl: preview.audio_url ?? null,
+        // audio_url이 있으면 text는 폴백용이므로 짧게, 없으면 Web Speech 폴백 전체 문장.
+        text: [preview.title, preview.short_summary, preview.action_line].filter(Boolean).join(". ")
+      })),
+    [previews]
+  );
 
   useEffect(() => {
-    const handlePlayback = (owner: string | null) => {
-      if (owner !== ownerId) setPlaying(false);
-    };
-    heroPlaybackSubs.add(handlePlayback);
-    return () => {
-      heroPlaybackSubs.delete(handlePlayback);
-    };
-  }, [ownerId]);
+    return subscribeSpeechState(() => {
+      setPlaying(getSpeechSnapshot().active);
+    });
+  }, []);
 
   if (previews.length === 0) return null;
 
   function handlePlay() {
     if (playing) {
-      window.speechSynthesis?.cancel();
-      setPlaying(false);
+      stopSpeech();
       return;
     }
 
-    // Build text from all preview items
-    const items = previews.map((p, i) => ({
-      label: `${i + 1}. ${p.category}`,
-      text: [p.title, p.short_summary].filter(Boolean).join(". "),
-    }));
-
-    // Set up playlist for the player UI
     const playlistLabels = items.map((item) => ({ label: item.label }));
     setSpeechPlaylist(playlistLabels, 0);
 
-    // Chain play all items
     function playItem(idx: number) {
       const item = items[idx];
       if (!item) return;
 
       if (idx < items.length - 1) {
         setAutoPlayNextFn(() => {
+          const next = items[idx + 1]!;
           setSpeechPlaylist(playlistLabels, idx + 1);
-          playSpeech(items[idx + 1]!.text, items[idx + 1]!.label);
           playItem(idx + 1);
+          playListenable({
+            text: next.text,
+            title: next.label,
+            audioUrl: next.audioUrl,
+            slug: next.slug,
+          });
         });
       } else {
         setAutoPlayNextFn(null);
@@ -65,8 +75,12 @@ export function HeroListenButton({ previews }: { previews: PreviewItem[] }) {
     }
 
     playItem(0);
-    setPlaying(true);
-    playSpeech(items[0]!.text, items[0]!.label);
+    playListenable({
+      text: items[0]!.text,
+      title: items[0]!.label,
+      audioUrl: items[0]!.audioUrl,
+      slug: items[0]!.slug,
+    });
   }
 
   return (

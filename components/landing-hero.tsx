@@ -7,6 +7,8 @@ type PreviewItem = {
   title: string;
   slug: string;
   short_summary?: string;
+  action_line?: string;
+  audio_url?: string;
 };
 
 const CATEGORY_META: Record<string, { emoji: string; color: string; bg: string }> = {
