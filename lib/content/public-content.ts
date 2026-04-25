@@ -118,28 +118,25 @@ const listTodayPreviewCached = unstable_cache(
     const kstNow = new Date(now.getTime() + kstOffset);
     const todayStart = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()) - kstOffset);
 
-    // 미리듣기 카드 전용 — audio_url(Google TTS MP3) 있는 기사만 대상.
-    // audio_url 없는 기사를 뽑으면 Web Speech fallback(기본 목소리)으로 재생됨.
+    // 오늘 콘텐츠 조회 — audio_url 없거나 깨진 경우 client에서 Web Speech fallback으로 재생됨.
     const { data } = await supabase
       .from('sj_content_items')
       .select("title, slug, category, sub_interest, short_summary, action_line, audio_url")
       .eq("approval_status", "approved")
       .or("summary_status.eq.done,ai_status.eq.completed")
-      .not("audio_url", "is", null)
       .gte("published_at", todayStart.toISOString())
       .order("published_at", { ascending: false })
       .limit(100);
 
     let items = (data ?? []).map((item) => normalizePublicItemCategory(item));
 
-    // 오늘 audio 있는 콘텐츠가 5개 카테고리를 못 채우면, 과거 audio 있는 콘텐츠로 보충
+    // 오늘 콘텐츠가 5개 카테고리 못 채우면 최신 콘텐츠로 보충
     if (items.length < 5) {
       const { data: fallbackData } = await supabase
         .from('sj_content_items')
         .select("title, slug, category, sub_interest, short_summary, action_line, audio_url")
         .eq("approval_status", "approved")
         .or("summary_status.eq.done,ai_status.eq.completed")
-        .not("audio_url", "is", null)
         .not("published_at", "is", null)
         .order("published_at", { ascending: false })
         .limit(100);
@@ -164,14 +161,34 @@ const listTodayPreviewCached = unstable_cache(
       audio_url?: string;
     }[] = [];
 
+    // 현재 살아있는 Supabase storage host (NEW autoclip). audio_url이 이 host를 가리키면
+    // 실제 mp3 파일이 있어 정상 재생됨. 다른 host(구 프로젝트)는 깨진 URL이라 client에서 Web Speech fallback.
+    const liveSupabaseHost = (() => {
+      try {
+        const url = process.env.SUPABASE_URL ?? "";
+        return url ? new URL(url).host : "";
+      } catch {
+        return "";
+      }
+    })();
+
+    const isLiveAudio = (raw: string | null | undefined) => {
+      if (!raw || !liveSupabaseHost) return false;
+      try {
+        return new URL(raw).host === liveSupabaseHost;
+      } catch {
+        return false;
+      }
+    };
+
     for (const cat of categories) {
       const catItems = items.filter((item) => item.category === cat);
-      // 1순위: Google TTS MP3(audio_url) 있는 항목 — 없으면 Web Speech fallback이라 기본 목소리로 들림.
+      // 1순위: 현재 storage(autoclip)에서 실제 재생되는 audio_url
       // 2순위: 제목이 긴 항목 (구체적인 콘텐츠 우선)
       catItems.sort((a, b) => {
-        const aHasAudio = Boolean((a as { audio_url?: string | null }).audio_url);
-        const bHasAudio = Boolean((b as { audio_url?: string | null }).audio_url);
-        if (aHasAudio !== bHasAudio) return aHasAudio ? -1 : 1;
+        const aLive = isLiveAudio((a as { audio_url?: string | null }).audio_url);
+        const bLive = isLiveAudio((b as { audio_url?: string | null }).audio_url);
+        if (aLive !== bLive) return aLive ? -1 : 1;
         return b.title.length - a.title.length;
       });
       const pick = catItems[0];

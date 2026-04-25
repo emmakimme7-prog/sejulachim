@@ -77,7 +77,7 @@ export function playSpeech(text: string, title: string) {
 }
 
 /**
- * MP3 audio_url이 있으면 HTMLAudio 재생, 없으면 Web Speech 폴백.
+ * MP3 audio_url이 있으면 HTMLAudio 재생, 없거나 재생 실패 시 Web Speech 폴백.
  * chain(playlist/autoPlayNextFn)은 호출 직전에 setSpeechPlaylist/setAutoPlayNextFn 로 세팅.
  */
 export function playListenable(params: {
@@ -87,16 +87,25 @@ export function playListenable(params: {
   slug?: string | null;
 }) {
   const ownerId = `auto-${Date.now()}`;
-  if (params.audioUrl?.trim()) {
-    startAudioFrom(params.audioUrl, params.title, speechRate, ownerId, params.slug ?? undefined);
-  } else {
+  const normalizedText = params.text.replace(/\s+/g, " ").trim();
+  const fallbackToWebSpeech = () => {
     if (params.slug) markSlugAsListened(params.slug);
-    const normalizedText = params.text.replace(/\s+/g, " ").trim();
-    if (!normalizedText) return;
+    if (!normalizedText) {
+      speechOwner = null;
+      notifyPlayback();
+      notifyState();
+      return;
+    }
     speechFullText = normalizedText;
     speechDisplayTitle = params.title;
     speechSegments = null;
     startSpeechFrom(0, speechRate, ownerId);
+  };
+
+  if (params.audioUrl?.trim()) {
+    startAudioFrom(params.audioUrl, params.title, speechRate, ownerId, params.slug ?? undefined, fallbackToWebSpeech);
+  } else {
+    fallbackToWebSpeech();
   }
 }
 
@@ -167,7 +176,14 @@ function startSpeechFrom(charOffset: number, rate: number, ownerId: string) {
   window.speechSynthesis.speak(utterance);
 }
 
-function startAudioFrom(url: string, title: string, rate: number, ownerId: string, slug?: string | null) {
+function startAudioFrom(
+  url: string,
+  title: string,
+  rate: number,
+  ownerId: string,
+  slug?: string | null,
+  onFailFallback?: () => void
+) {
   currentUtterance = null;
   window.speechSynthesis?.cancel();
   if (currentAudio) {
@@ -188,6 +204,22 @@ function startAudioFrom(url: string, title: string, rate: number, ownerId: strin
   // NOTE: playlist/autoPlayNextFn은 리셋하지 않음 — chain을 사용하는 호출자(archive-browser 등)가
   // 본 함수 호출 직전에 setSpeechPlaylist/setAutoPlayNextFn 으로 세팅하기 때문.
   // chain이 필요 없는 단일 재생(detail 페이지 등)은 호출자가 명시적으로 null 세팅해야 함.
+
+  // MP3 fetch/play 실패 시 fallback이 한 번만 발동되도록 가드.
+  let fallbackFired = false;
+  const fireFallback = () => {
+    if (fallbackFired) return;
+    fallbackFired = true;
+    if (currentAudio === audio) currentAudio = null;
+    if (onFailFallback) {
+      // 별도 ownerId가 아닌 fallback이 자기 ownerId를 쓰도록 호출자가 처리.
+      onFailFallback();
+    } else {
+      speechOwner = null;
+      notifyPlayback();
+      notifyState();
+    }
+  };
 
   if (slug?.trim()) markSlugAsListened(slug);
 
@@ -221,10 +253,7 @@ function startAudioFrom(url: string, title: string, rate: number, ownerId: strin
   };
   audio.onerror = () => {
     if (currentAudio !== audio) return;
-    currentAudio = null;
-    speechOwner = null;
-    notifyPlayback();
-    notifyState();
+    fireFallback();
   };
 
   currentAudio = audio;
@@ -232,10 +261,7 @@ function startAudioFrom(url: string, title: string, rate: number, ownerId: strin
   notifyState();
   audio.play().catch(() => {
     if (currentAudio === audio) {
-      currentAudio = null;
-      speechOwner = null;
-      notifyPlayback();
-      notifyState();
+      fireFallback();
     }
   });
 }
