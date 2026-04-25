@@ -28,12 +28,26 @@ type ContentRow = {
  *   GET /api/cron/repair-thumbnails?limit=20
  *   GET /api/cron/repair-thumbnails?limit=5&force=1
  */
+async function logJob(status: string, details: string) {
+  try {
+    const supabase = createAdminSupabaseClient();
+    await supabase.from('sj_job_logs').insert({
+      job_name: "repair-thumbnails",
+      status,
+      details,
+      run_at: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("[repair-thumbnails] failed to write job log:", error);
+  }
+}
+
 async function handleRepair(request: NextRequest) {
   if (!isAuthorizedCronRequest(request, getServerEnv().CRON_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const limit = Math.min(Number(request.nextUrl.searchParams.get("limit") ?? 20), 50);
+  const limit = Math.min(Number(request.nextUrl.searchParams.get("limit") ?? 50), 50);
   const force = request.nextUrl.searchParams.get("force") === "1";
   const supabase = createAdminSupabaseClient();
 
@@ -45,8 +59,14 @@ async function handleRepair(request: NextRequest) {
     .limit(limit);
 
   if (!force) {
-    // pixabay.com (만료 원본) 또는 null만 대상
-    query = query.or("thumbnail_url.is.null,thumbnail_url.like.%pixabay.com%,thumbnail_url.eq.");
+    // null, 빈 문자열, pixabay.com 만료 원본,
+    // autoclip 마이그레이션으로 죽은 구 supabase storage(vzhukifcwggmxrizhlqr) 가리키는 것 모두 대상.
+    query = query.or(
+      "thumbnail_url.is.null," +
+      "thumbnail_url.eq.," +
+      "thumbnail_url.like.%pixabay.com%," +
+      "thumbnail_url.like.%vzhukifcwggmxrizhlqr.supabase.co%"
+    );
   }
 
   const { data, error } = await query;
@@ -100,6 +120,8 @@ async function handleRepair(request: NextRequest) {
     skipped: results.filter((r) => r.status === "skipped").length,
     failed: results.filter((r) => r.status === "failed").length,
   };
+
+  await logJob("success", `limit=${limit} force=${force ? 1 : 0} fixed=${summary.fixed} skipped=${summary.skipped} failed=${summary.failed}`);
 
   return NextResponse.json({ ok: true, summary, results });
 }
