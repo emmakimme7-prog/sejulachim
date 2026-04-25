@@ -137,7 +137,7 @@ function normalizeItems(items) {
 
 async function upsertDailyPick(date, rows) {
   const { data: dailyPick, error: dailyPickError } = await supabase
-    .from("daily_picks")
+    .from('sj_daily_picks')
     .upsert(
       {
         pick_date: date,
@@ -150,11 +150,11 @@ async function upsertDailyPick(date, rows) {
     .single();
   if (dailyPickError) throw dailyPickError;
 
-  const { error: pickDeleteError } = await supabase.from("daily_pick_items").delete().eq("daily_pick_id", dailyPick.id);
+  const { error: pickDeleteError } = await supabase.from('sj_daily_pick_items').delete().eq("daily_pick_id", dailyPick.id);
   if (pickDeleteError) throw pickDeleteError;
 
   const { data: insertedRows, error: insertedRowsError } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id, summary_type, published_at")
     .in("slug", rows.map((row) => row.slug));
   if (insertedRowsError) throw insertedRowsError;
@@ -172,7 +172,7 @@ async function upsertDailyPick(date, rows) {
   }));
 
   if (pickItems.length > 0) {
-    const { error: pickItemsError } = await supabase.from("daily_pick_items").insert(pickItems);
+    const { error: pickItemsError } = await supabase.from('sj_daily_pick_items').insert(pickItems);
     if (pickItemsError) throw pickItemsError;
   }
 }
@@ -181,7 +181,7 @@ async function restoreFile(pathname) {
   const items = JSON.parse(readFileSync(resolve(process.cwd(), pathname), "utf8"));
   const rows = normalizeItems(items);
   const dbRows = rows.map(({ sourceDate, ...row }) => row);
-  const { error } = await supabase.from("content_items").upsert(dbRows, { onConflict: "slug" });
+  const { error } = await supabase.from('sj_content_items').upsert(dbRows, { onConflict: "slug" });
   if (error) throw error;
 
   const grouped = rows.reduce((acc, row) => {
@@ -210,7 +210,7 @@ async function main() {
     restoredCount += await restoreFile(file);
   }
 
-  const { count: totalCount, error: countError } = await supabase.from("content_items").select("*", { count: "exact", head: true });
+  const { count: totalCount, error: countError } = await supabase.from('sj_content_items').select("*", { count: "exact", head: true });
   if (countError) throw countError;
 
   console.log(JSON.stringify({ ok: true, restoredCount, totalCount: totalCount ?? 0, files }, null, 2));

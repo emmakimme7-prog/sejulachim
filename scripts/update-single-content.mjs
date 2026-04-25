@@ -48,7 +48,7 @@ const update = {
 };
 
 const { error } = await supabase
-  .from("content_items")
+  .from('sj_content_items')
   .update({
     ...update,
     updated_at: new Date().toISOString()

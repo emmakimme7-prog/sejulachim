@@ -50,7 +50,7 @@ export async function sendSignupPreviewEmail(input: { email: string; userId: unk
 
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
-    await supabase.from("email_logs").insert({
+    await supabase.from('sj_email_logs').insert({
       user_id: String(input.userId),
       status: "sent",
       provider_message_id: response.data?.id ?? null,

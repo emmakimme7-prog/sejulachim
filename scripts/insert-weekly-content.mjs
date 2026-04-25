@@ -217,7 +217,7 @@ for (const item of allContent) {
     } : {}),
   };
 
-  const { error } = await supabase.from("content_items").upsert(row, { onConflict: "slug" });
+  const { error } = await supabase.from('sj_content_items').upsert(row, { onConflict: "slug" });
 
   if (error) {
     console.error(`  ✗ ${item.title}: ${error.message}`);

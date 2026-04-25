@@ -31,7 +31,7 @@ const listPublicContentItemsCached = unstable_cache(
 
     const supabase = createAdminSupabaseClient();
     const { data } = await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .select("id, title, short_summary, long_summary, action_line, source_name, source_url, sources, slug, published_at, summary_type, category, sub_interest, raw_text, thumbnail_url, thumbnail_alt, thumbnail_page_url, thumbnail_license, audio_url")
       .eq("approval_status", "approved")
       .or("summary_status.eq.done,ai_status.eq.completed")
@@ -54,7 +54,7 @@ const getPublicContentItemBySlugCached = unstable_cache(
     const decodedSlug = decodeSlugValue(slug);
     const supabase = createAdminSupabaseClient();
     const { data } = await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .select("id, title, short_summary, long_summary, action_line, source_name, source_url, sources, slug, published_at, summary_type, category, sub_interest, raw_text, thumbnail_url, thumbnail_alt, thumbnail_page_url, thumbnail_license, audio_url")
       .eq("slug", decodedSlug)
       .eq("approval_status", "approved")
@@ -77,7 +77,7 @@ const listRelatedPublicContentItemsCached = unstable_cache(
     const supabase = createAdminSupabaseClient();
     const storedCategory = getStoredCategoryForMainInterest(category);
     const { data } = await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .select("title, short_summary, long_summary, action_line, slug, published_at, category, sub_interest, thumbnail_url, thumbnail_alt, audio_url")
       .eq("approval_status", "approved")
       .or("summary_status.eq.done,ai_status.eq.completed")
@@ -120,7 +120,7 @@ const listTodayPreviewCached = unstable_cache(
 
     // 먼저 오늘 콘텐츠 조회
     const { data } = await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .select("title, slug, category, sub_interest, short_summary, action_line, audio_url")
       .eq("approval_status", "approved")
       .or("summary_status.eq.done,ai_status.eq.completed")
@@ -133,7 +133,7 @@ const listTodayPreviewCached = unstable_cache(
     // 오늘 콘텐츠가 부족하면 최신 콘텐츠로 대체
     if (items.length < 5) {
       const { data: fallbackData } = await supabase
-        .from("content_items")
+        .from('sj_content_items')
         .select("title, slug, category, sub_interest, short_summary, action_line, audio_url")
         .eq("approval_status", "approved")
         .or("summary_status.eq.done,ai_status.eq.completed")

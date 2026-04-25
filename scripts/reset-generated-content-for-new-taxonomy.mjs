@@ -69,7 +69,7 @@ async function callLocalCron(path) {
 
 async function main() {
   const { data: generatedItems, error: generatedItemsError } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id")
     .eq("source_name", "세줄아침 자동생성");
 
@@ -81,21 +81,21 @@ async function main() {
 
   if (generatedIds.length > 0) {
     const { error: dailyPickItemsDeleteError } = await supabase
-      .from("daily_pick_items")
+      .from('sj_daily_pick_items')
       .delete()
       .in("content_item_id", generatedIds);
     if (dailyPickItemsDeleteError) {
       throw dailyPickItemsDeleteError;
     }
 
-    const { error: contentDeleteError } = await supabase.from("content_items").delete().in("id", generatedIds);
+    const { error: contentDeleteError } = await supabase.from('sj_content_items').delete().in("id", generatedIds);
     if (contentDeleteError) {
       throw contentDeleteError;
     }
   }
 
   const { error: dailyPicksDeleteError } = await supabase
-    .from("daily_picks")
+    .from('sj_daily_picks')
     .delete()
     .gte("pick_date", formatKstDate(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)));
   if (dailyPicksDeleteError) {

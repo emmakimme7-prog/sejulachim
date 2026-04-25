@@ -14,7 +14,7 @@ export async function GET() {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     const { count } = await supabase
-      .from("notifications")
+      .from('sj_notifications')
       .select("*", { count: "exact", head: true })
       .eq("user_id", session.id)
       .eq("is_read", false);

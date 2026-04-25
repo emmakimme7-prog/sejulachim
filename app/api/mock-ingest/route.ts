@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createAdminSupabaseClient();
-    const { error } = await supabase.from("content_items").insert({
+    const { error } = await supabase.from('sj_content_items').insert({
       title: sanitizePlainText(payload.title, 160),
       category: payload.category,
       source_name: sanitizePlainText(payload.sourceName, 80),

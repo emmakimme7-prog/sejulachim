@@ -498,13 +498,13 @@ async function seedSettings() {
     }
   ];
 
-  const { error } = await supabase.from("site_settings").upsert(settingsRows, { onConflict: "key" });
+  const { error } = await supabase.from('sj_site_settings').upsert(settingsRows, { onConflict: "key" });
   if (error) throw error;
 }
 
 async function seedContent() {
   const rows = items.map(mapRow);
-  const { error } = await supabase.from("content_items").upsert(rows, { onConflict: "slug" });
+  const { error } = await supabase.from('sj_content_items').upsert(rows, { onConflict: "slug" });
   if (error) throw error;
 
   const latestByType = {
@@ -515,7 +515,7 @@ async function seedContent() {
 
   const pickDate = "2026-04-06";
   const { data: dailyPick, error: dailyPickError } = await supabase
-    .from("daily_picks")
+    .from('sj_daily_picks')
     .upsert(
       {
         pick_date: pickDate,
@@ -529,10 +529,10 @@ async function seedContent() {
 
   if (dailyPickError) throw dailyPickError;
 
-  const { error: pickDeleteError } = await supabase.from("daily_pick_items").delete().eq("daily_pick_id", dailyPick.id);
+  const { error: pickDeleteError } = await supabase.from('sj_daily_pick_items').delete().eq("daily_pick_id", dailyPick.id);
   if (pickDeleteError) throw pickDeleteError;
 
-  const { error: dailyPickItemsError } = await supabase.from("daily_pick_items").insert([
+  const { error: dailyPickItemsError } = await supabase.from('sj_daily_pick_items').insert([
     { daily_pick_id: dailyPick.id, content_item_id: latestByType.MUST.id, position: 1 },
     { daily_pick_id: dailyPick.id, content_item_id: latestByType.USEFUL.id, position: 2 },
     { daily_pick_id: dailyPick.id, content_item_id: latestByType.ACTION.id, position: 3 }
@@ -545,7 +545,7 @@ async function main() {
   await seedSettings();
   await seedContent();
 
-  const { count } = await supabase.from("content_items").select("*", { count: "exact", head: true });
+  const { count } = await supabase.from('sj_content_items').select("*", { count: "exact", head: true });
   console.log(JSON.stringify({ ok: true, contentCount: count ?? 0, seededDays: 7 }, null, 2));
 }
 

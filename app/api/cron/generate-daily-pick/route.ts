@@ -9,7 +9,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 async function logJob(jobName: string, status: string, details: string) {
   const supabase = createAdminSupabaseClient();
-  await supabase.from("job_logs").insert({
+  await supabase.from('sj_job_logs').insert({
     job_name: jobName,
     status,
     details,
@@ -37,14 +37,14 @@ async function handleCron(request: NextRequest) {
 
   try {
     const { data: existing } = await supabase
-      .from("daily_picks")
+      .from('sj_daily_picks')
       .select("id, status")
       .eq("pick_date", date)
       .maybeSingle();
 
     if (!force && existing?.status === "ready") {
       const { count } = await supabase
-        .from("daily_pick_items")
+        .from('sj_daily_pick_items')
         .select("id", { count: "exact", head: true })
         .eq("daily_pick_id", existing.id);
 
@@ -55,7 +55,7 @@ async function handleCron(request: NextRequest) {
     }
 
     const { data: dailyPick } = await supabase
-      .from("daily_picks")
+      .from('sj_daily_picks')
       .upsert(
         {
           pick_date: date,
@@ -69,7 +69,7 @@ async function handleCron(request: NextRequest) {
 
     const [must, useful, action] = await Promise.all([
       supabase
-        .from("content_items")
+        .from('sj_content_items')
         .select("id")
         .eq("summary_type", "MUST")
         .eq("approval_status", "approved")
@@ -78,7 +78,7 @@ async function handleCron(request: NextRequest) {
         .limit(1)
         .maybeSingle(),
       supabase
-        .from("content_items")
+        .from('sj_content_items')
         .select("id")
         .eq("summary_type", "USEFUL")
         .eq("approval_status", "approved")
@@ -87,7 +87,7 @@ async function handleCron(request: NextRequest) {
         .limit(1)
         .maybeSingle(),
       supabase
-        .from("content_items")
+        .from('sj_content_items')
         .select("id")
         .eq("summary_type", "ACTION")
         .eq("approval_status", "approved")
@@ -99,18 +99,18 @@ async function handleCron(request: NextRequest) {
 
     const selected = [must.data?.id, useful.data?.id, action.data?.id].filter(Boolean);
     if (selected.length !== 3 || !dailyPick) {
-      await supabase.from("daily_picks").update({ status: "failed" }).eq("pick_date", date);
+      await supabase.from('sj_daily_picks').update({ status: "failed" }).eq("pick_date", date);
       await logJob(jobName, "failed", "Not enough approved items for all summary types");
       return NextResponse.json({ error: "Insufficient content" }, { status: 409 });
     }
 
-    await supabase.from("daily_pick_items").delete().eq("daily_pick_id", dailyPick.id);
-    await supabase.from("daily_pick_items").insert([
+    await supabase.from('sj_daily_pick_items').delete().eq("daily_pick_id", dailyPick.id);
+    await supabase.from('sj_daily_pick_items').insert([
       { daily_pick_id: dailyPick.id, content_item_id: must.data!.id, position: 1 },
       { daily_pick_id: dailyPick.id, content_item_id: useful.data!.id, position: 2 },
       { daily_pick_id: dailyPick.id, content_item_id: action.data!.id, position: 3 }
     ]);
-    await supabase.from("daily_picks").update({ status: "ready" }).eq("id", dailyPick.id);
+    await supabase.from('sj_daily_picks').update({ status: "ready" }).eq("id", dailyPick.id);
 
     await logJob(jobName, "success", `${date} daily pick generated`);
     return NextResponse.json({ ok: true });

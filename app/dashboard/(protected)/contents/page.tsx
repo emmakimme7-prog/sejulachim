@@ -10,7 +10,7 @@ export default async function DashboardContentsPage() {
   const data = hasSupabaseServerEnv()
     ? (
         await createAdminSupabaseClient()
-          .from("content_items")
+          .from('sj_content_items')
           .select("id, title, category, sub_interest, source_name, summary_status, approval_status, summary_type, created_at")
           .order("created_at", { ascending: false })
           .limit(50)

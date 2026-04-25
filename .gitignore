@@ -10,3 +10,7 @@ npm-debug.log*
 .DS_Store
 .tmp-*
 .data/
+
+# Additional env files (sensitive)
+.env.prod
+.env.temp

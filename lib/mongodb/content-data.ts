@@ -60,7 +60,7 @@ export async function createManualContentItem(input: {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
 
-    await supabase.from("content_items").insert({
+    await supabase.from('sj_content_items').insert({
       title: input.title,
       category: getStoredCategoryForMainInterest(input.category),
       sub_interest: input.subInterest ?? null,
@@ -134,7 +134,7 @@ export async function createManualContentItem(input: {
 export async function seedDemoContentItems() {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
-    const { count } = await supabase.from("content_items").select("*", { count: "exact", head: true });
+    const { count } = await supabase.from('sj_content_items').select("*", { count: "exact", head: true });
     if ((count ?? 0) >= 5) {
       return;
     }
@@ -228,7 +228,7 @@ export async function seedDemoContentItems() {
       }
     ];
 
-    await supabase.from("content_items").insert(
+    await supabase.from('sj_content_items').insert(
       items.map((item, index) => ({
         ...item,
         approval_status: "approved" as const,
@@ -444,7 +444,7 @@ export async function seedDemoContentItems() {
 export async function listDashboardContentItems() {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
-    const { data } = await supabase.from("content_items").select("*").order("created_at", { ascending: false }).limit(50);
+    const { data } = await supabase.from('sj_content_items').select("*").order("created_at", { ascending: false }).limit(50);
     return data ?? [];
   }
 
@@ -456,7 +456,7 @@ export async function setContentApprovalStatus(id: string, status: "approved" | 
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .update({
         approval_status: status,
         published_at: status === "approved" ? new Date().toISOString() : null,
@@ -489,7 +489,7 @@ export async function claimPendingContentForAi(id: string) {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
     const { data } = await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .update({
         ai_processing_started_at: now,
         updated_at: now
@@ -530,7 +530,7 @@ export async function claimPendingContentForAi(id: string) {
 export async function getContentItemById(id: string) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
-    const { data } = await supabase.from("content_items").select("*").eq("id", id).maybeSingle();
+    const { data } = await supabase.from('sj_content_items').select("*").eq("id", id).maybeSingle();
     return data;
   }
 
@@ -557,7 +557,7 @@ export async function markContentAiCompleted(
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .update({
         title: input.title,
         short_summary: input.shortSummary,
@@ -609,7 +609,7 @@ export async function markContentAiFailed(id: string) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .update({
         ai_status: "failed",
         ai_processing_started_at: null,
@@ -641,7 +641,7 @@ export async function listArchiveContentItems() {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     const { data } = await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .select("*")
       .eq("approval_status", "approved")
       .eq("ai_status", "completed")
@@ -666,11 +666,11 @@ export async function listArchiveContentItems() {
 export async function listUserFavoriteContentItems(userId: string) {
   const supabase = getSupabaseClientIfAvailable();
   if (supabase) {
-    const { data: favorites } = await supabase.from("favorites").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+    const { data: favorites } = await supabase.from('sj_favorites').select("*").eq("user_id", userId).order("created_at", { ascending: false });
     const archiveItems = await listArchiveContentItems();
     const contentIds = (favorites ?? []).map((item) => item.content_item_id).filter((value): value is string => Boolean(value));
     const { data: contentItems } =
-      contentIds.length > 0 ? await supabase.from("content_items").select("*").in("id", contentIds) : { data: [] as Record<string, unknown>[] };
+      contentIds.length > 0 ? await supabase.from('sj_content_items').select("*").in("id", contentIds) : { data: [] as Record<string, unknown>[] };
 
     const itemMap = new Map((contentItems ?? []).map((item) => [String(item.id), item]));
     const archiveBySlug = new Map(
@@ -805,7 +805,7 @@ export async function listUserFavoriteContentItems(userId: string) {
 export async function listUserFavoriteContentSlugs(userId: string) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
-    const { data: favorites } = await supabase.from("favorites").select("*").eq("user_id", userId);
+    const { data: favorites } = await supabase.from('sj_favorites').select("*").eq("user_id", userId);
     const demoById = new Map(DEMO_ARCHIVE_ITEMS.map((item) => [item.id, item.slug]));
 
     return (favorites ?? [])
@@ -831,7 +831,7 @@ export async function toggleFavoriteContentItem(
 ) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
-    const { data: favorites, error: favoritesError } = await supabase.from("favorites").select("*").eq("user_id", userId);
+    const { data: favorites, error: favoritesError } = await supabase.from('sj_favorites').select("*").eq("user_id", userId);
     if (favoritesError) {
       throw favoritesError;
     }
@@ -841,14 +841,14 @@ export async function toggleFavoriteContentItem(
     );
 
     if (existing) {
-      const { error: deleteError } = await supabase.from("favorites").delete().eq("id", existing.id);
+      const { error: deleteError } = await supabase.from('sj_favorites').delete().eq("id", existing.id);
       if (deleteError) {
         throw deleteError;
       }
       return { isFavorite: false };
     }
 
-    const { error: insertError } = await supabase.from("favorites").insert({
+    const { error: insertError } = await supabase.from('sj_favorites').insert({
       user_id: userId,
       content_item_id: input.contentItemId ?? null,
       content_slug: input.slug,
@@ -898,7 +898,7 @@ export async function createSharedLinkRecord(input: {
 
     if (input.shareKey) {
       await supabase
-        .from("shared_links")
+        .from('sj_shared_links')
         .update({
           slugs: input.slugs.slice(0, 10),
           nickname: input.nickname ?? null,
@@ -913,7 +913,7 @@ export async function createSharedLinkRecord(input: {
     }
 
     const shareKey = randomBytes(10).toString("hex");
-    await supabase.from("shared_links").insert({
+    await supabase.from('sj_shared_links').insert({
       user_id: input.userId,
       share_key: shareKey,
       slugs: input.slugs.slice(0, 10),
@@ -972,7 +972,7 @@ export async function createSharedLinkRecord(input: {
 export async function getSharedLinkRecord(shareKey: string) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
-    const { data } = await supabase.from("shared_links").select("*").eq("share_key", shareKey).maybeSingle();
+    const { data } = await supabase.from('sj_shared_links').select("*").eq("share_key", shareKey).maybeSingle();
     return data;
   }
 
@@ -984,9 +984,9 @@ export async function incrementSharedLinkView(shareKey: string) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
-    const { data } = await supabase.from("shared_links").select("view_count").eq("share_key", shareKey).maybeSingle();
+    const { data } = await supabase.from('sj_shared_links').select("view_count").eq("share_key", shareKey).maybeSingle();
     await supabase
-      .from("shared_links")
+      .from('sj_shared_links')
       .update({
         view_count: Number(data?.view_count ?? 0) + 1,
         updated_at: now,
@@ -1010,10 +1010,10 @@ export async function incrementSharedLinkView(shareKey: string) {
 export async function listUserSharedLinks(userId: string) {
   const supabase = getSupabaseClientIfAvailable();
   if (supabase) {
-    const { data: links } = await supabase.from("shared_links").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+    const { data: links } = await supabase.from('sj_shared_links').select("*").eq("user_id", userId).order("created_at", { ascending: false });
     const shareKeys = (links ?? []).map((item) => item.share_key);
     const { data: comments } =
-      shareKeys.length > 0 ? await supabase.from("shared_comments").select("share_key").in("share_key", shareKeys) : { data: [] as { share_key: string }[] };
+      shareKeys.length > 0 ? await supabase.from('sj_shared_comments').select("share_key").in("share_key", shareKeys) : { data: [] as { share_key: string }[] };
     const countMap = new Map<string, number>();
 
     for (const comment of comments ?? []) {
@@ -1046,7 +1046,7 @@ export async function listUserSharedLinks(userId: string) {
 export async function listSharedComments(shareKey: string) {
   const supabase = getSupabaseClientIfAvailable();
   if (supabase) {
-    const { data } = await supabase.from("shared_comments").select("*").eq("share_key", shareKey).order("created_at", { ascending: true });
+    const { data } = await supabase.from('sj_shared_comments').select("*").eq("share_key", shareKey).order("created_at", { ascending: true });
     return data ?? [];
   }
 
@@ -1068,7 +1068,7 @@ export async function createSharedComment(input: {
 
     if (input.parentId) {
       const { data: parent } = await supabase
-        .from("shared_comments")
+        .from('sj_shared_comments')
         .select("*")
         .eq("id", input.parentId)
         .eq("share_key", input.shareKey)
@@ -1094,7 +1094,7 @@ export async function createSharedComment(input: {
       created_at: now
     };
 
-    const { data, error } = await supabase.from("shared_comments").insert(document).select("*").single();
+    const { data, error } = await supabase.from('sj_shared_comments').insert(document).select("*").single();
     if (error || !data) {
       throw new Error("COMMENT_CREATE_FAILED");
     }
@@ -1162,7 +1162,7 @@ export async function createNotification(input: {
 }) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
-    await supabase.from("notifications").insert({
+    await supabase.from('sj_notifications').insert({
       user_id: input.userId,
       type: "share_comment",
       actor_name: input.actorName.slice(0, 30),
@@ -1193,7 +1193,7 @@ export async function createNotification(input: {
 export async function listUserNotifications(userId: string) {
   const supabase = getSupabaseClientIfAvailable();
   if (supabase) {
-    const { data } = await supabase.from("notifications").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(50);
+    const { data } = await supabase.from('sj_notifications').select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(50);
     return data ?? [];
   }
 
@@ -1204,7 +1204,7 @@ export async function listUserNotifications(userId: string) {
 export async function countUnreadNotifications(userId: string) {
   const supabase = getSupabaseClientIfAvailable();
   if (supabase) {
-    const { count } = await supabase.from("notifications").select("*", { count: "exact", head: true }).eq("user_id", userId).eq("is_read", false);
+    const { count } = await supabase.from('sj_notifications').select("*", { count: "exact", head: true }).eq("user_id", userId).eq("is_read", false);
     return count ?? 0;
   }
 
@@ -1216,7 +1216,7 @@ export async function markNotificationRead(notificationId: string, userId: strin
   const supabase = getSupabaseClientIfAvailable();
   if (supabase) {
     await supabase
-      .from("notifications")
+      .from('sj_notifications')
       .update({ is_read: true, read_at: new Date().toISOString() })
       .eq("id", notificationId)
       .eq("user_id", userId);
@@ -1237,7 +1237,7 @@ export async function markNotificationRead(notificationId: string, userId: strin
 export async function markAllNotificationsRead(userId: string) {
   const supabase = getSupabaseClientIfAvailable();
   if (supabase) {
-    await supabase.from("notifications").update({ is_read: true, read_at: new Date().toISOString() }).eq("user_id", userId).eq("is_read", false);
+    await supabase.from('sj_notifications').update({ is_read: true, read_at: new Date().toISOString() }).eq("user_id", userId).eq("is_read", false);
     return;
   }
 
@@ -1252,7 +1252,7 @@ export async function getArchiveContentItemBySlug(slug: string) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     const { data } = await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .select("*")
       .eq("slug", slug)
       .eq("approval_status", "approved")
@@ -1334,11 +1334,11 @@ export async function getDashboardMetrics() {
       recentUsersResult,
       recentSharesResult
     ] = await Promise.all([
-      supabase.from("users").select("*", { count: "exact", head: true }),
-      supabase.from("content_items").select("*", { count: "exact", head: true }),
-      supabase.from("email_logs").select("*").order("sent_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("users").select("created_at").gte("created_at", thirtyDaysAgo),
-      supabase.from("job_logs").select("run_at").eq("job_name", "share.action").gte("run_at", sevenDaysAgo)
+      supabase.from('sj_users').select("*", { count: "exact", head: true }),
+      supabase.from('sj_content_items').select("*", { count: "exact", head: true }),
+      supabase.from('sj_email_logs').select("*").order("sent_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('sj_users').select("created_at").gte("created_at", thirtyDaysAgo),
+      supabase.from('sj_job_logs').select("run_at").eq("job_name", "share.action").gte("run_at", sevenDaysAgo)
     ]);
 
     const recentUsers = recentUsersResult.data ?? [];
@@ -1445,7 +1445,7 @@ export async function getDashboardMetrics() {
 export async function listDashboardEmailLogs() {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
-    const { data } = await supabase.from("email_logs").select("*").order("sent_at", { ascending: false }).limit(30);
+    const { data } = await supabase.from('sj_email_logs').select("*").order("sent_at", { ascending: false }).limit(30);
     return data ?? [];
   }
 
@@ -1456,7 +1456,7 @@ export async function listDashboardEmailLogs() {
 export async function listDashboardJobLogs() {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
-    const { data } = await supabase.from("job_logs").select("*").order("run_at", { ascending: false }).limit(30);
+    const { data } = await supabase.from('sj_job_logs').select("*").order("run_at", { ascending: false }).limit(30);
     return data ?? [];
   }
 
@@ -1490,7 +1490,7 @@ export async function updateContentItem(
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .update({
         title: input.title,
         category: input.category,

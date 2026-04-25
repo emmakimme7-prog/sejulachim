@@ -20,7 +20,7 @@ export default async function NotificationsPage() {
   }
 
   const notifications = hasSupabaseServerEnv()
-    ? ((await createAdminSupabaseClient().from("notifications").select("*").eq("user_id", session.id).order("created_at", { ascending: false }).limit(50)).data ?? [])
+    ? ((await createAdminSupabaseClient().from('sj_notifications').select("*").eq("user_id", session.id).order("created_at", { ascending: false }).limit(50)).data ?? [])
     : await listUserNotifications(session.id);
 
   return (

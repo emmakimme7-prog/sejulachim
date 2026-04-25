@@ -10,7 +10,7 @@ import { getKstDateParts } from "@/lib/utils";
 
 async function logJob(jobName: string, status: string, details: string) {
   const supabase = createAdminSupabaseClient();
-  await supabase.from("job_logs").insert({
+  await supabase.from('sj_job_logs').insert({
     job_name: jobName,
     status,
     details,

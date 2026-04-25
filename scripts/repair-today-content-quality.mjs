@@ -258,7 +258,7 @@ async function main() {
       updated_at: new Date().toISOString()
     };
 
-    const { error } = await supabase.from("content_items").update(payload).eq("slug", slug);
+    const { error } = await supabase.from('sj_content_items').update(payload).eq("slug", slug);
     if (error) {
       throw error;
     }

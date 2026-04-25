@@ -33,7 +33,7 @@ export async function generateAndStoreContentAudio(
 
   const supabase = createAdminSupabaseClient();
   const { data: content, error: fetchError } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id, title, short_summary, action_line, audio_url")
     .eq("id", contentId)
     .maybeSingle();
@@ -82,7 +82,7 @@ export async function generateAndStoreContentAudio(
   }
 
   const { error: updateError } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .update({ audio_url: audioUrl, audio_generated_at: new Date().toISOString() })
     .eq("id", content.id);
 

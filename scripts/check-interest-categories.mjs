@@ -28,7 +28,7 @@ const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
 
 console.log("=== user_interest_selections 카테고리 분포 ===");
 const { data: interests, error: e1 } = await supabase
-  .from("user_interest_selections")
+  .from('sj_user_interest_selections')
   .select("main_interest");
 if (e1) {
   console.error("error:", e1);
@@ -42,7 +42,7 @@ if (e1) {
 
 console.log("\n=== content_items 카테고리 분포 ===");
 const { data: contents, error: e2 } = await supabase
-  .from("content_items")
+  .from('sj_content_items')
   .select("category");
 if (e2) {
   console.error("error:", e2);

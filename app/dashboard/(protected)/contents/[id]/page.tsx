@@ -21,7 +21,7 @@ export default async function DashboardContentDetailPage({ params }: PageProps) 
   const item = hasSupabaseServerEnv()
     ? (
         await createAdminSupabaseClient()
-          .from("content_items")
+          .from('sj_content_items')
           .select("*")
           .eq("id", id)
           .maybeSingle()

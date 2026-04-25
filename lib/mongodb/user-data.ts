@@ -49,7 +49,7 @@ export async function ensureMongoIndexes() {
 export async function findUserByEmail(email: string) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
-    const { data } = await supabase.from("users").select("*").eq("email", email).maybeSingle();
+    const { data } = await supabase.from('sj_users').select("*").eq("email", email).maybeSingle();
     return data ? { ...data, id: data.id } : null;
   }
 
@@ -68,7 +68,7 @@ export async function findUserByEmail(email: string) {
 export async function findUserById(userId: string) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
-    const { data } = await supabase.from("users").select("*").eq("id", userId).maybeSingle();
+    const { data } = await supabase.from('sj_users').select("*").eq("id", userId).maybeSingle();
     return data ? { ...data, id: data.id } : null;
   }
 
@@ -91,7 +91,7 @@ export async function listUserInterestSelections(userId: string) {
     if (hasSupabaseServerEnv()) {
       const supabase = createAdminSupabaseClient();
       const { data } = await supabase
-        .from("user_interest_selections")
+        .from('sj_user_interest_selections')
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: true });
@@ -120,7 +120,7 @@ export async function updateUserPreferences(input: {
     const now = new Date().toISOString();
 
     const userUpdate = await supabase
-      .from("users")
+      .from('sj_users')
       .update({
         delivery_time: input.deliveryTime,
         updated_at: now
@@ -132,7 +132,7 @@ export async function updateUserPreferences(input: {
     }
 
     const deleteResult = await supabase
-      .from("user_interest_selections")
+      .from('sj_user_interest_selections')
       .delete()
       .eq("user_id", input.userId);
     if (deleteResult.error) {
@@ -141,7 +141,7 @@ export async function updateUserPreferences(input: {
     }
 
     if (input.interests.length > 0) {
-      const insertResult = await supabase.from("user_interest_selections").insert(
+      const insertResult = await supabase.from('sj_user_interest_selections').insert(
         input.interests.map((interest) => ({
           user_id: input.userId,
           main_interest: getStoredCategoryForMainInterest(interest),
@@ -196,7 +196,7 @@ export async function updateUserActiveStatus(userId: string, isActive: boolean) 
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
     await supabase
-      .from("users")
+      .from('sj_users')
       .update({
         is_active: isActive,
         unsubscribed_at: isActive ? null : now,
@@ -233,7 +233,7 @@ export async function deleteUserAccount(userId: string) {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
     await supabase
-      .from("users")
+      .from('sj_users')
       .update({
         is_active: false,
         deleted_at: now,
@@ -272,7 +272,7 @@ export async function cancelAccountDeletion(userId: string) {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
     await supabase
-      .from("users")
+      .from('sj_users')
       .update({
         is_active: true,
         deleted_at: null,
@@ -301,7 +301,7 @@ export async function listExpiredDeletedUsers() {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     const { data } = await supabase
-      .from("users")
+      .from('sj_users')
       .select("id, email")
       .not("deleted_at", "is", null)
       .lte("deleted_at", thirtyDaysAgo);
@@ -322,7 +322,7 @@ export async function hardDeleteUser(userId: string) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     // user_interest_selections, favorites, shared_links 등은 ON DELETE CASCADE
-    await supabase.from("users").delete().eq("id", userId);
+    await supabase.from('sj_users').delete().eq("id", userId);
     return;
   }
 
@@ -346,7 +346,7 @@ export async function updateUserProfile(input: {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
     await supabase
-      .from("users")
+      .from('sj_users')
       .update({
         nickname: input.nickname,
         avatar_key: input.avatarKey,
@@ -427,7 +427,7 @@ export async function upsertSubscriberSignup(input: {
 
     // 1차 시도: 신규 컬럼(phone, delivery_kakao, delivery_email) 포함
     let upsertResult = await supabase
-      .from("users")
+      .from('sj_users')
       .upsert({ ...baseUpsert, ...channelsPatch }, { onConflict: "email", ignoreDuplicates: false })
       .select("id,email")
       .single();
@@ -436,7 +436,7 @@ export async function upsertSubscriberSignup(input: {
     if (upsertResult.error && /column .* does not exist/i.test(upsertResult.error.message ?? "")) {
       console.warn("[upsertSubscriberSignup] new channel columns missing; retrying without phone/delivery_kakao/delivery_email/marketing_consent_at. Apply migrations 009+011 to enable.");
       upsertResult = await supabase
-        .from("users")
+        .from('sj_users')
         .upsert(baseUpsert, { onConflict: "email", ignoreDuplicates: false })
         .select("id,email")
         .single();
@@ -448,10 +448,10 @@ export async function upsertSubscriberSignup(input: {
       throw new Error("SUPABASE_USER_UPSERT_FAILED");
     }
 
-    await supabase.from("user_interest_selections").delete().eq("user_id", user.id);
+    await supabase.from('sj_user_interest_selections').delete().eq("user_id", user.id);
 
     if (input.interests.length > 0) {
-      await supabase.from("user_interest_selections").insert(
+      await supabase.from('sj_user_interest_selections').insert(
         input.interests.map((interest) => ({
           user_id: user.id,
           main_interest: getStoredCategoryForMainInterest(interest),
@@ -527,7 +527,7 @@ export async function createUnsubscribeToken(userId: string) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     const token = randomBytes(32).toString("hex");
-    await supabase.from("unsubscribe_tokens").insert({
+    await supabase.from('sj_unsubscribe_tokens').insert({
       user_id: userId,
       token_hash: hashToken(token),
       created_at: new Date().toISOString(),
@@ -557,7 +557,7 @@ export async function markUserUnsubscribedByToken(rawToken: string) {
     const tokenHash = hashToken(rawToken);
     const now = new Date().toISOString();
     const { data: tokenRow } = await supabase
-      .from("unsubscribe_tokens")
+      .from('sj_unsubscribe_tokens')
       .select("*")
       .eq("token_hash", tokenHash)
       .is("used_at", null)
@@ -567,8 +567,8 @@ export async function markUserUnsubscribedByToken(rawToken: string) {
       return false;
     }
 
-    await supabase.from("users").update({ is_active: false, unsubscribed_at: now, updated_at: now }).eq("id", tokenRow.user_id);
-    await supabase.from("unsubscribe_tokens").update({ used_at: now }).eq("id", tokenRow.id);
+    await supabase.from('sj_users').update({ is_active: false, unsubscribed_at: now, updated_at: now }).eq("id", tokenRow.user_id);
+    await supabase.from('sj_unsubscribe_tokens').update({ used_at: now }).eq("id", tokenRow.id);
     return true;
   }
 
@@ -609,7 +609,7 @@ export async function createMagicLinkToken(userId: string) {
     const supabase = createAdminSupabaseClient();
     const rawToken = randomBytes(32).toString("hex");
     const now = Date.now();
-    await supabase.from("magic_link_tokens").insert({
+    await supabase.from('sj_magic_link_tokens').insert({
       user_id: userId,
       token_hash: hashToken(rawToken),
       expires_at: new Date(now + 1000 * 60 * 15).toISOString(),
@@ -642,7 +642,7 @@ export async function consumeMagicLinkToken(rawToken: string) {
     const now = new Date().toISOString();
     const tokenHash = hashToken(rawToken);
     const { data: tokenRow } = await supabase
-      .from("magic_link_tokens")
+      .from('sj_magic_link_tokens')
       .select("*")
       .eq("token_hash", tokenHash)
       .is("used_at", null)
@@ -653,7 +653,7 @@ export async function consumeMagicLinkToken(rawToken: string) {
       return null;
     }
 
-    await supabase.from("magic_link_tokens").update({ used_at: now }).eq("id", tokenRow.id);
+    await supabase.from('sj_magic_link_tokens').update({ used_at: now }).eq("id", tokenRow.id);
     return findUserById(tokenRow.user_id);
   }
 
@@ -681,7 +681,7 @@ export async function createPasswordResetToken(userId: string) {
     const supabase = createAdminSupabaseClient();
     const rawToken = randomBytes(32).toString("hex");
     const now = Date.now();
-    await supabase.from("password_reset_tokens").insert({
+    await supabase.from('sj_password_reset_tokens').insert({
       user_id: userId,
       token_hash: hashToken(rawToken),
       expires_at: new Date(now + 1000 * 60 * 15).toISOString(),
@@ -714,7 +714,7 @@ export async function consumePasswordResetToken(rawToken: string) {
     const now = new Date().toISOString();
     const tokenHash = hashToken(rawToken);
     const { data: tokenRow } = await supabase
-      .from("password_reset_tokens")
+      .from('sj_password_reset_tokens')
       .select("*")
       .eq("token_hash", tokenHash)
       .is("used_at", null)
@@ -725,7 +725,7 @@ export async function consumePasswordResetToken(rawToken: string) {
       return null;
     }
 
-    await supabase.from("password_reset_tokens").update({ used_at: now }).eq("id", tokenRow.id);
+    await supabase.from('sj_password_reset_tokens').update({ used_at: now }).eq("id", tokenRow.id);
     return findUserById(tokenRow.user_id);
   }
 
@@ -753,7 +753,7 @@ export async function updateUserPassword(userId: string, passwordHash: string) {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
     await supabase
-      .from("users")
+      .from('sj_users')
       .update({
         has_password: true,
         password_hash: passwordHash,
@@ -789,7 +789,7 @@ export async function listDashboardUsers() {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     const { data } = await supabase
-      .from("users")
+      .from('sj_users')
       .select("id, email, nickname, avatar_key, avatar_data_url, created_at, delivery_time, is_active, has_password, user_interest_selections(main_interest, sub_interest)")
       .order("created_at", { ascending: false })
       .limit(100);
@@ -820,10 +820,10 @@ export async function getDashboardUserDetail(userId: string) {
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     const [{ data: user }, { data: interests }, { data: emailLogs }, { data: jobLogs }] = await Promise.all([
-      supabase.from("users").select("*").eq("id", userId).maybeSingle(),
-      supabase.from("user_interest_selections").select("*").eq("user_id", userId),
-      supabase.from("email_logs").select("*").eq("user_id", userId).order("sent_at", { ascending: false }).limit(20),
-      supabase.from("job_logs").select("*").order("run_at", { ascending: false }).limit(20)
+      supabase.from('sj_users').select("*").eq("id", userId).maybeSingle(),
+      supabase.from('sj_user_interest_selections').select("*").eq("user_id", userId),
+      supabase.from('sj_email_logs').select("*").eq("user_id", userId).order("sent_at", { ascending: false }).limit(20),
+      supabase.from('sj_job_logs').select("*").order("run_at", { ascending: false }).limit(20)
     ]);
 
     if (!user) {
@@ -934,7 +934,7 @@ export async function addSecurityJobLog(jobName: string, status: string, details
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
-    await supabase.from("job_logs").insert({
+    await supabase.from('sj_job_logs').insert({
       job_name: jobName,
       run_at: now,
       status,

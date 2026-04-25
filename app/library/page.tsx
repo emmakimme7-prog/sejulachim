@@ -26,7 +26,7 @@ export default async function LibraryPage() {
         const supabase = createAdminSupabaseClient();
         const [archiveRows, favoriteItems, shareItems] = await Promise.all([
           supabase
-            .from("content_items")
+            .from('sj_content_items')
             .select("*")
             .eq("approval_status", "approved")
             .or("summary_status.eq.done,ai_status.eq.completed")

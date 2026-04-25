@@ -23,7 +23,7 @@ const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
 });
 
 const { data, count } = await supabase
-  .from("content_items")
+  .from('sj_content_items')
   .select("id, title, slug, category, thumbnail_url, published_at", { count: "exact" })
   .order("published_at", { ascending: false })
   .limit(15);
@@ -37,11 +37,11 @@ for (const r of data ?? []) {
 
 // Stats
 const { count: withThumb } = await supabase
-  .from("content_items")
+  .from('sj_content_items')
   .select("id", { count: "exact", head: true })
   .not("thumbnail_url", "is", null);
 const { count: noThumb } = await supabase
-  .from("content_items")
+  .from('sj_content_items')
   .select("id", { count: "exact", head: true })
   .is("thumbnail_url", null);
 console.log(`\nthumbnail_url 있음: ${withThumb} / 없음: ${noThumb}`);

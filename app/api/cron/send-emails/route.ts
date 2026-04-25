@@ -46,7 +46,7 @@ type EmailCard = {
 
 async function logJob(jobName: string, status: string, details: string) {
   const supabase = createAdminSupabaseClient();
-  await supabase.from("job_logs").insert({
+  await supabase.from('sj_job_logs').insert({
     job_name: jobName,
     status,
     details,
@@ -71,7 +71,7 @@ function toEmailCard(item: Record<string, unknown>, mainInterest?: string): Emai
 async function findLatestApprovedCard(mainInterest: string, subInterest?: string | null) {
   const supabase = createAdminSupabaseClient();
   let query = supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("*")
     .eq("approval_status", "approved")
     .eq("category", mainInterest)
@@ -94,7 +94,7 @@ async function findLatestApprovedCard(mainInterest: string, subInterest?: string
 async function buildUserCards(userId: string) {
   const supabase = createAdminSupabaseClient();
   const { data: selections } = await supabase
-    .from("user_interest_selections")
+    .from('sj_user_interest_selections')
     .select("main_interest, sub_interest, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
@@ -122,7 +122,7 @@ async function buildUserCards(userId: string) {
 
   if (cards.length < 3) {
     const { data: fallbackItems } = await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .select("*")
       .eq("approval_status", "approved")
       .or("summary_status.eq.done,ai_status.eq.completed")
@@ -176,7 +176,7 @@ async function handleCron(request: NextRequest) {
   try {
     const now = new Date().toISOString();
     const { data: dailyPick } = await supabase
-      .from("daily_picks")
+      .from('sj_daily_picks')
       .upsert(
         {
           pick_date: date,
@@ -195,7 +195,7 @@ async function handleCron(request: NextRequest) {
     // 7:30 KST 일괄 발송 — 활성/구독 중인 모든 사용자.
     // 채널 컬럼(delivery_kakao, delivery_email, phone, marketing_consent_at)은 DB에 있으면 가져옴
     const { data: users } = await supabase
-      .from("users")
+      .from('sj_users')
       .select("id, email, phone, delivery_kakao, delivery_email, marketing_consent_at")
       .eq("is_active", true)
       .is("unsubscribed_at", null);
@@ -213,7 +213,7 @@ async function handleCron(request: NextRequest) {
       const useEmail = hasMarketingConsent && user.delivery_email === true;
 
       const { data: existingLog } = await supabase
-        .from("email_logs")
+        .from('sj_email_logs')
         .select("id")
         .eq("user_id", userId)
         .eq("daily_pick_id", dailyPick.id)
@@ -222,7 +222,7 @@ async function handleCron(request: NextRequest) {
       const cards = await buildUserCards(userId);
       if (cards.length !== 3) {
         if (!existingLog) {
-          await supabase.from("email_logs").insert({
+          await supabase.from('sj_email_logs').insert({
             user_id: userId,
             daily_pick_id: dailyPick.id,
             status: "failed",
@@ -238,7 +238,7 @@ async function handleCron(request: NextRequest) {
       // === KAKAO 발송 ===
       if (useKakao && user.phone) {
         const { data: existingKakaoLog } = await supabase
-          .from("kakao_logs")
+          .from('sj_kakao_logs')
           .select("id")
           .eq("user_id", userId)
           .eq("daily_pick_id", dailyPick.id)
@@ -247,7 +247,7 @@ async function handleCron(request: NextRequest) {
 
         if (!existingKakaoLog) {
           const { data: pendingKakaoLog } = await supabase
-            .from("kakao_logs")
+            .from('sj_kakao_logs')
             .insert({
               user_id: userId,
               daily_pick_id: dailyPick.id,
@@ -264,7 +264,7 @@ async function handleCron(request: NextRequest) {
           if (result.ok) {
             if (pendingKakaoLog?.id) {
               await supabase
-                .from("kakao_logs")
+                .from('sj_kakao_logs')
                 .update({
                   status: "sent",
                   provider_group_id: result.groupId,
@@ -278,7 +278,7 @@ async function handleCron(request: NextRequest) {
             console.warn("[cron:send-emails] kakao send failed", { userId, reason: result.reason, detail: result.detail });
             if (pendingKakaoLog?.id) {
               await supabase
-                .from("kakao_logs")
+                .from('sj_kakao_logs')
                 .update({
                   status: "failed",
                   error_detail: `${result.reason}:${result.detail ?? ""}`.slice(0, 500),
@@ -297,7 +297,7 @@ async function handleCron(request: NextRequest) {
       }
 
       const { data: pendingLog } = await supabase
-        .from("email_logs")
+        .from('sj_email_logs')
         .insert({
           user_id: userId,
           daily_pick_id: dailyPick.id,
@@ -336,12 +336,12 @@ async function handleCron(request: NextRequest) {
       if (lastError) {
         console.error("[cron:send-emails] send failed", { userId, email: user.email, error: lastError });
         if (pendingLog?.id) {
-          await supabase.from("email_logs").update({ status: "failed", sent_at: new Date().toISOString() }).eq("id", pendingLog.id);
+          await supabase.from('sj_email_logs').update({ status: "failed", sent_at: new Date().toISOString() }).eq("id", pendingLog.id);
         }
       } else {
         if (pendingLog?.id) {
           await supabase
-            .from("email_logs")
+            .from('sj_email_logs')
             .update({
               status: "sent",
               provider_message_id: sendResult?.data?.id ?? null,

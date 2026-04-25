@@ -27,7 +27,7 @@ const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
 });
 
 const { count, error } = await supabase
-  .from("coupang_product_cache")
+  .from('sj_coupang_product_cache')
   .select("keyword", { count: "exact", head: true });
 
 if (error) {

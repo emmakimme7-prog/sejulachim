@@ -19,10 +19,10 @@ export async function POST(request: NextRequest, { params }: RouteProps) {
       throw new Error("SUPABASE_ENV_MISSING");
     }
     const supabase = createAdminSupabaseClient();
-    await supabase.from("content_items").update({ summary_status: "processing", updated_at: new Date().toISOString() }).eq("id", id);
+    await supabase.from('sj_content_items').update({ summary_status: "processing", updated_at: new Date().toISOString() }).eq("id", id);
 
     const { data: item } = await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .select("id, title, category, sub_interest, raw_text, summary_type, short_summary")
       .eq("id", id)
       .single();
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest, { params }: RouteProps) {
     });
 
     await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .update({
         title: sanitizePlainText(summarized.title, 30),
         short_summary: sanitizePlainText(summarized.shortSummary, 300),
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest, { params }: RouteProps) {
     const { id } = await params;
     if (hasSupabaseServerEnv()) {
       const supabase = createAdminSupabaseClient();
-      await supabase.from("content_items").update({ ai_status: "failed", summary_status: "failed", updated_at: new Date().toISOString() }).eq("id", id);
+      await supabase.from('sj_content_items').update({ ai_status: "failed", summary_status: "failed", updated_at: new Date().toISOString() }).eq("id", id);
     }
   }
 

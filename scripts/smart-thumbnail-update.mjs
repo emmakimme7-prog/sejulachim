@@ -305,7 +305,7 @@ async function main() {
   const slugArg = process.argv.find((a) => a.startsWith("--slug="))?.slice(7);
 
   const { data: items, error } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id, slug, title, category, sub_interest, thumbnail_url")
     .order("published_at", { ascending: false });
 
@@ -337,7 +337,7 @@ async function main() {
     const isPixabay = result.url.includes("pixabay");
     const permanentUrl = isPixabay ? await rehostToStorage(result.url, item.slug) : result.url;
 
-    const { error: updateError } = await supabase.from("content_items").update({
+    const { error: updateError } = await supabase.from('sj_content_items').update({
       thumbnail_url: permanentUrl,
       thumbnail_alt: result.alt || item.title,
       thumbnail_page_url: result.pageUrl,

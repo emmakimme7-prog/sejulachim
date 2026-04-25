@@ -100,7 +100,7 @@ function isMismatchedContent(item) {
 
 async function main() {
   const { data, error } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id, slug, title, source_name, raw_text, short_summary, long_summary")
     .eq("approval_status", "approved");
 
@@ -118,16 +118,16 @@ async function main() {
   const slugs = targets.map((item) => item.slug).filter(Boolean);
 
   if (ids.length > 0) {
-    const { error: favoriteByIdError } = await supabase.from("favorites").delete().in("content_item_id", ids);
+    const { error: favoriteByIdError } = await supabase.from('sj_favorites').delete().in("content_item_id", ids);
     if (favoriteByIdError) throw favoriteByIdError;
   }
 
   if (slugs.length > 0) {
-    const { error: favoriteBySlugError } = await supabase.from("favorites").delete().in("content_slug", slugs);
+    const { error: favoriteBySlugError } = await supabase.from('sj_favorites').delete().in("content_slug", slugs);
     if (favoriteBySlugError) throw favoriteBySlugError;
   }
 
-  const { data: sharedLinks, error: sharedLinksSelectError } = await supabase.from("shared_links").select("share_key, slugs");
+  const { data: sharedLinks, error: sharedLinksSelectError } = await supabase.from('sj_shared_links').select("share_key, slugs");
   if (sharedLinksSelectError) throw sharedLinksSelectError;
 
   const linkedShareKeys = (sharedLinks ?? [])
@@ -136,14 +136,14 @@ async function main() {
     .filter(Boolean);
 
   if (linkedShareKeys.length > 0) {
-    const { error: sharedCommentsError } = await supabase.from("shared_comments").delete().in("share_key", linkedShareKeys);
+    const { error: sharedCommentsError } = await supabase.from('sj_shared_comments').delete().in("share_key", linkedShareKeys);
     if (sharedCommentsError) throw sharedCommentsError;
 
-    const { error: sharedLinksError } = await supabase.from("shared_links").delete().in("share_key", linkedShareKeys);
+    const { error: sharedLinksError } = await supabase.from('sj_shared_links').delete().in("share_key", linkedShareKeys);
     if (sharedLinksError) throw sharedLinksError;
   }
 
-  const { error: deleteError } = await supabase.from("content_items").delete().in("id", ids);
+  const { error: deleteError } = await supabase.from('sj_content_items').delete().in("id", ids);
   if (deleteError) throw deleteError;
 
   console.log(

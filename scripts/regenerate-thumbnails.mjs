@@ -329,7 +329,7 @@ async function main() {
   const replaceAll = process.argv.includes("--all");
 
   let query = supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id, title, category, sub_interest, short_summary, slug, thumbnail_url")
     .order("published_at", { ascending: false });
 
@@ -366,7 +366,7 @@ async function main() {
       updated_at: new Date().toISOString()
     };
 
-    const { error: updateError } = await supabase.from("content_items").update(payload).eq("id", item.id);
+    const { error: updateError } = await supabase.from('sj_content_items').update(payload).eq("id", item.id);
     if (updateError) {
       console.error(`[error] ${item.slug}:`, updateError.message);
       continue;

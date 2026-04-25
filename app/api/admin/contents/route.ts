@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createAdminSupabaseClient();
-    await supabase.from("content_items").insert({
+    await supabase.from('sj_content_items').insert({
       title: sanitizePlainText(payload.title, 160),
       category: payload.category,
       sub_interest: payload.subInterest ? sanitizePlainText(payload.subInterest, 80) : null,

@@ -857,7 +857,7 @@ async function main() {
   let ok = 0, fail = 0;
   for (const slug of slugs) {
     const { error } = await sb
-      .from("content_items")
+      .from('sj_content_items')
       .update({ long_summary: updates[slug], updated_at: new Date().toISOString() })
       .eq("slug", slug);
 

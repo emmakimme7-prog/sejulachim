@@ -123,7 +123,7 @@ async function fetchAndCache(keyword) {
 
   const products = payload.data?.productData ?? [];
   const now = new Date();
-  await supabase.from("coupang_product_cache").upsert({
+  await supabase.from('sj_coupang_product_cache').upsert({
     keyword,
     products,
     cached_at: now.toISOString(),

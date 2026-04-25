@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const deviceType = parseDeviceType(userAgent);
 
     const supabase = createAdminSupabaseClient();
-    await supabase.from("page_views").insert({
+    await supabase.from('sj_page_views').insert({
       session_id: sessionId,
       path,
       referrer,

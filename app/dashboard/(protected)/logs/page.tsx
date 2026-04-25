@@ -10,12 +10,12 @@ export default async function DashboardLogsPage() {
         const supabase = createAdminSupabaseClient();
         const [{ data: emailLogs }, { data: jobLogs }] = await Promise.all([
           supabase
-            .from("email_logs")
+            .from('sj_email_logs')
             .select("id, status, sent_at, provider_message_id, user_id")
             .order("sent_at", { ascending: false })
             .limit(30),
           supabase
-            .from("job_logs")
+            .from('sj_job_logs')
             .select("id, job_name, run_at, status, details")
             .order("run_at", { ascending: false })
             .limit(30)
@@ -23,7 +23,7 @@ export default async function DashboardLogsPage() {
 
         const userIds = [...new Set((emailLogs ?? []).map((item) => item.user_id).filter(Boolean))];
         const { data: users } = userIds.length
-          ? await supabase.from("users").select("id, email").in("id", userIds)
+          ? await supabase.from('sj_users').select("id, email").in("id", userIds)
           : { data: [] as Array<{ id: string; email: string }> };
         const emailWithUser = (emailLogs ?? []).map((item) => ({
           ...item,

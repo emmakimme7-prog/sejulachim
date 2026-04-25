@@ -51,7 +51,7 @@ export function getDefaultHomeHeroSettings(): HomeHeroSettings {
 const getCachedTodaySectionSettingsFromSupabase = unstable_cache(
   async (): Promise<TodaySectionSettings> => {
     const supabase = createAdminSupabaseClient();
-    const { data: row } = await supabase.from("site_settings").select("*").eq("key", TODAY_SECTION_KEY).maybeSingle();
+    const { data: row } = await supabase.from('sj_site_settings').select("*").eq("key", TODAY_SECTION_KEY).maybeSingle();
     const fallback = getDefaultTodaySectionSettings();
 
     if (!row) {
@@ -74,7 +74,7 @@ const getCachedTodaySectionSettingsFromSupabase = unstable_cache(
 const getCachedHomeHeroSettingsFromSupabase = unstable_cache(
   async (): Promise<HomeHeroSettings> => {
     const supabase = createAdminSupabaseClient();
-    const { data: row } = await supabase.from("site_settings").select("*").eq("key", HOME_HERO_KEY).maybeSingle();
+    const { data: row } = await supabase.from('sj_site_settings').select("*").eq("key", HOME_HERO_KEY).maybeSingle();
     const fallback = getDefaultHomeHeroSettings();
 
     if (!row) {
@@ -149,7 +149,7 @@ export async function updateTodaySectionSettings(input: TodaySectionSettings) {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
 
-    await supabase.from("site_settings").upsert(
+    await supabase.from('sj_site_settings').upsert(
       {
         key: TODAY_SECTION_KEY,
         section_title: input.sectionTitle.trim(),
@@ -196,7 +196,7 @@ export async function updateHomeHeroSettings(input: HomeHeroSettings) {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
 
-    await supabase.from("site_settings").upsert(
+    await supabase.from('sj_site_settings').upsert(
       {
         key: HOME_HERO_KEY,
         title: input.title.trim(),

@@ -83,7 +83,7 @@ async function shortenTitle(title, category, subInterest) {
 
 async function main() {
   const { data: items, error } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id, title, category, sub_interest, slug")
     .order("published_at", { ascending: false });
 
@@ -100,7 +100,7 @@ async function main() {
     }
 
     const { error: updateError } = await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .update({ title: nextTitle, updated_at: new Date().toISOString() })
       .eq("id", item.id);
 

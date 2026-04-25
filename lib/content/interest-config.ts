@@ -33,7 +33,7 @@ export function getDefaultInterestConfig(): InterestConfig {
 const getCachedInterestConfigFromSupabase = unstable_cache(
   async (): Promise<InterestConfig> => {
     const supabase = createAdminSupabaseClient();
-    const { data } = await supabase.from("site_settings").select("*").eq("key", "interest_config").maybeSingle();
+    const { data } = await supabase.from('sj_site_settings').select("*").eq("key", "interest_config").maybeSingle();
 
     let stored: StoredInterestConfig | null = null;
     if (data && typeof (data as { value?: unknown }).value === "object") {
@@ -112,7 +112,7 @@ export async function updateInterestConfig(input: Array<{ key: string; label: st
     order: item.order
   }));
 
-  await supabase.from("site_settings").upsert(
+  await supabase.from('sj_site_settings').upsert(
     {
       key: "interest_config",
       title: JSON.stringify({
@@ -132,7 +132,7 @@ export async function seedDefaultInterestConfig() {
   }
 
   const supabase = createAdminSupabaseClient();
-  const { data } = await supabase.from("site_settings").select("key").eq("key", "interest_config").maybeSingle();
+  const { data } = await supabase.from('sj_site_settings').select("key").eq("key", "interest_config").maybeSingle();
   if (data?.key) {
     return;
   }

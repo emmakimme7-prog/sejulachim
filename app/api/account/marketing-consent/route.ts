@@ -28,7 +28,7 @@ export async function DELETE(request: NextRequest) {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
     const { error } = await supabase
-      .from("users")
+      .from('sj_users')
       .update({
         marketing_consent_at: null,
         unsubscribed_at: now,
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminSupabaseClient();
     const now = new Date().toISOString();
     const { error } = await supabase
-      .from("users")
+      .from('sj_users')
       .update({
         marketing_consent_at: now,
         unsubscribed_at: null,

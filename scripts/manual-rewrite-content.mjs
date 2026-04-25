@@ -988,7 +988,7 @@ function buildActionLine(item) {
 
 async function main() {
   const { data, error } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id, title, short_summary, long_summary, action_line, category, sub_interest, source_name, raw_text")
     .eq("approval_status", "approved");
 
@@ -1012,7 +1012,7 @@ async function main() {
 
   for (const update of updates) {
     const { error: updateError } = await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .update({
         title: update.title,
         short_summary: update.short_summary,

@@ -21,18 +21,18 @@ export default async function DashboardPage() {
         const sevenDaysAgo = getSevenDaysAgoIso();
         const thirtyDaysAgo = getThirtyDaysAgoIso();
         const [{ count: userCount }, { count: contentCount }, { data: latestEmailLog }, { count: recentSignupCount }, { count: recentShareCount }, { data: recentUsers }, { data: recentShares }] = await Promise.all([
-          supabase.from("users").select("*", { count: "exact", head: true }),
-          supabase.from("content_items").select("*", { count: "exact", head: true }),
+          supabase.from('sj_users').select("*", { count: "exact", head: true }),
+          supabase.from('sj_content_items').select("*", { count: "exact", head: true }),
           supabase
-            .from("email_logs")
+            .from('sj_email_logs')
             .select("status, sent_at")
             .order("sent_at", { ascending: false })
             .limit(1)
             .maybeSingle(),
-          supabase.from("users").select("*", { count: "exact", head: true }).gte("created_at", sevenDaysAgo),
-          supabase.from("job_logs").select("*", { count: "exact", head: true }).eq("job_name", "share.action").gte("run_at", sevenDaysAgo),
-          supabase.from("users").select("created_at").gte("created_at", thirtyDaysAgo),
-          supabase.from("job_logs").select("run_at").eq("job_name", "share.action").gte("run_at", sevenDaysAgo)
+          supabase.from('sj_users').select("*", { count: "exact", head: true }).gte("created_at", sevenDaysAgo),
+          supabase.from('sj_job_logs').select("*", { count: "exact", head: true }).eq("job_name", "share.action").gte("run_at", sevenDaysAgo),
+          supabase.from('sj_users').select("created_at").gte("created_at", thirtyDaysAgo),
+          supabase.from('sj_job_logs').select("run_at").eq("job_name", "share.action").gte("run_at", sevenDaysAgo)
         ]);
 
         const weeklyLabels = ["1일", "2일", "3일", "4일", "5일", "6일", "7일"];

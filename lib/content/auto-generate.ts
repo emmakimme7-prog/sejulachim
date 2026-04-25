@@ -527,7 +527,7 @@ export async function generateDailyContentForDate(date = getKstDateParts().date)
 
   if (rows.length > 0) {
     const { data: inserted, error } = await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .upsert(rows, { onConflict: "slug" })
       .select("id, audio_url");
     if (error) {

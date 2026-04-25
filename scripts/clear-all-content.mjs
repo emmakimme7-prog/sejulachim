@@ -38,19 +38,19 @@ const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
 });
 
 async function main() {
-  const { data: contentItems, error: selectError } = await supabase.from("content_items").select("id, slug");
+  const { data: contentItems, error: selectError } = await supabase.from('sj_content_items').select("id, slug");
   if (selectError) throw selectError;
 
   const contentIds = (contentItems ?? []).map((row) => row.id);
   const contentSlugs = (contentItems ?? []).map((row) => row.slug).filter(Boolean);
 
   if (contentIds.length > 0) {
-    const { error } = await supabase.from("favorites").delete().in("content_item_id", contentIds);
+    const { error } = await supabase.from('sj_favorites').delete().in("content_item_id", contentIds);
     if (error) throw error;
   }
 
   if (contentSlugs.length > 0) {
-    const { error } = await supabase.from("favorites").delete().in("content_slug", contentSlugs);
+    const { error } = await supabase.from('sj_favorites').delete().in("content_slug", contentSlugs);
     if (error) throw error;
   }
 
@@ -68,7 +68,7 @@ async function main() {
   await wipeAll("job_logs");
   await wipeAll("content_items");
 
-  const { count, error: countError } = await supabase.from("content_items").select("*", { count: "exact", head: true });
+  const { count, error: countError } = await supabase.from('sj_content_items').select("*", { count: "exact", head: true });
   if (countError) throw countError;
 
   console.log(

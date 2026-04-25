@@ -16,7 +16,7 @@ export async function POST(request: NextRequest, { params }: RouteProps) {
       throw new Error("SUPABASE_ENV_MISSING");
     }
     const supabase = createAdminSupabaseClient();
-    await supabase.from("content_items").update({ approval_status: "rejected", published_at: null }).eq("id", id);
+    await supabase.from('sj_content_items').update({ approval_status: "rejected", published_at: null }).eq("id", id);
   } catch (error) {
     console.error("[admin] reject failed", { id: (await params).id, error });
   }

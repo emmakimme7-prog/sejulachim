@@ -39,7 +39,7 @@ async function handleRepair(request: NextRequest) {
 
   // 복구 대상 조회
   let query = supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id, title, category, sub_interest, short_summary, thumbnail_url")
     .order("published_at", { ascending: false })
     .limit(limit);
@@ -72,7 +72,7 @@ async function handleRepair(request: NextRequest) {
       }
 
       const { error: updateError } = await supabase
-        .from("content_items")
+        .from('sj_content_items')
         .update({
           thumbnail_url: thumbnail.url,
           thumbnail_alt: thumbnail.alt,

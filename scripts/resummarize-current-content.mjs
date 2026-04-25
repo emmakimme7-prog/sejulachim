@@ -114,7 +114,7 @@ async function summarizeItem(item) {
 
 async function main() {
   const { data, error } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id, slug, title, category, sub_interest, raw_text, summary_type")
     .like("slug", `${SLUG_PREFIX}%`)
     .order("published_at", { ascending: false });
@@ -128,7 +128,7 @@ async function main() {
     try {
       const summarized = await summarizeItem(item);
       const { error: updateError } = await supabase
-        .from("content_items")
+        .from('sj_content_items')
         .update({
           ...summarized,
           updated_at: new Date().toISOString()

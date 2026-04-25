@@ -144,11 +144,11 @@ async function main() {
   }
 
   const rows = buildRows(items, targetDate);
-  const { error: upsertError } = await supabase.from("content_items").upsert(rows, { onConflict: "slug" });
+  const { error: upsertError } = await supabase.from('sj_content_items').upsert(rows, { onConflict: "slug" });
   if (upsertError) throw upsertError;
 
   const { data: dailyPick, error: dailyPickError } = await supabase
-    .from("daily_picks")
+    .from('sj_daily_picks')
     .upsert({
       pick_date: targetDate,
       status: "ready",
@@ -159,11 +159,11 @@ async function main() {
     .single();
   if (dailyPickError) throw dailyPickError;
 
-  const { error: pickDeleteError } = await supabase.from("daily_pick_items").delete().eq("daily_pick_id", dailyPick.id);
+  const { error: pickDeleteError } = await supabase.from('sj_daily_pick_items').delete().eq("daily_pick_id", dailyPick.id);
   if (pickDeleteError) throw pickDeleteError;
 
   const { data: pickedRows, error: pickedRowsError } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id, slug, summary_type, published_at")
     .in("slug", rows.map((row) => row.slug));
   if (pickedRowsError) throw pickedRowsError;
@@ -179,7 +179,7 @@ async function main() {
     content_item_id: item.id,
     position: index + 1
   }));
-  const { error: pickItemsError } = await supabase.from("daily_pick_items").insert(pickItems);
+  const { error: pickItemsError } = await supabase.from('sj_daily_pick_items').insert(pickItems);
   if (pickItemsError) throw pickItemsError;
 
   const countBySubInterest = Object.fromEntries(rows.map((row) => [row.sub_interest, 1]));

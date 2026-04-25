@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminSupabaseClient();
     const { data } = await supabase
-      .from("users")
+      .from('sj_users')
       .select("id")
       .eq("phone", body.phone)
       .is("unsubscribed_at", null)

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest, { params }: RouteProps) {
     }
     const supabase = createAdminSupabaseClient();
     await supabase
-      .from("content_items")
+      .from('sj_content_items')
       .update({ approval_status: "approved", published_at: new Date().toISOString() })
       .eq("id", id);
 

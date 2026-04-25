@@ -32,13 +32,13 @@ export async function sendEmailVerificationCode(email: string): Promise<SendResu
 
   // 만료되지 않은 이전 코드 무효화
   await supabase
-    .from("email_signup_verifications")
+    .from('sj_email_signup_verifications')
     .update({ used_at: new Date().toISOString() })
     .eq("email", normalized)
     .is("used_at", null);
 
   const { error: insertError } = await supabase
-    .from("email_signup_verifications")
+    .from('sj_email_signup_verifications')
     .insert({
       email: normalized,
       code_hash: codeHash,
@@ -76,7 +76,7 @@ export async function verifyEmailVerificationCode(email: string, code: string): 
   const codeHash = hashCode(code, normalized);
 
   const { data: record } = await supabase
-    .from("email_signup_verifications")
+    .from('sj_email_signup_verifications')
     .select("id, code_hash, expires_at, attempts, used_at")
     .eq("email", normalized)
     .is("used_at", null)
@@ -90,14 +90,14 @@ export async function verifyEmailVerificationCode(email: string, code: string): 
 
   if (record.code_hash !== codeHash) {
     await supabase
-      .from("email_signup_verifications")
+      .from('sj_email_signup_verifications')
       .update({ attempts: record.attempts + 1 })
       .eq("id", record.id);
     return { ok: false, reason: "MISMATCH" };
   }
 
   await supabase
-    .from("email_signup_verifications")
+    .from('sj_email_signup_verifications')
     .update({ used_at: new Date().toISOString() })
     .eq("id", record.id);
   return { ok: true };

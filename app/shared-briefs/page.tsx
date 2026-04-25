@@ -49,7 +49,7 @@ export default async function SharedBriefsPage({ searchParams }: PageProps) {
   const data = hasSupabaseServerEnv()
     ? (
         await createAdminSupabaseClient()
-          .from("content_items")
+          .from('sj_content_items')
           .select("id, title, short_summary, long_summary, action_line, source_name, source_url, sources, slug, published_at, main_interest, sub_interest, thumbnail_url, thumbnail_alt")
           .in("slug", slugs)
       ).data ?? []

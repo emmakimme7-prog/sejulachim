@@ -87,7 +87,7 @@ const updates = [
 
 for (const item of updates) {
   const { error, count } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .update({
       title: item.title,
       short_summary: item.short_summary,

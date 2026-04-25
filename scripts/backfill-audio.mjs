@@ -113,7 +113,7 @@ async function uploadAndSave(content) {
   if (!audioUrl) throw new Error("NO_PUBLIC_URL");
 
   const { error: updateError } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .update({ audio_url: audioUrl, audio_generated_at: new Date().toISOString() })
     .eq("id", content.id);
   if (updateError) throw new Error(`DB: ${updateError.message}`);
@@ -126,7 +126,7 @@ async function main() {
 
   const since = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000).toISOString();
   let query = supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id, title, short_summary, action_line, audio_url, published_at")
     .eq("approval_status", "approved")
     .gte("published_at", since)

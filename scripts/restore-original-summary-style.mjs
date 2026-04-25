@@ -318,7 +318,7 @@ const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
 
 async function main() {
   const { data, error } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id, slug, title, category, sub_interest, source_name, raw_text, summary_type")
     .like("slug", `real-${TARGET_DATE}-%`);
 
@@ -345,7 +345,7 @@ async function main() {
       updated_at: new Date().toISOString()
     };
 
-    const { error: updateError } = await supabase.from("content_items").update(payload).eq("id", item.id);
+    const { error: updateError } = await supabase.from('sj_content_items').update(payload).eq("id", item.id);
     if (updateError) throw updateError;
     updates.push({ slug: item.slug, title, short_summary: payload.short_summary });
   }

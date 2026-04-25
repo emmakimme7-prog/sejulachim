@@ -37,7 +37,7 @@ console.log("매핑:", MAPPING);
 
 for (const [oldCat, newCat] of Object.entries(MAPPING)) {
   const { count: beforeCount, error: countErr } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .select("id", { count: "exact", head: true })
     .eq("category", oldCat);
   if (countErr) {
@@ -47,7 +47,7 @@ for (const [oldCat, newCat] of Object.entries(MAPPING)) {
   console.log(`[${oldCat}] → [${newCat}]: ${beforeCount}개 row 업데이트 예정`);
 
   const { error: updateErr } = await supabase
-    .from("content_items")
+    .from('sj_content_items')
     .update({ category: newCat })
     .eq("category", oldCat);
   if (updateErr) {
@@ -59,7 +59,7 @@ for (const [oldCat, newCat] of Object.entries(MAPPING)) {
 }
 
 console.log("\n=== 마이그레이션 후 분포 ===");
-const { data: contents } = await supabase.from("content_items").select("category");
+const { data: contents } = await supabase.from('sj_content_items').select("category");
 const counts = {};
 for (const row of contents ?? []) {
   counts[row.category] = (counts[row.category] ?? 0) + 1;

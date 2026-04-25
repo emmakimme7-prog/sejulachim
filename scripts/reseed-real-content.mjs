@@ -898,7 +898,7 @@ async function main() {
   }
 
   if (rows.length > 0) {
-    const { error: upsertError } = await supabase.from("content_items").upsert(rows, { onConflict: "slug" });
+    const { error: upsertError } = await supabase.from('sj_content_items').upsert(rows, { onConflict: "slug" });
     if (upsertError) throw upsertError;
   }
 
@@ -913,7 +913,7 @@ async function main() {
     const picked = Object.values(groupedToday).filter(Boolean);
     if (picked.length > 0) {
       const { data: existingPick, error: existingPickError } = await supabase
-        .from("daily_picks")
+        .from('sj_daily_picks')
         .upsert(
           {
             pick_date: TODAY_KST,
@@ -927,10 +927,10 @@ async function main() {
       if (existingPickError) throw existingPickError;
 
       const dailyPickId = existingPick.id ?? crypto.randomUUID();
-      const { error: pickDeleteError } = await supabase.from("daily_pick_items").delete().eq("daily_pick_id", dailyPickId);
+      const { error: pickDeleteError } = await supabase.from('sj_daily_pick_items').delete().eq("daily_pick_id", dailyPickId);
       if (pickDeleteError) throw pickDeleteError;
 
-      const { error: pickError } = await supabase.from("daily_picks").upsert({
+      const { error: pickError } = await supabase.from('sj_daily_picks').upsert({
         id: dailyPickId,
         pick_date: TODAY_KST,
         status: "ready",
@@ -940,7 +940,7 @@ async function main() {
       if (pickError) throw pickError;
 
       const { data: insertedRows, error: insertedRowsError } = await supabase
-        .from("content_items")
+        .from('sj_content_items')
         .select("id, slug")
         .in("slug", picked.map((item) => item.slug));
       if (insertedRowsError) throw insertedRowsError;
@@ -952,7 +952,7 @@ async function main() {
       }));
 
       if (pickItems.length > 0) {
-        const { error: pickItemsInsertError } = await supabase.from("daily_pick_items").insert(pickItems);
+        const { error: pickItemsInsertError } = await supabase.from('sj_daily_pick_items').insert(pickItems);
         if (pickItemsInsertError) throw pickItemsInsertError;
       }
     }

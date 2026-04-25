@@ -19,7 +19,7 @@ export default async function DashboardUsersPage() {
   const rows = (hasSupabaseServerEnv()
     ? (
         await createAdminSupabaseClient()
-          .from("users")
+          .from('sj_users')
           .select("id, email, nickname, auth_provider, created_at, is_active, user_interest_selections(main_interest, sub_interest)")
           .order("created_at", { ascending: false })
           .limit(100)

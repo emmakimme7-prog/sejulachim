@@ -27,7 +27,7 @@ const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
 });
 
 const { data, error } = await supabase
-  .from("content_items")
+  .from('sj_content_items')
   .select("slug, title, category, sub_interest, thumbnail_url")
   .order("published_at", { ascending: false });
 

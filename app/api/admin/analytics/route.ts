@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   // Realtime: distinct sessions in last 5 minutes
   const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000).toISOString();
   const { data: realtimeRows } = await supabase
-    .from("page_views")
+    .from('sj_page_views')
     .select("session_id")
     .gte("created_at", fiveMinAgo);
   const realtimeSessions = new Set(realtimeRows?.map((r) => r.session_id) ?? []).size;
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
   // Today stats
   const todayStart = kstTodayStart.toISOString();
   const { data: todayRows } = await supabase
-    .from("page_views")
+    .from('sj_page_views')
     .select("session_id, path, referrer, device_type, user_agent, country, utm_source")
     .gte("created_at", todayStart);
 
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
   const trendStart = new Date(kstTodayStart.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
   const { data: trendRows } = await supabase
-    .from("page_views")
+    .from('sj_page_views')
     .select("session_id, path, created_at")
     .gte("created_at", trendStart.toISOString())
     .order("created_at", { ascending: true });

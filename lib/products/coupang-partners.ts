@@ -69,7 +69,7 @@ async function getProductCache(keyword: string): Promise<CacheRow | null> {
   try {
     const supabase = createAdminSupabaseClient();
     const { data } = await supabase
-      .from("coupang_product_cache")
+      .from('sj_coupang_product_cache')
       .select("products, cached_at, expires_at")
       .eq("keyword", keyword)
       .single();
@@ -83,7 +83,7 @@ async function setProductCache(keyword: string, products: SearchProductEntry[]):
   try {
     const supabase = createAdminSupabaseClient();
     const now = new Date();
-    await supabase.from("coupang_product_cache").upsert({
+    await supabase.from('sj_coupang_product_cache').upsert({
       keyword,
       products,
       cached_at: now.toISOString(),
