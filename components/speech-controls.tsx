@@ -2,7 +2,7 @@
 
 import { Mic, Pause, Play, SkipBack, SkipForward, Square, Volume2, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 declare global {
   interface Window {
@@ -39,15 +39,30 @@ let audioCurrentTime = 0;
 let audioDuration = 0;
 
 // chain 자동 이동 중이면 pathname 변경으로 인한 stopSpeech를 막는다.
+// chain 자동 이동을 NavigationStopper가 한 번만 무시하도록 일회용 토큰 + 안전 타임아웃.
+// 토큰을 한 번 소비(consume)하면 즉시 false로 돌아가, 사용자가 곧바로 다른 페이지를 누른 경우
+// 그 클릭은 정상적으로 stop을 트리거한다.
 let chainAdvancing = false;
+let chainAdvancingTimer: ReturnType<typeof setTimeout> | null = null;
 export function beginChainAdvance(windowMs = 900) {
   chainAdvancing = true;
-  setTimeout(() => {
+  if (chainAdvancingTimer) clearTimeout(chainAdvancingTimer);
+  // safety net — chain 의 router.push가 실제로 발생하지 않은 예외 상황 대비.
+  chainAdvancingTimer = setTimeout(() => {
     chainAdvancing = false;
+    chainAdvancingTimer = null;
   }, windowMs);
 }
 export function isChainAdvancing() {
   return chainAdvancing;
+}
+/** chain 이동 한 건을 소비 — NavigationStopper가 한 번 무시한 직후 호출. */
+export function consumeChainAdvance() {
+  chainAdvancing = false;
+  if (chainAdvancingTimer) {
+    clearTimeout(chainAdvancingTimer);
+    chainAdvancingTimer = null;
+  }
 }
 
 // 자동재생
@@ -582,11 +597,34 @@ function rateLabel(rate: number): string {
 export function SpeechPlayer() {
   const [snap, setSnap] = useState<SpeechSnapshot>(() => getSpeechSnapshot());
   const [expanded, setExpanded] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const unsub = subscribeSpeechState(() => setSnap(getSpeechSnapshot()));
     return unsub;
   }, []);
+
+  // 두 번째 안전망 — NavigationStopper(top slot)와 별개로 SpeechPlayer 자체가 pathname/query를 감시.
+  // chain 토큰은 한 번만 소비, 그 다음 사용자 이동은 정상적으로 stop.
+  const lastPathRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key = `${pathname}?${searchParams?.toString() ?? ""}`;
+    const prev = lastPathRef.current;
+    lastPathRef.current = key;
+    if (prev === null) return; // 첫 mount 무시
+    if (prev === key) return;
+    if (chainAdvancing) {
+      // NavigationStopper가 먼저 소비했을 수도 있지만 idempotent라 안전.
+      chainAdvancing = false;
+      if (chainAdvancingTimer) {
+        clearTimeout(chainAdvancingTimer);
+        chainAdvancingTimer = null;
+      }
+      return;
+    }
+    stopAllSpeech();
+  }, [pathname, searchParams]);
 
   if (!snap.active) return null;
 
