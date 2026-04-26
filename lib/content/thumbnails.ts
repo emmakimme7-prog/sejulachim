@@ -369,3 +369,52 @@ export async function findRelatedContentThumbnail(input: {
 
   return null;
 }
+
+export async function generateAndStoreContentThumbnail(
+  contentId: string,
+  options: { force?: boolean } = {}
+): Promise<{ ok: true; thumbnailUrl: string } | { ok: false; reason: string }> {
+  const supabase = createAdminSupabaseClient();
+  const { data: content, error: fetchError } = await supabase
+    .from('sj_content_items')
+    .select("id, title, category, sub_interest, short_summary, thumbnail_url")
+    .eq("id", contentId)
+    .maybeSingle();
+
+  if (fetchError || !content) {
+    return { ok: false, reason: "CONTENT_NOT_FOUND" };
+  }
+
+  if (content.thumbnail_url && !options.force) {
+    return { ok: true, thumbnailUrl: content.thumbnail_url };
+  }
+
+  const thumbnail = await findRelatedContentThumbnail({
+    title: content.title,
+    category: content.category ?? "",
+    subInterest: content.sub_interest,
+    summary: content.short_summary
+  });
+
+  if (!thumbnail?.url) {
+    return { ok: false, reason: "THUMBNAIL_NOT_FOUND" };
+  }
+
+  const { error: updateError } = await supabase
+    .from('sj_content_items')
+    .update({
+      thumbnail_url: thumbnail.url,
+      thumbnail_alt: thumbnail.alt,
+      thumbnail_page_url: thumbnail.pageUrl,
+      thumbnail_author: thumbnail.author ?? null,
+      thumbnail_license: thumbnail.license ?? null
+    })
+    .eq("id", content.id);
+
+  if (updateError) {
+    console.warn("[thumbnails] DB update failed", { contentId, error: updateError.message });
+    return { ok: false, reason: "DB_UPDATE_FAILED" };
+  }
+
+  return { ok: true, thumbnailUrl: thumbnail.url };
+}
