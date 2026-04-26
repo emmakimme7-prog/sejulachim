@@ -2,7 +2,7 @@
 
 import { Mic, Pause, Play, SkipBack, SkipForward, Square, Volume2, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 declare global {
   interface Window {
@@ -598,22 +598,20 @@ export function SpeechPlayer() {
   const [snap, setSnap] = useState<SpeechSnapshot>(() => getSpeechSnapshot());
   const [expanded, setExpanded] = useState(false);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     const unsub = subscribeSpeechState(() => setSnap(getSpeechSnapshot()));
     return unsub;
   }, []);
 
-  // 두 번째 안전망 — NavigationStopper(top slot)와 별개로 SpeechPlayer 자체가 pathname/query를 감시.
+  // 두 번째 안전망 — NavigationStopper(top slot)와 별개로 SpeechPlayer 자체가 pathname을 감시.
   // chain 토큰은 한 번만 소비, 그 다음 사용자 이동은 정상적으로 stop.
   const lastPathRef = useRef<string | null>(null);
   useEffect(() => {
-    const key = `${pathname}?${searchParams?.toString() ?? ""}`;
     const prev = lastPathRef.current;
-    lastPathRef.current = key;
+    lastPathRef.current = pathname;
     if (prev === null) return; // 첫 mount 무시
-    if (prev === key) return;
+    if (prev === pathname) return;
     if (chainAdvancing) {
       // NavigationStopper가 먼저 소비했을 수도 있지만 idempotent라 안전.
       chainAdvancing = false;
@@ -624,7 +622,7 @@ export function SpeechPlayer() {
       return;
     }
     stopAllSpeech();
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   if (!snap.active) return null;
 
