@@ -60,15 +60,11 @@ export default async function AccountPage({ searchParams }: PageProps) {
         avatar_data_url?: string | null;
         nickname?: string | null;
         font_size_preference?: string | null;
-        delivery_kakao?: boolean | null;
         delivery_email?: boolean | null;
-        phone?: string | null;
         marketing_consent_at?: string | null;
       })
     | null;
-  const initialChannel: "kakao" | "email" =
-    profileUser?.delivery_kakao && !profileUser?.delivery_email ? "kakao" : "email";
-  const initialPhone = typeof profileUser?.phone === "string" ? profileUser.phone : "";
+  const initialChannel: "email" | "none" = profileUser?.delivery_email ? "email" : "none";
   const hasMarketingConsent = Boolean(profileUser?.marketing_consent_at);
   const interestRows = await listUserInterestSelections(session.id);
   const interestConfig = await getInterestConfig();
@@ -195,7 +191,6 @@ export default async function AccountPage({ searchParams }: PageProps) {
                   <SoftCard className="space-y-5">
                     <AccountDeliveryForm
                       initialChannel={initialChannel}
-                      initialPhone={initialPhone}
                       initialEmail={session.email}
                       initialMarketingConsent={hasMarketingConsent}
                     />

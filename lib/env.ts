@@ -37,6 +37,7 @@ const serverEnvSchema = z.object({
   SOLAPI_SENDER_PHONE: z.string().regex(/^\d{10,11}$/, "발신번호는 숫자만 10~11자리").optional(),
   COUPANG_PARTNERS_ACCESS_KEY: z.string().min(1).optional(),
   COUPANG_PARTNERS_SECRET_KEY: z.string().min(1).optional(),
+  COUPANG_PARTNERS_ENABLED: z.string().min(1).optional(),
   CRON_SECRET: z.string().min(32),
   ADMIN_SESSION_SECRET: z.string().min(32),
   ADMIN_PASSWORD: z.string().min(12),

@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
 
     if (verified.mode === "signup" && verified.interests.length > 0) {
       const consentedAt = new Date().toISOString();
+      const useEmailDelivery = verified.channel === "email";
       const user = await upsertMongoSignup({
         email: profile.email,
         deliveryTime: "07:00",
@@ -62,13 +63,16 @@ export async function GET(request: NextRequest) {
         subInterests: verified.subInterests,
         consentedAt,
         marketingConsentedAt: verified.marketingConsent ? consentedAt : null,
+        deliveryChannels: { email: useEmailDelivery },
         authProvider: "naver",
       });
       await createUserSession({ userId: user.id, email: profile.email, rememberMe: true });
       await addSecurityJobLog("auth.naver_signup", "success", `user=${user.id}`);
-      try {
-        await sendSignupPreviewEmail({ email: profile.email, userId: user.id, interests: verified.interests });
-      } catch { /* non-critical */ }
+      if (useEmailDelivery) {
+        try {
+          await sendSignupPreviewEmail({ email: profile.email, userId: user.id, interests: verified.interests });
+        } catch { /* non-critical */ }
+      }
       const response = NextResponse.redirect(new URL("/complete", request.url));
       clearStateCookie(response);
       return response;

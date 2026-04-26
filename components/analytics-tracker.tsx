@@ -5,33 +5,43 @@ import { usePathname } from "next/navigation";
 
 function getSessionId() {
   if (typeof window === "undefined") return "";
-  let id = localStorage.getItem("slm_sid");
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem("slm_sid", id);
+  try {
+    let id = localStorage.getItem("slm_sid");
+    if (!id) {
+      id = typeof crypto?.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      localStorage.setItem("slm_sid", id);
+    }
+    return id;
+  } catch {
+    return "";
   }
-  return id;
 }
 
 // UTM 파라미터: 세션 최초 방문 시 캡처해서 세션 내내 유지
 function getSessionUtm() {
   if (typeof window === "undefined") return {};
-  const cached = localStorage.getItem("slm_utm");
-  if (cached) {
-    try { return JSON.parse(cached) as Record<string, string>; } catch { /* ignore */ }
+  try {
+    const cached = localStorage.getItem("slm_utm");
+    if (cached) {
+      try { return JSON.parse(cached) as Record<string, string>; } catch { /* ignore */ }
+    }
+    const params = new URLSearchParams(window.location.search);
+    const utm: Record<string, string> = {};
+    const src = params.get("utm_source");
+    const med = params.get("utm_medium");
+    const cam = params.get("utm_campaign");
+    if (src) utm.utm_source = src;
+    if (med) utm.utm_medium = med;
+    if (cam) utm.utm_campaign = cam;
+    if (Object.keys(utm).length > 0) {
+      localStorage.setItem("slm_utm", JSON.stringify(utm));
+    }
+    return utm;
+  } catch {
+    return {};
   }
-  const params = new URLSearchParams(window.location.search);
-  const utm: Record<string, string> = {};
-  const src = params.get("utm_source");
-  const med = params.get("utm_medium");
-  const cam = params.get("utm_campaign");
-  if (src) utm.utm_source = src;
-  if (med) utm.utm_medium = med;
-  if (cam) utm.utm_campaign = cam;
-  if (Object.keys(utm).length > 0) {
-    localStorage.setItem("slm_utm", JSON.stringify(utm));
-  }
-  return utm;
 }
 
 export function AnalyticsTracker() {

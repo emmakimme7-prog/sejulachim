@@ -13,6 +13,7 @@ import { getSlmCollections } from "@/lib/mongodb/collections";
 import { hashToken } from "@/lib/security/request";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { getDisplayMainInterest, getStoredCategoryForMainInterest } from "@/lib/content/sub-interests";
+import { normalizeEmail } from "@/lib/utils";
 
 function serializeUserId(value: ObjectId | string) {
   return typeof value === "string" ? value : value.toString();
@@ -47,14 +48,15 @@ export async function ensureMongoIndexes() {
 }
 
 export async function findUserByEmail(email: string) {
+  const normalizedEmail = normalizeEmail(email);
   if (hasSupabaseServerEnv()) {
     const supabase = createAdminSupabaseClient();
-    const { data } = await supabase.from('sj_users').select("*").eq("email", email).maybeSingle();
+    const { data } = await supabase.from('sj_users').select("*").eq("email", normalizedEmail).maybeSingle();
     return data ? { ...data, id: data.id } : null;
   }
 
   const db = await getMongoDb();
-  const user = await getSlmCollections(db).users.findOne({ email });
+  const user = await getSlmCollections(db).users.findOne({ email: normalizedEmail });
   if (!user?._id) {
     return null;
   }

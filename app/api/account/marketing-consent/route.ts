@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireUserSession } from "@/lib/auth/user-session";
+import { ApiUnauthorizedError, requireApiUserSession } from "@/lib/auth/user-session";
 import { hasSupabaseServerEnv } from "@/lib/env";
 import { addSecurityJobLog } from "@/lib/mongodb/user-data";
 import { checkRateLimit } from "@/lib/security/rate-limit";
@@ -10,11 +10,11 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 // DELETE: 광고성 정보 수신 동의 철회 (정보통신망법 제50조 이행)
 // - marketing_consent_at = NULL
 // - unsubscribed_at = now() (크론이 자동 skip)
-// - delivery_kakao, delivery_email = false
+// - delivery_email = false
 export async function DELETE(request: NextRequest) {
   try {
     assertSameOrigin(request);
-    const session = await requireUserSession();
+    const session = await requireApiUserSession();
     const ip = getClientIp(request);
     const limit = checkRateLimit(`account:marketing:${session.id}:${ip}`, 5, 60_000);
     if (!limit.allowed) {
@@ -47,6 +47,9 @@ export async function DELETE(request: NextRequest) {
     await addSecurityJobLog("account.marketing_revoke", "success", `user=${session.id}`);
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (error instanceof ApiUnauthorizedError) {
+      return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+    }
     console.error("[/api/account/marketing-consent] failed:", error);
     return NextResponse.json({ error: "처리하지 못했습니다." }, { status: 400 });
   }
@@ -56,7 +59,7 @@ export async function DELETE(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     assertSameOrigin(request);
-    const session = await requireUserSession();
+    const session = await requireApiUserSession();
     const ip = getClientIp(request);
     const limit = checkRateLimit(`account:marketing:${session.id}:${ip}`, 5, 60_000);
     if (!limit.allowed) {
@@ -87,6 +90,9 @@ export async function POST(request: NextRequest) {
     await addSecurityJobLog("account.marketing_reconsent", "success", `user=${session.id}`);
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (error instanceof ApiUnauthorizedError) {
+      return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+    }
     console.error("[/api/account/marketing-consent] failed:", error);
     return NextResponse.json({ error: "처리하지 못했습니다." }, { status: 400 });
   }

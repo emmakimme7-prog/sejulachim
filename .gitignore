@@ -14,3 +14,12 @@ npm-debug.log*
 # Additional env files (sensitive)
 .env.prod
 .env.temp
+.env.*.before-autoclip-migration
+.env.production.fetch
+
+# Local agent / claude / cowork state
+.claude/
+.agents/
+
+# Supabase CLI temporary state
+supabase/.temp/

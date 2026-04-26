@@ -15,10 +15,8 @@ function parseSignupData(request: NextRequest) {
     try { subInterests = JSON.parse(subRaw); } catch { /* ignore */ }
   }
   const marketingConsent = request.nextUrl.searchParams.get("m") === "1";
-  const channel: "kakao" | "email" = request.nextUrl.searchParams.get("ch") === "kakao" ? "kakao" : "email";
-  const rawPhone = (request.nextUrl.searchParams.get("p") || "").replace(/\D/g, "");
-  const phone = /^010\d{8}$/.test(rawPhone) ? rawPhone : null;
-  return interests.length ? { interests, subInterests, marketingConsent, channel, phone } : undefined;
+  const channel: "email" | "none" = request.nextUrl.searchParams.get("ch") === "none" ? "none" : "email";
+  return interests.length ? { interests, subInterests, marketingConsent, channel } : undefined;
 }
 
 export async function GET(request: NextRequest) {

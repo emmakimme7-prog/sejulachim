@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     const existingUser = await findUserByEmail(normalizedEmail);
-    if (existingUser?.is_active) {
+    if (existingUser) {
       return NextResponse.json({ error: "이미 신청된 이메일입니다. 로그인 후 설정을 변경해주세요." }, { status: 409 });
     }
 
@@ -67,11 +67,10 @@ export async function POST(request: NextRequest) {
       consentedAt,
       marketingConsentedAt: body.agreeToMarketing ? consentedAt : null,
       password: password || undefined,
-      phone: body.phone ?? null,
-      deliveryChannels: body.deliveryChannels ?? { kakao: false, email: true }
+      phone: null,
+      deliveryChannels: body.deliveryChannels ?? { email: true }
     });
 
-    // 이메일 채널 선택자에게만 첫 브리핑 메일 발송 (카카오 채널은 알림톡 어댑터 구현 전까지 발송 없음)
     const channelEmail = body.deliveryChannels?.email ?? true;
     if (channelEmail) {
       try {

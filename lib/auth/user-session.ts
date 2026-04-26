@@ -11,6 +11,13 @@ import { normalizeEmail } from "@/lib/utils";
 const COOKIE_NAME = "slm_user_session";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 14;
 
+export class ApiUnauthorizedError extends Error {
+  constructor(message = "UNAUTHORIZED") {
+    super(message);
+    this.name = "ApiUnauthorizedError";
+  }
+}
+
 function shouldUseSecureCookie() {
   return process.env.NODE_ENV === "production";
 }
@@ -100,4 +107,12 @@ export async function requireUserSession() {
 
 export async function getCurrentUserByEmail(email: string) {
   return findUserByEmail(email);
+}
+
+export async function requireApiUserSession() {
+  const session = await getCurrentUserSession();
+  if (!session) {
+    throw new ApiUnauthorizedError();
+  }
+  return session;
 }

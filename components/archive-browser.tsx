@@ -384,7 +384,10 @@ export function ArchiveBrowser({
     return () => observer.disconnect();
   }, [displayItems.length]);
 
-  const visibleItems = useMemo(() => displayItems.slice(0, visibleCount), [displayItems, visibleCount]);
+  const visibleItems = useMemo(
+    () => (localTodayMode ? displayItems : displayItems.slice(0, visibleCount)),
+    [displayItems, localTodayMode, visibleCount]
+  );
 
   const selectedItems = displayItems.filter((item) => selectedSlugs.includes(item.slug));
   const selectedTitles = selectedItems.map((item) => item.title).join(", ");
@@ -1049,7 +1052,7 @@ export function ArchiveBrowser({
         })}
       </div>
 
-      {visibleCount < displayItems.length && (
+      {!localTodayMode && visibleCount < displayItems.length && (
         <div ref={loadMoreRef} className="flex justify-center py-6">
           <span className="text-sm text-gray-400">더 불러오는 중...</span>
         </div>

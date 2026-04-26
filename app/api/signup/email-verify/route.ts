@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     // 이미 가입된 이메일이면 코드 발송 안 하고 안내 (계정 탈취 시도 방지).
     const existing = await findUserByEmail(normalized);
-    if (existing?.is_active) {
+    if (existing) {
       return NextResponse.json({ error: "이미 가입된 이메일입니다. 로그인 화면에서 로그인해주세요." }, { status: 409 });
     }
 

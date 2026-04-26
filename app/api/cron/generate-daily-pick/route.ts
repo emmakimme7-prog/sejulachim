@@ -9,12 +9,15 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 async function logJob(jobName: string, status: string, details: string) {
   const supabase = createAdminSupabaseClient();
-  await supabase.from('sj_job_logs').insert({
+  const { error } = await supabase.from('sj_job_logs').insert({
     job_name: jobName,
     status,
     details,
     run_at: new Date().toISOString()
   });
+  if (error) {
+    console.error("[generate-daily-pick] failed to write job log:", error);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -42,6 +45,11 @@ async function handleCron(request: NextRequest) {
       .eq("pick_date", date)
       .maybeSingle();
 
+    if (!force && existing?.status === "processing") {
+      await logJob(jobName, "skipped", `${date} daily pick is already processing`);
+      return NextResponse.json({ ok: true, skipped: true, reason: "processing" });
+    }
+
     if (!force && existing?.status === "ready") {
       const { count } = await supabase
         .from('sj_daily_pick_items')
@@ -54,7 +62,7 @@ async function handleCron(request: NextRequest) {
       }
     }
 
-    const { data: dailyPick } = await supabase
+    const { data: dailyPick, error: dailyPickError } = await supabase
       .from('sj_daily_picks')
       .upsert(
         {
@@ -66,6 +74,9 @@ async function handleCron(request: NextRequest) {
       )
       .select("id")
       .single();
+    if (dailyPickError || !dailyPick?.id) {
+      throw new Error(`DAILY_PICK_UPSERT_FAILED:${dailyPickError?.message ?? "missing id"}`);
+    }
 
     const [must, useful, action] = await Promise.all([
       supabase
@@ -97,6 +108,12 @@ async function handleCron(request: NextRequest) {
         .maybeSingle()
     ]);
 
+    if (must.error || useful.error || action.error) {
+      throw new Error(
+        `CONTENT_QUERY_FAILED:${must.error?.message ?? ""}|${useful.error?.message ?? ""}|${action.error?.message ?? ""}`
+      );
+    }
+
     const selected = [must.data?.id, useful.data?.id, action.data?.id].filter(Boolean);
     if (selected.length !== 3 || !dailyPick) {
       await supabase.from('sj_daily_picks').update({ status: "failed" }).eq("pick_date", date);
@@ -104,18 +121,30 @@ async function handleCron(request: NextRequest) {
       return NextResponse.json({ error: "Insufficient content" }, { status: 409 });
     }
 
-    await supabase.from('sj_daily_pick_items').delete().eq("daily_pick_id", dailyPick.id);
-    await supabase.from('sj_daily_pick_items').insert([
+    const { error: deleteError } = await supabase.from('sj_daily_pick_items').delete().eq("daily_pick_id", dailyPick.id);
+    if (deleteError) {
+      throw new Error(`DAILY_PICK_ITEMS_DELETE_FAILED:${deleteError.message}`);
+    }
+
+    const { error: insertError } = await supabase.from('sj_daily_pick_items').insert([
       { daily_pick_id: dailyPick.id, content_item_id: must.data!.id, position: 1 },
       { daily_pick_id: dailyPick.id, content_item_id: useful.data!.id, position: 2 },
       { daily_pick_id: dailyPick.id, content_item_id: action.data!.id, position: 3 }
     ]);
-    await supabase.from('sj_daily_picks').update({ status: "ready" }).eq("id", dailyPick.id);
+    if (insertError) {
+      throw new Error(`DAILY_PICK_ITEMS_INSERT_FAILED:${insertError.message}`);
+    }
+
+    const { error: readyError } = await supabase.from('sj_daily_picks').update({ status: "ready" }).eq("id", dailyPick.id);
+    if (readyError) {
+      throw new Error(`DAILY_PICK_READY_UPDATE_FAILED:${readyError.message}`);
+    }
 
     await logJob(jobName, "success", `${date} daily pick generated`);
     return NextResponse.json({ ok: true });
-  } catch {
-    await logJob(jobName, "failed", "Unexpected generation error");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unexpected generation error";
+    await logJob(jobName, "failed", message);
     return NextResponse.json({ error: "Job failed" }, { status: 500 });
   }
 }

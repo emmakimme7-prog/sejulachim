@@ -8,6 +8,7 @@ import { Notice } from "@/components/ui/notice";
 import { Toast } from "@/components/ui/toast";
 import { MAIN_INTERESTS, SUB_INTERESTS, type MainInterest } from "@/lib/content/sub-interests";
 import { encodeShareState } from "@/lib/share";
+import { normalizeEmail } from "@/lib/utils";
 
 type Step = "interests" | "delivery" | "auth";
 const STEP_ORDER: Step[] = ["interests", "delivery", "auth"];
@@ -20,14 +21,6 @@ const INTEREST_META: Record<string, { emoji: string; color: string; bg: string; 
   뉴스: { emoji: "📰", color: "#424242", bg: "#EFEFEF", desc: "꼭 알아야 할 소식" },
   관계: { emoji: "💛", color: "#C2185B", bg: "#FDE8EF", desc: "가족, 친구, 마음 건강" },
 };
-
-function KakaoMark({ size = 26 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="#3C1E1E" aria-hidden="true">
-      <path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.72 1.74 5.12 4.39 6.51l-.9 3.3c-.08.29.23.52.48.37l3.93-2.6c.69.09 1.39.14 2.1.14 5.52 0 10-3.48 10-7.8S17.52 3 12 3z" />
-    </svg>
-  );
-}
 
 function GoogleMark({ size = 26 }: { size?: number }) {
   return (
@@ -73,29 +66,16 @@ export function SignupForm({
   const [toast, setToast] = useState<string | null>(null);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [agreedPrivacy, setAgreedPrivacy] = useState(false);
-  // 광고성 정보 수신 동의는 step 2 의 채널 선택(카카오톡/이메일/미수신) 자체가 동의 여부를 결정.
-  // 카카오톡 → step 2의 kakao bundle 체크박스 참조. 이메일 → 채널 선택 자체가 동의.
-  // 미수신 → 당연히 false.
   const allAgreed = agreedTerms && agreedPrivacy;
   const setAllAgreed = (v: boolean) => {
     setAgreedTerms(v);
     setAgreedPrivacy(v);
   };
 
-  // 수신 채널. 카카오톡 선택 시 step 3 에서 카카오 OAuth 강제. 미수신이면 가입은 되지만 알림 발송 X.
-  const [channel, setChannel] = useState<"kakao" | "email" | "none">(defaultEmail ? "email" : "kakao");
-  const kakaoChannel = channel === "kakao";
+  const [channel, setChannel] = useState<"email" | "none">(defaultEmail ? "email" : "email");
   const emailChannel = channel === "email";
   const noneChannel = channel === "none";
-  // 카카오 채널 선택 시 step 2에서 번호 수집 (카카오 OAuth 는 기본 scope로 번호 못 받기 때문).
-  const [phone, setPhone] = useState("");
-  // 카카오 채널 가입 플로우용 일괄 동의 (필수): 이용약관·개인정보·광고성 수신.
-  const [agreedKakaoBundle, setAgreedKakaoBundle] = useState(false);
-  // 이메일 채널 step 2 동의 (필수): 광고성 수신.
   const [agreedEmailConsent, setAgreedEmailConsent] = useState(false);
-  // 카카오 번호 중복 체크 상태
-  const [phoneCheckStatus, setPhoneCheckStatus] = useState<"idle" | "checking" | "duplicate" | "ok">("idle");
-  // 이메일 가입 확장/인증 상태
   const [emailFormExpanded, setEmailFormExpanded] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
@@ -109,21 +89,29 @@ export function SignupForm({
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
+  function resetAuthFields(options?: { keepEmailFormExpanded?: boolean }) {
+    setPassword("");
+    setShowPassword(false);
+    setHoneypot("");
+    setSubmitting(false);
+    setError("");
+    setAgreedTerms(false);
+    setAgreedPrivacy(false);
+    setVerificationSent(false);
+    setVerificationCode("");
+    setSendingCode(false);
+    setEmailFormExpanded(options?.keepEmailFormExpanded ?? false);
+  }
+
+  function resetVerificationState() {
+    setVerificationSent(false);
+    setVerificationCode("");
+    setSendingCode(false);
+    setError("");
+  }
+
   function isValidEmailClient(value: string) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-  }
-
-  // 010-1234-5678 형태로 자동 포맷팅 (한국 휴대폰)
-  function formatPhone(raw: string) {
-    const digits = raw.replace(/\D/g, "").slice(0, 11);
-    if (digits.length < 4) return digits;
-    if (digits.length < 8) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-  }
-
-  function isValidPhoneClient(value: string) {
-    const digits = value.replace(/\D/g, "");
-    return /^010\d{8}$/.test(digits);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
   }
 
   function toggleInterest(interest: string) {
@@ -159,22 +147,76 @@ export function SignupForm({
       setToast("매일 아침 이메일 받기 수신 동의에 체크해 주세요.");
       return;
     }
-    if (kakaoChannel && !/^010\d{8}$/.test(phone.replace(/\D/g, ""))) {
-      setToast("올바른 휴대폰번호(010-XXXX-XXXX)를 입력해 주세요.");
+    setStep("auth");
+  }
+
+  async function requestVerificationCode() {
+    if (!isValidEmailClient(email)) {
+      setError("올바른 이메일 주소를 입력해 주세요.");
       return;
     }
-    setStep("auth");
+    if (password.length < 8) {
+      setError("비밀번호는 8자 이상이어야 합니다.");
+      return;
+    }
+    if (!agreedTerms || !agreedPrivacy) {
+      setError("이용약관과 개인정보 수집·이용에 동의해 주세요.");
+      return;
+    }
+    setSendingCode(true);
+    setError("");
+    try {
+      const res = await fetch("/api/signup/email-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const payload = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !payload.ok) {
+        setError(payload.error ?? "인증번호 발송에 실패했습니다.");
+        return;
+      }
+      setVerificationSent(true);
+      setVerificationCode("");
+    } catch {
+      setError("네트워크 문제로 인증번호를 보내지 못했습니다.");
+    } finally {
+      setSendingCode(false);
+    }
+  }
+
+  async function resendVerificationCode() {
+    if (!isValidEmailClient(email)) {
+      setError("올바른 이메일 주소를 입력해 주세요.");
+      return;
+    }
+    setSendingCode(true);
+    setError("");
+    setVerificationCode("");
+    try {
+      const res = await fetch("/api/signup/email-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const payload = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !payload.ok) {
+        setError(payload.error ?? "인증번호 재발송에 실패했습니다.");
+        return;
+      }
+    } catch {
+      setError("네트워크 문제로 인증번호를 다시 보내지 못했습니다.");
+    } finally {
+      setSendingCode(false);
+    }
   }
 
   function buildOauthHref(provider: "google" | "kakao" | "naver") {
     const interestParam = encodeURIComponent(selectedInterests.join(","));
     const subParam = encodeURIComponent(JSON.stringify(subInterests));
-    // 카카오 채널 선택 시 OAuth 버튼 클릭 = 알림톡 수신 동의 간주 (UI 상 명시됨).
-    // step 2 에서 카카오/이메일 채널 선택 = 광고성 수신 동의 간주. 미수신은 false.
-    const marketingParam = (kakaoChannel && provider === "kakao") || emailChannel ? "1" : "0";
-    const channelParam = kakaoChannel ? "kakao" : "email";
-    const phoneParam = kakaoChannel ? `&p=${encodeURIComponent(phone.replace(/\D/g, ""))}` : "";
-    return `/api/auth/oauth/${provider}/start?mode=signup&interests=${interestParam}&sub=${subParam}&m=${marketingParam}&ch=${channelParam}${phoneParam}`;
+    const marketingParam = emailChannel ? "1" : "0";
+    const channelParam = emailChannel ? "email" : "none";
+    return `/api/auth/oauth/${provider}/start?mode=signup&interests=${interestParam}&sub=${subParam}&m=${marketingParam}&ch=${channelParam}`;
   }
 
   async function handleEmailSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -222,8 +264,7 @@ export function SignupForm({
           honeypot,
           phone: null,
           deliveryChannels: {
-            kakao: kakaoChannel,
-            email: emailChannel || noneChannel ? emailChannel : false,
+            email: emailChannel,
           },
         }),
       });
@@ -373,7 +414,7 @@ export function SignupForm({
         </div>
       ) : null}
 
-      {/* Step 2: 받는 방법 (카카오톡 / 이메일) */}
+      {/* Step 2: 받는 방법 (이메일 / 미수신) */}
       {step === "delivery" ? (
         <div>
           <h1 style={{ margin: "6px 0 8px", fontSize: 26, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.03em", lineHeight: 1.3 }}>
@@ -396,7 +437,7 @@ export function SignupForm({
               aria-label="받는 방법"
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
+                gridTemplateColumns: "1fr 1fr",
                 gap: 6,
                 padding: 4,
                 borderRadius: 14,
@@ -405,33 +446,6 @@ export function SignupForm({
                 marginBottom: 14,
               }}
             >
-              <button
-                type="button"
-                role="radio"
-                aria-checked={kakaoChannel}
-                onClick={() => { setChannel("kakao"); setError(""); }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                  minHeight: 48,
-                  padding: "0 8px",
-                  borderRadius: 10,
-                  background: kakaoChannel ? "#FEE500" : "transparent",
-                  color: "#1F1A14",
-                  border: "none",
-                  fontSize: 14,
-                  fontWeight: kakaoChannel ? 900 : 700,
-                  letterSpacing: "-0.01em",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  transition: "background 0.15s, font-weight 0.15s",
-                }}
-              >
-                <KakaoMark size={18} />
-                카카오톡
-              </button>
               <button
                 type="button"
                 role="radio"
@@ -494,34 +508,6 @@ export function SignupForm({
                 <br />
                 사이트는 이용하실 수 있지만 알림을 받지 않습니다. 언제든 설정에서 변경 가능합니다.
               </p>
-            ) : kakaoChannel ? (
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#4A4037", marginBottom: 6, letterSpacing: "-0.01em" }}>
-                  휴대폰번호
-                </label>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  autoComplete="tel"
-                  value={phone}
-                  onChange={(e) => { setPhone(formatPhone(e.target.value)); setError(""); setPhoneCheckStatus("idle"); }}
-                  placeholder="010-1234-5678"
-                  style={{
-                    width: "100%",
-                    minHeight: 52,
-                    padding: "0 16px",
-                    background: "#fff",
-                    border: "2px solid #E8DCC7",
-                    borderRadius: 12,
-                    fontSize: 16,
-                    fontWeight: 600,
-                    color: "#1F1A14",
-                    outline: "none",
-                    fontFamily: "inherit",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
             ) : (
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#4A4037", marginBottom: 6, letterSpacing: "-0.01em" }}>
@@ -535,6 +521,7 @@ export function SignupForm({
                   onChange={(e) => {
                     setEmail(e.target.value);
                     setError("");
+                    resetVerificationState();
                   }}
                   placeholder="example@email.com"
                   style={{
@@ -591,147 +578,34 @@ export function SignupForm({
             </label>
           ) : null}
 
-          {kakaoChannel && phoneCheckStatus === "duplicate" ? (
-            <div
-              style={{
-                marginTop: 14,
-                padding: "14px 16px",
-                borderRadius: 12,
-                background: "#FDE8EF",
-                border: "1.5px solid #F2B8D0",
-                fontSize: 13,
-                color: "#A6124B",
-                fontWeight: 600,
-                lineHeight: 1.6,
-              }}
-            >
-              ⚠️ 이미 등록된 번호입니다.
-              <br />
-              <a href="mailto:hello@studiobyyou.kr" style={{ color: "#C2185B", fontWeight: 800, textDecoration: "underline" }}>
-                고객센터 (hello@studiobyyou.kr)
-              </a>
-              로 문의해 주세요.
-            </div>
-          ) : null}
-
-          {kakaoChannel ? (
-            <>
-              {/* 카카오 채널 일괄 동의 체크박스 */}
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 10,
-                  marginTop: 18,
-                  padding: "14px 14px",
-                  borderRadius: 12,
-                  background: "#fff",
-                  border: "1.5px solid #E8DCC7",
-                  cursor: "pointer",
-                  fontSize: 14,
-                  lineHeight: 1.6,
-                  color: "#4A4037",
-                  fontWeight: 500,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={agreedKakaoBundle}
-                  onChange={(e) => setAgreedKakaoBundle(e.target.checked)}
-                  style={{ marginTop: 3, width: 20, height: 20, accentColor: "#E57C23", flexShrink: 0 }}
-                />
-                <span>
-                  <span style={{ color: "#B2570F", fontWeight: 700, marginRight: 4 }}>[필수]</span>
-                  매일 아침 <b style={{ color: "#1F1A14" }}>카카오톡 알림톡</b> 받기에 동의합니다.
-                  <span style={{ display: "block", fontSize: 12, color: "#7A6F62", fontWeight: 500, marginTop: 4, lineHeight: 1.5 }}>
-                    광고성 정보 수신에 동의합니다. 언제든 설정에서 철회할 수 있습니다.
-                  </span>
-                </span>
-              </label>
-
-              <button
-                type="button"
-                disabled={!agreedKakaoBundle || phoneCheckStatus === "checking" || phoneCheckStatus === "duplicate"}
-                onClick={async () => {
-                  const digits = phone.replace(/\D/g, "");
-                  if (!/^010\d{8}$/.test(digits)) {
-                    setToast("올바른 휴대폰번호(010-XXXX-XXXX)를 입력해 주세요.");
-                    return;
-                  }
-                  if (!agreedKakaoBundle) {
-                    setToast("알림톡 수신 동의에 체크해 주세요.");
-                    return;
-                  }
-                  setPhoneCheckStatus("checking");
-                  try {
-                    const response = await fetch("/api/signup/check-phone", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ phone: digits }),
-                    });
-                    const payload = (await response.json()) as { available?: boolean; error?: string };
-                    if (!payload.available) {
-                      setPhoneCheckStatus("duplicate");
-                      return;
-                    }
-                    setPhoneCheckStatus("ok");
-                    window.location.href = buildOauthHref("kakao");
-                  } catch {
-                    setPhoneCheckStatus("idle");
-                    setToast("번호 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.");
-                  }
-                }}
-                style={{
-                  width: "100%",
-                  minHeight: 60,
-                  marginTop: 16,
-                  background: agreedKakaoBundle && phoneCheckStatus !== "duplicate" ? "#FEE500" : "#F5EEE2",
-                  color: agreedKakaoBundle && phoneCheckStatus !== "duplicate" ? "#3C1E1E" : "#9C907F",
-                  border: "none",
-                  borderRadius: 16,
-                  fontSize: 18,
-                  fontWeight: 900,
-                  letterSpacing: "-0.01em",
-                  boxShadow: agreedKakaoBundle && phoneCheckStatus !== "duplicate" ? "0 6px 16px rgba(254, 229, 0, 0.45)" : "none",
-                  cursor: agreedKakaoBundle && phoneCheckStatus !== "duplicate" ? "pointer" : "not-allowed",
-                  fontFamily: "inherit",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 10,
-                }}
-              >
-                <KakaoMark size={24} />
-                {phoneCheckStatus === "checking" ? "번호 확인 중..." : "카카오톡으로 회원가입"}
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={handleNextToAuth}
-              style={{
-                width: "100%",
-                minHeight: 60,
-                marginTop: 24,
-                background: "#E57C23",
-                color: "#fff",
-                border: "none",
-                borderRadius: 16,
-                fontSize: 18,
-                fontWeight: 900,
-                letterSpacing: "-0.01em",
-                boxShadow: "0 6px 16px rgba(229, 124, 35, 0.35)",
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              다음
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleNextToAuth}
+            style={{
+              width: "100%",
+              minHeight: 60,
+              marginTop: 24,
+              background: "#E57C23",
+              color: "#fff",
+              border: "none",
+              borderRadius: 16,
+              fontSize: 18,
+              fontWeight: 900,
+              letterSpacing: "-0.01em",
+              boxShadow: "0 6px 16px rgba(229, 124, 35, 0.35)",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            다음
+          </button>
 
           <button
             type="button"
-            onClick={() => setStep("interests")}
+            onClick={() => {
+              resetAuthFields({ keepEmailFormExpanded: false });
+              setStep("interests");
+            }}
             style={{
               display: "block",
               margin: "16px auto 0",
@@ -756,17 +630,15 @@ export function SignupForm({
       {step === "auth" ? (
         <form onSubmit={handleEmailSubmit}>
           <h1 style={{ margin: "6px 0 8px", fontSize: 26, fontWeight: 900, color: "#1F1A14", letterSpacing: "-0.03em", lineHeight: 1.3 }}>
-            {kakaoChannel ? "카카오로 회원가입" : "어디로 받아볼까요?"}
+            어디로 받아볼까요?
           </h1>
           <p style={{ margin: "0 0 20px", fontSize: 15, color: "#4A4037", lineHeight: 1.6, fontWeight: 500 }}>
-            {kakaoChannel
-              ? "카카오톡으로 매일 아침 알림톡을 받으시려면 카카오 계정으로 가입해주세요."
-              : "매일 아침 7시에 세 줄 브리핑을 보내드립니다."}
+            매일 아침 7시에 세 줄 브리핑을 보내드립니다.
           </p>
 
           {/* 소셜 로그인 버튼 */}
-          {(kakaoEnabled || (!kakaoChannel && (naverEnabled || googleEnabled))) ? (
-            <div style={{ display: "grid", gap: 10, marginBottom: kakaoChannel ? 0 : 22 }}>
+          {(kakaoEnabled || naverEnabled || googleEnabled) ? (
+            <div style={{ display: "grid", gap: 10, marginBottom: 22 }}>
               {kakaoEnabled ? (
                 <a
                   href={buildOauthHref("kakao")}
@@ -785,16 +657,11 @@ export function SignupForm({
                     letterSpacing: "-0.01em",
                   }}
                 >
-                  <KakaoMark size={26} />
-                  <span style={{ flex: 1, textAlign: "center", paddingRight: 28 }}>{kakaoChannel ? "카카오로 회원가입" : "카카오로 시작하기"}</span>
+                  <span style={{ fontSize: 20 }} aria-hidden="true">💬</span>
+                  <span style={{ flex: 1, textAlign: "center", paddingRight: 28 }}>카카오로 시작하기</span>
                 </a>
               ) : null}
-              {!kakaoChannel ? (
-                <>
-                  {null}
-                </>
-              ) : null}
-              {!kakaoChannel && naverEnabled ? (
+              {naverEnabled ? (
                 <a
                   href={buildOauthHref("naver")}
                   style={{
@@ -832,7 +699,7 @@ export function SignupForm({
                   <span style={{ flex: 1, textAlign: "center", paddingRight: 28 }}>네이버로 시작하기</span>
                 </a>
               ) : null}
-              {!kakaoChannel && googleEnabled ? (
+              {googleEnabled ? (
                 <a
                   href={buildOauthHref("google")}
                   style={{
@@ -858,8 +725,7 @@ export function SignupForm({
             </div>
           ) : null}
 
-          {/* 구분선 (카카오 채널 선택 시 이메일 폼 숨김) */}
-          {!kakaoChannel && (kakaoEnabled || naverEnabled || googleEnabled) ? (
+          {(kakaoEnabled || naverEnabled || googleEnabled) ? (
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
               <div style={{ flex: 1, height: 1, background: "#E8DCC7" }} />
               <span style={{ fontSize: 12, color: "#9C907F", fontWeight: 700 }}>또는 이메일로 가입</span>
@@ -867,13 +733,14 @@ export function SignupForm({
             </div>
           ) : null}
 
-          {!kakaoChannel && !emailFormExpanded ? (
+          {!emailFormExpanded ? (
             <button
               type="button"
               onClick={() => {
                 if (noneChannel && !isValidEmailClient(email)) {
                   // noneChannel 사용자는 여기서 이메일 입력부터 해야 함 → expand 하되 폼 보여줌
                 }
+                resetVerificationState();
                 setEmailFormExpanded(true);
               }}
               style={{
@@ -900,7 +767,7 @@ export function SignupForm({
             </button>
           ) : null}
 
-          {!kakaoChannel && emailFormExpanded ? (
+          {emailFormExpanded ? (
           <>
           {/* 이메일 폼 시작 */}
 
@@ -928,6 +795,7 @@ export function SignupForm({
                 onChange={(e) => {
                   setEmail(e.target.value);
                   setError("");
+                  resetVerificationState();
                 }}
                 placeholder="예) hong@naver.com"
                 style={{
@@ -1106,37 +974,7 @@ export function SignupForm({
               type="button"
               disabled={sendingCode}
               onClick={async () => {
-                if (!isValidEmailClient(email)) {
-                  setError("올바른 이메일 주소를 입력해 주세요.");
-                  return;
-                }
-                if (password.length < 8) {
-                  setError("비밀번호는 8자 이상이어야 합니다.");
-                  return;
-                }
-                if (!agreedTerms || !agreedPrivacy) {
-                  setError("이용약관과 개인정보 수집·이용에 동의해 주세요.");
-                  return;
-                }
-                setSendingCode(true);
-                setError("");
-                try {
-                  const res = await fetch("/api/signup/email-verify", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email }),
-                  });
-                  const payload = (await res.json()) as { ok?: boolean; error?: string };
-                  if (!res.ok || !payload.ok) {
-                    setError(payload.error ?? "인증번호 발송에 실패했습니다.");
-                    return;
-                  }
-                  setVerificationSent(true);
-                } catch {
-                  setError("네트워크 문제로 인증번호를 보내지 못했습니다.");
-                } finally {
-                  setSendingCode(false);
-                }
+                await requestVerificationCode();
               }}
               style={{
                 width: "100%",
@@ -1217,18 +1055,7 @@ export function SignupForm({
                 type="button"
                 disabled={sendingCode}
                 onClick={async () => {
-                  setSendingCode(true);
-                  setError("");
-                  setVerificationCode("");
-                  try {
-                    await fetch("/api/signup/email-verify", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ email }),
-                    });
-                  } finally {
-                    setSendingCode(false);
-                  }
+                  await resendVerificationCode();
                 }}
                 style={{
                   display: "block",
@@ -1254,7 +1081,10 @@ export function SignupForm({
 
           <button
             type="button"
-            onClick={() => setStep("delivery")}
+            onClick={() => {
+              resetAuthFields({ keepEmailFormExpanded: false });
+              setStep("delivery");
+            }}
             style={{
               display: "block",
               margin: "16px auto 0",

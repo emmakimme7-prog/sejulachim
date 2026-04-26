@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     // 가입 모드 + 관심사 있으면 자동 가입
     if (verified.mode === "signup" && verified.interests.length > 0) {
       const consentedAt = new Date().toISOString();
-      const isKakaoChannel = verified.channel === "kakao";
+      const useEmailDelivery = verified.channel === "email";
       const user = await upsertMongoSignup({
         email: profile.email,
         deliveryTime: "07:00",
@@ -65,15 +65,17 @@ export async function GET(request: NextRequest) {
         subInterests: verified.subInterests,
         consentedAt,
         marketingConsentedAt: verified.marketingConsent ? consentedAt : null,
-        deliveryChannels: { kakao: isKakaoChannel, email: !isKakaoChannel },
-        phone: isKakaoChannel ? verified.phone ?? null : null,
+        deliveryChannels: { email: useEmailDelivery },
+        phone: null,
         authProvider: "kakao",
       });
       await createUserSession({ userId: user.id, email: profile.email, rememberMe: true });
       await addSecurityJobLog("auth.kakao_signup", "success", `user=${user.id}`);
-      try {
-        await sendSignupPreviewEmail({ email: profile.email, userId: user.id, interests: verified.interests });
-      } catch { /* non-critical */ }
+      if (useEmailDelivery) {
+        try {
+          await sendSignupPreviewEmail({ email: profile.email, userId: user.id, interests: verified.interests });
+        } catch { /* non-critical */ }
+      }
       const response = NextResponse.redirect(new URL("/complete", request.url));
       clearStateCookie(response);
       return response;

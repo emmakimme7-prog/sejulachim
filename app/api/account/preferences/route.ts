@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireUserSession } from "@/lib/auth/user-session";
+import { ApiUnauthorizedError, requireApiUserSession } from "@/lib/auth/user-session";
 import { addSecurityJobLog, updateUserPreferences } from "@/lib/mongodb/user-data";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { assertSameOrigin, getClientIp } from "@/lib/security/request";
@@ -10,7 +10,7 @@ import { sanitizePlainText } from "@/lib/utils";
 export async function POST(request: NextRequest) {
   try {
     assertSameOrigin(request);
-    const session = await requireUserSession();
+    const session = await requireApiUserSession();
     const ip = getClientIp(request);
     const limit = checkRateLimit(`account:preferences:${session.id}:${ip}`, 10, 60_000);
     if (!limit.allowed) {
@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
     await addSecurityJobLog("account.preferences_update", "success", `user=${session.id}`);
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (error instanceof ApiUnauthorizedError) {
+      return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+    }
     console.error("[/api/account/preferences] failed:", error);
     const message = error instanceof Error ? error.message : "설정을 저장하지 못했습니다.";
     return NextResponse.json({ error: message }, { status: 400 });

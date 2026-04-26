@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { CompletePhoneForm } from "@/components/complete-phone-form";
 import { getCurrentUserSession } from "@/lib/auth/user-session";
-import { findUserById } from "@/lib/mongodb/user-data";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -11,18 +9,6 @@ export const metadata: Metadata = {
 
 export default async function CompletePage() {
   const session = await getCurrentUserSession();
-  const user = session ? await findUserById(session.id) : null;
-  const channelUser = user as
-    | (typeof user & {
-        delivery_kakao?: boolean | null;
-        delivery_email?: boolean | null;
-        phone?: string | null;
-      })
-    | null;
-  const isKakaoChannel = Boolean(channelUser?.delivery_kakao) && !channelUser?.delivery_email;
-  const phoneDisplay = channelUser?.phone
-    ? channelUser.phone.replace(/^(010)(\d{4})(\d{4})$/, "$1-$2-$3")
-    : null;
 
   return (
     <div style={{ background: "#F0EEE9", minHeight: "100vh", padding: "60px 20px 80px" }}>
@@ -95,31 +81,13 @@ export default async function CompletePage() {
             fontWeight: 500,
           }}
         >
-          {isKakaoChannel ? (
-            <>
-              <b style={{ color: "#1F1A14" }}>내일 아침 7시 30분</b>부터
-              <br />
-              카카오톡으로 보내드릴게요.
-            </>
-          ) : (
-            <>
-              오늘의 첫 브리핑을 방금 메일로 보냈어요.
-              <br />
-              <b style={{ color: "#1F1A14" }}>내일 아침 7시 30분</b>부터 매일 보내드려요.
-            </>
-          )}
+          오늘의 첫 브리핑을 방금 메일로 보냈어요.
+          <br />
+          <b style={{ color: "#1F1A14" }}>내일 아침 7시 30분</b>부터 매일 보내드려요.
         </p>
         <p style={{ margin: "0 0 28px", fontSize: 14, color: "#7A6F62", fontWeight: 500 }}>
-          {isKakaoChannel
-            ? phoneDisplay
-              ? `${phoneDisplay}로 알림톡이 도착해요.`
-              : "알림톡 받을 번호를 아래에 입력해주세요."
-            : "메일이 보이지 않으면 프로모션함이나 스팸함도 확인해주세요."}
+          메일이 보이지 않으면 프로모션함이나 스팸함도 확인해주세요.
         </p>
-
-        {isKakaoChannel && !phoneDisplay && session ? (
-          <CompletePhoneForm email={session.email} />
-        ) : null}
 
         <div style={{ display: "flex", justifyContent: "center" }}>
           <Link

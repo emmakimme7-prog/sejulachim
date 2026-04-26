@@ -32,7 +32,7 @@ type ContentProductMatchInput = {
 };
 
 export const PRODUCT_DISCLOSURE =
-  "이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.";
+  "쿠팡으로 이동할 수 있는 외부 링크가 포함될 수 있습니다.";
 
 function createCoupangSearchUrl(keyword: string) {
   return `https://www.coupang.com/np/search?component=&q=${encodeURIComponent(keyword)}`;

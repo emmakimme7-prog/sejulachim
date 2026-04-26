@@ -12,7 +12,9 @@ export const SUB_INTERESTS: Record<MainInterest, string[]> = {
 const DISPLAY_MAIN_INTEREST_BY_STORED_CATEGORY: Record<string, MainInterest> = {
   건강: "건강",
   돈: "돈",
+  실생활: "실생활",
   뉴스: "뉴스",
+  관계: "관계",
   취미: "실생활",
   가족: "관계"
 };
@@ -20,9 +22,9 @@ const DISPLAY_MAIN_INTEREST_BY_STORED_CATEGORY: Record<string, MainInterest> = {
 const STORED_CATEGORY_BY_MAIN_INTEREST: Record<MainInterest, string> = {
   건강: "건강",
   돈: "돈",
-  실생활: "취미",
+  실생활: "실생활",
   뉴스: "뉴스",
-  관계: "가족"
+  관계: "관계"
 };
 
 const MAIN_INTEREST_BY_SUB_INTEREST = Object.fromEntries(

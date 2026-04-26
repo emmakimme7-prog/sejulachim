@@ -65,6 +65,24 @@ type DeepLinkCacheRow = {
   expires_at: string;
 };
 
+function isCoupangPartnersEnabled() {
+  return getOptionalServerEnv().COUPANG_PARTNERS_ENABLED?.trim().toLowerCase() === "true";
+}
+
+function isAllowedCoupangProductUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+    if (!hostname.endsWith("coupang.com")) {
+      return false;
+    }
+
+    return parsed.pathname.startsWith("/vp/products/") || parsed.pathname.startsWith("/products/");
+  } catch {
+    return false;
+  }
+}
+
 async function getProductCache(keyword: string): Promise<CacheRow | null> {
   try {
     const supabase = createAdminSupabaseClient();
@@ -164,7 +182,7 @@ async function requestAffiliateDeepLinks(urls: string[], cacheOnly = false) {
   const env = getOptionalServerEnv();
   const accessKey = env.COUPANG_PARTNERS_ACCESS_KEY?.trim();
   const secretKey = env.COUPANG_PARTNERS_SECRET_KEY?.trim();
-  const uniqueUrls = Array.from(new Set(urls.filter(Boolean)));
+  const uniqueUrls = Array.from(new Set(urls.filter(Boolean).filter(isAllowedCoupangProductUrl)));
 
   if (uniqueUrls.length === 0) {
     return [];
@@ -183,7 +201,7 @@ async function requestAffiliateDeepLinks(urls: string[], cacheOnly = false) {
     .filter((item): item is DeepLinkEntry => Boolean(item));
 
   const missingUrls = uniqueUrls.filter((url) => !cachedMap.has(url));
-  if (missingUrls.length === 0 || cacheOnly || !accessKey || !secretKey) {
+  if (missingUrls.length === 0 || cacheOnly || !isCoupangPartnersEnabled() || !accessKey || !secretKey) {
     return cachedEntries;
   }
 
@@ -226,7 +244,10 @@ export async function attachAffiliateLinks(products: ProductCatalogItem[]): Prom
     return products;
   }
 
-  const urls = Array.from(new Set(products.map((item) => item.linkUrl)));
+  const urls = Array.from(new Set(products.map((item) => item.linkUrl).filter(isAllowedCoupangProductUrl)));
+  if (urls.length === 0) {
+    return products;
+  }
 
   try {
     const deepLinks = await requestAffiliateDeepLinks(urls);
@@ -278,7 +299,7 @@ async function requestTopSearchProducts(keyword: string, limit = 1, minScore = 1
   const secretKey = env.COUPANG_PARTNERS_SECRET_KEY?.trim();
 
   if (!keyword.trim()) return [];
-  if (!cacheOnly && (!accessKey || !secretKey)) return [];
+  if (!cacheOnly && (!isCoupangPartnersEnabled() || !accessKey || !secretKey)) return [];
 
   // 1. DB 캐시 조회 (캐시는 score 필터 없이 저장, 반환 시 필터 적용)
   const cached = await getProductCache(keyword);

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextRequest } from "next/server";
 
 import { getOptionalServerEnv } from "@/lib/env";
@@ -35,13 +35,16 @@ export function hashToken(token: string) {
 }
 
 export function secureCompareSecret(input: string | null, expected: string) {
-  if (!input) return false;
+  if (!input || !expected) return false;
   const left = Buffer.from(input);
   const right = Buffer.from(expected);
-  return left.length === right.length && left.equals(right);
+  return left.length === right.length && timingSafeEqual(left, right);
 }
 
 export function isAuthorizedCronRequest(request: NextRequest, expectedSecret: string) {
+  if (!expectedSecret) {
+    return false;
+  }
   const authorization = request.headers.get("authorization");
   const manualHeader = request.headers.get("x-cron-secret");
 
