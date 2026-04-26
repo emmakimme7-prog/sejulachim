@@ -30,12 +30,23 @@ async function handleCron(request: NextRequest) {
 
   try {
     const result = await generateDailyContentForDate(date);
-    await logJob(jobName, "success", `${result.date} count=${result.count}`);
+    await logJob(
+      jobName,
+      "success",
+      [
+        `${result.date} count=${result.count}`,
+        `thumbnails ${result.thumbnail.generated}/${result.thumbnail.attempted}`,
+        `audio ${result.audio.generated}/${result.audio.attempted}`
+      ].join(" | ")
+    );
     return NextResponse.json({ ok: true, date: result.date, count: result.count });
   } catch (error) {
-    const details = error instanceof Error ? error.message : "Unexpected generation error";
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error && error.stack ? error.stack.split("\n").slice(0, 6).join(" | ") : "";
+    const details = `[${date}] ${message}${stack ? ` :: ${stack}` : ""}`.slice(0, 1500);
+    console.error("[generate-daily-content] failed", error);
     await logJob(jobName, "failed", details);
-    return NextResponse.json({ error: "Job failed" }, { status: 500 });
+    return NextResponse.json({ error: "Job failed", message, date }, { status: 500 });
   }
 }
 
