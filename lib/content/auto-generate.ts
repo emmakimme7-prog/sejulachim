@@ -1,6 +1,7 @@
 import "server-only";
 
 import { generateAndStoreContentAudio } from "@/lib/content/audio";
+import { generateAndStoreContentThumbnail } from "@/lib/content/thumbnails";
 import { summarizeContentItem } from "@/lib/content/summarize";
 import { MAIN_INTERESTS, SUB_INTERESTS, getStoredCategoryForMainInterest } from "@/lib/content/sub-interests";
 import type { SourceType } from "@/lib/content/sources";
@@ -21,6 +22,12 @@ type FeedItem = {
   sourceName: string;
   publishedAt: string | null;
   type: SourceType;
+};
+
+type GenerationSummary = {
+  attempted: number;
+  generated: number;
+  failed: number;
 };
 
 const CATEGORY_SLUG_MAP: Record<string, string> = {
@@ -341,13 +348,16 @@ async function buildRowFromSource(params: {
   subInterest: string;
   item: FeedItem;
   date: string;
-  index: number;
+  slugIndex: number;
+  publishOrder: number;
+  totalPublishSlots: number;
 }) {
-  const { category, subInterest, item, date, index } = params;
-  const summaryType = SUMMARY_TYPE_ORDER[index % SUMMARY_TYPE_ORDER.length];
+  const { category, subInterest, item, date, slugIndex, publishOrder, totalPublishSlots } = params;
+  const summaryType = SUMMARY_TYPE_ORDER[slugIndex % SUMMARY_TYPE_ORDER.length];
   const categorySlug = CATEGORY_SLUG_MAP[category] ?? "brief";
-  const subInterestSlug = SUB_INTEREST_SLUG_MAP[subInterest] ?? `sub-${index + 1}`;
-  const slug = `brief-${date}-${categorySlug}-${subInterestSlug}-${index + 1}`;
+  const subInterestSlug = SUB_INTEREST_SLUG_MAP[subInterest] ?? `sub-${slugIndex + 1}`;
+  const slug = `brief-${date}-${categorySlug}-${subInterestSlug}-${slugIndex + 1}`;
+  const publishOffset = Math.max(0, totalPublishSlots - 1 - publishOrder) * 2;
   const rawText = [
     `원문 제목: ${item.title}`,
     item.description ? `원문 요약: ${item.description}` : "",
@@ -385,7 +395,7 @@ async function buildRowFromSource(params: {
     approval_status: "approved",
     ai_status: "completed",
     summary_status: "done",
-    published_at: item.publishedAt ?? buildPublishedAtFallback(date, index * 2),
+    published_at: buildPublishedAtFallback(date, publishOffset),
     slug,
     updated_at: new Date().toISOString()
   };
@@ -400,13 +410,16 @@ function buildFallbackRow(params: {
   subInterest: string;
   item: FeedItem;
   date: string;
-  index: number;
+  slugIndex: number;
+  publishOrder: number;
+  totalPublishSlots: number;
 }): Record<string, unknown> {
-  const { category, subInterest, item, date, index } = params;
-  const summaryType = SUMMARY_TYPE_ORDER[index % SUMMARY_TYPE_ORDER.length];
+  const { category, subInterest, item, date, slugIndex, publishOrder, totalPublishSlots } = params;
+  const summaryType = SUMMARY_TYPE_ORDER[slugIndex % SUMMARY_TYPE_ORDER.length];
   const categorySlug = CATEGORY_SLUG_MAP[category] ?? "brief";
-  const subInterestSlug = SUB_INTEREST_SLUG_MAP[subInterest] ?? `sub-${index + 1}`;
-  const slug = `brief-${date}-${categorySlug}-${subInterestSlug}-${index + 1}`;
+  const subInterestSlug = SUB_INTEREST_SLUG_MAP[subInterest] ?? `sub-${slugIndex + 1}`;
+  const slug = `brief-${date}-${categorySlug}-${subInterestSlug}-${slugIndex + 1}`;
+  const publishOffset = Math.max(0, totalPublishSlots - 1 - publishOrder) * 2;
   const rawText = [
     `원문 제목: ${item.title}`,
     item.description ? `원문 요약: ${item.description}` : "",
@@ -429,9 +442,9 @@ function buildFallbackRow(params: {
     action_line: "",
     summary_type: summaryType,
     approval_status: "approved",
-    ai_status: "fallback",
+    ai_status: "failed",
     summary_status: "done",
-    published_at: item.publishedAt ?? buildPublishedAtFallback(date, index * 2),
+    published_at: buildPublishedAtFallback(date, publishOffset),
     slug,
     thumbnail_url: null,
     thumbnail_alt: null,
@@ -451,7 +464,9 @@ function buildFallbackRow(params: {
 async function generateCategoryArticles(
   category: string,
   date: string,
-  globalIndex: number
+  categoryIndex: number,
+  totalCategories: number,
+  totalPublishSlots: number
 ): Promise<Array<Record<string, unknown>>> {
   const subInterests = (SUB_INTERESTS as Record<string, string[]>)[category] ?? [];
 
@@ -466,7 +481,8 @@ async function generateCategoryArticles(
 
   for (let i = 0; i < subInterests.length; i++) {
     const result = sourceResults[i];
-    const articleIndex = globalIndex + i;
+    const slugIndex = categoryIndex * subInterests.length + i;
+    const publishOrder = i * totalCategories + categoryIndex;
     const subInterest = subInterests[i];
 
     // RSS 수집 자체 실패 → 스킵 (소스 없음)
@@ -478,7 +494,15 @@ async function generateCategoryArticles(
     const item = result.value[0];
 
     buildTasks.push(
-      buildRowFromSource({ category, subInterest, item, date, index: articleIndex })
+      buildRowFromSource({
+        category,
+        subInterest,
+        item,
+        date,
+        slugIndex,
+        publishOrder,
+        totalPublishSlots
+      })
         .then((built) => {
           const row: Record<string, unknown> = { ...built };
           // 썸네일은 별도 repair-thumbnails cron에서 채움 (생성 속도 우선)
@@ -492,7 +516,15 @@ async function generateCategoryArticles(
         .catch((err) => {
           // AI 요약 실패 → 원문 기반 폴백 row로 대체 (null 반환 대신)
           console.error("[article-build-error] AI 요약 실패, 폴백 row 사용:", category, subInterest, err);
-          return buildFallbackRow({ category, subInterest, item, date, index: articleIndex });
+          return buildFallbackRow({
+            category,
+            subInterest,
+            item,
+            date,
+            slugIndex,
+            publishOrder,
+            totalPublishSlots
+          });
         })
     );
   }
@@ -510,11 +542,15 @@ async function generateCategoryArticles(
 
 export async function generateDailyContentForDate(date = getKstDateParts().date) {
   const supabase = createAdminSupabaseClient();
+  const totalPublishSlots = MAIN_INTERESTS.reduce(
+    (count, category) => count + (((SUB_INTERESTS as Record<string, string[]>)[category] ?? []).length),
+    0
+  );
 
   // 5개 카테고리를 병렬로 처리 (각 5개 서브카테고리 = 총 25개 기사)
   const categoryResults = await Promise.allSettled(
     MAIN_INTERESTS.map((category, catIdx) =>
-      generateCategoryArticles(category, date, catIdx * 5)
+      generateCategoryArticles(category, date, catIdx, MAIN_INTERESTS.length, totalPublishSlots)
     )
   );
 
@@ -529,29 +565,72 @@ export async function generateDailyContentForDate(date = getKstDateParts().date)
     const { data: inserted, error } = await supabase
       .from('sj_content_items')
       .upsert(rows, { onConflict: "slug" })
-      .select("id, audio_url");
+      .select("id, audio_url, thumbnail_url");
     if (error) {
       throw error;
     }
 
-    // TTS 자동 생성 (audio_url 이 아직 없는 것만). 승인은 이미 upsert 로 됐음.
-    // fire-and-forget — 실패해도 cron 결과에 영향 X. 여러 건이라 병렬 최대 3개로 제한.
-    const toGenerate = (inserted ?? []).filter((row) => !row.audio_url).map((row) => String(row.id));
-    if (toGenerate.length > 0) {
-      void (async () => {
-        const CONCURRENCY = 3;
-        for (let i = 0; i < toGenerate.length; i += CONCURRENCY) {
-          await Promise.all(
-            toGenerate.slice(i, i + CONCURRENCY).map((id) =>
-              generateAndStoreContentAudio(id).catch((error) => {
-                console.warn("[auto-generate] audio failed", { id, error: (error as Error).message });
-              })
-            )
-          );
+    const runInBatches = async (
+      ids: string[],
+      concurrency: number,
+      worker: (id: string) => Promise<{ ok: boolean }>
+    ): Promise<GenerationSummary> => {
+      const summary: GenerationSummary = { attempted: ids.length, generated: 0, failed: 0 };
+      for (let i = 0; i < ids.length; i += concurrency) {
+        const batch = await Promise.all(ids.slice(i, i + concurrency).map((id) => worker(id)));
+        for (const result of batch) {
+          if (result.ok) {
+            summary.generated += 1;
+          } else {
+            summary.failed += 1;
+          }
         }
-      })();
-    }
+      }
+      return summary;
+    };
+
+    // 썸네일은 별도 repair cron이 있더라도, 본 생성 경로에서 한 번 더 채워서
+    // 크론 누락 시 오늘 기사 카드가 비는 상황을 막는다.
+    const thumbnailIds = (inserted ?? []).filter((row) => !row.thumbnail_url).map((row) => String(row.id));
+    const thumbnailSummary = await runInBatches(thumbnailIds, 4, async (id) => {
+      try {
+        const result = await generateAndStoreContentThumbnail(id);
+        if (!result.ok) {
+          console.warn("[auto-generate] thumbnail failed", { id, reason: result.reason });
+        }
+        return { ok: result.ok };
+      } catch (error) {
+        console.warn("[auto-generate] thumbnail failed", { id, error: (error as Error).message });
+        return { ok: false };
+      }
+    });
+
+    const audioIds = (inserted ?? []).filter((row) => !row.audio_url).map((row) => String(row.id));
+    const audioSummary = await runInBatches(audioIds, 3, async (id) => {
+      try {
+        const result = await generateAndStoreContentAudio(id);
+        if (!result.ok) {
+          console.warn("[auto-generate] audio failed", { id, reason: result.reason });
+        }
+        return { ok: result.ok };
+      } catch (error) {
+        console.warn("[auto-generate] audio failed", { id, error: (error as Error).message });
+        return { ok: false };
+      }
+    });
+
+    return {
+      date,
+      count: rows.length,
+      thumbnail: thumbnailSummary,
+      audio: audioSummary
+    };
   }
 
-  return { date, count: rows.length };
+  return {
+    date,
+    count: rows.length,
+    thumbnail: { attempted: 0, generated: 0, failed: 0 },
+    audio: { attempted: 0, generated: 0, failed: 0 }
+  };
 }
