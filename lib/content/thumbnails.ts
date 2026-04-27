@@ -3,7 +3,6 @@ import "server-only";
 import { createHash } from "node:crypto";
 
 import { getOptionalServerEnv } from "@/lib/env";
-import { createOpenAIClient, selectOpenAIModel } from "@/lib/openai/model-router";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { sanitizePlainText } from "@/lib/utils";
 
@@ -122,59 +121,14 @@ function buildFallbackQuery(input: {
   return [...subInterestKeywords, ...categoryKeywords].slice(0, 2).join(" ");
 }
 
-async function translateToImageQuery(input: {
+// translateToImageQuery: OpenAI 통합 제거됨. 항상 카테고리/sub_interest 키워드 기반 fallback 사용.
+function translateToImageQuery(input: {
   title: string;
   category: string;
   subInterest?: string | null;
   summary?: string | null;
-}) {
-  const env = getOptionalServerEnv();
-  if (!env.OPENAI_API_KEY) {
-    return buildFallbackQuery(input);
-  }
-
-  try {
-    const client = createOpenAIClient();
-    const routedModel = await selectOpenAIModel([
-      "한국어 기사 제목과 내용을 바탕으로 무료 이미지 검색용 짧은 영어 쿼리 한 줄을 만드는 작업입니다.",
-      "짧은 답변이면 충분하고 구조화된 복잡한 추론은 필요하지 않습니다."
-    ].join(" "));
-    const completion = await client.chat.completions.create({
-      model: routedModel.model,
-      temperature: 0.1,
-      messages: [
-        {
-          role: "system",
-          content: [
-            "You create concise English search queries for free stock photos on Pixabay.",
-            "Return exactly TWO lines of plain text, each a separate search query.",
-            "Use 4 to 6 English words per line.",
-            "Avoid brand names, punctuation, quotes, and Korean words.",
-            "Focus on the SPECIFIC subject of the article, not the broad category.",
-            "Example: For an article about towel care with citric acid, use 'white towel fluffy clean folded stack' NOT 'motorcycle rider city street'.",
-            "Think about what physical objects, scenes, or actions the article describes, then translate those into photo search terms."
-          ].join(" ")
-        },
-        {
-          role: "user",
-          content: [
-            `title: ${sanitizePlainText(input.title, 160)}`,
-            `category: ${sanitizePlainText(input.category, 40)}`,
-            `subInterest: ${sanitizePlainText(input.subInterest ?? "", 80)}`,
-            input.summary ? `summary: ${sanitizePlainText(input.summary, 300)}` : ""
-          ].filter(Boolean).join("\n")
-        }
-      ]
-    });
-
-    const raw = completion.choices[0]?.message?.content?.trim();
-    if (!raw) return [buildFallbackQuery(input)];
-    // AI가 2줄 반환 → 각각 별도 쿼리로 사용
-    const lines = raw.split(/\n+/).map((l) => sanitizePlainText(l.trim(), 80)).filter(Boolean);
-    return lines.length > 0 ? lines : [buildFallbackQuery(input)];
-  } catch {
-    return [buildFallbackQuery(input)];
-  }
+}): string[] {
+  return [buildFallbackQuery(input)];
 }
 
 async function searchWikimediaCommons(query: string, excludePageUrls?: Set<string>) {
@@ -328,7 +282,7 @@ export async function findRelatedContentThumbnail(input: {
   excludePageUrls?: Set<string>;
 }) {
   const env = getOptionalServerEnv();
-  const aiQueries = await translateToImageQuery(input);
+  const aiQueries = translateToImageQuery(input);
   const fallbackQuery = buildFallbackQuery(input);
   const queries = Array.from(new Set([...aiQueries, fallbackQuery].filter(Boolean)));
 

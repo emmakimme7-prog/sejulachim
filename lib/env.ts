@@ -27,7 +27,6 @@ const serverEnvSchema = z.object({
   MONGODB_DB_NAME: z.string().min(1).optional(),
   RESEND_API_KEY: z.string().min(1),
   RESEND_FROM_EMAIL: z.string().min(1),
-  OPENAI_API_KEY: z.string().min(1).optional(),
   PIXABAY_API_KEY: z.string().min(1).optional(),
   GOOGLE_APPLICATION_CREDENTIALS_JSON: z.string().min(1).optional(),
   SOLAPI_API_KEY: z.string().min(1).optional(),
