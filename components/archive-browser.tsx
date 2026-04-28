@@ -307,12 +307,45 @@ export function ArchiveBrowser({
       return sortOrder === "oldest" ? leftDate - rightDate : rightDate - leftDate;
     });
 
+    // '오늘 소식' 탭의 latest 정렬 + '전체' 카테고리일 때 카테고리 라운드 로빈 적용.
+    // 시간순 그대로면 같은 카테고리 5개가 연속 노출되는 문제가 있어, 카테고리별로
+    // 최신 1건씩 번갈아 나오도록 재배치한다. 카테고리 필터링 중이면 의미 없으니 skip.
+    if (localTodayMode && sortOrder === "latest" && (!selectedTopic || selectedTopic === ALL_TOPICS)) {
+      const ROUND_ROBIN_ORDER = ["건강", "돈", "실생활", "뉴스", "관계"];
+      const buckets = new Map<string, typeof sorted>();
+      for (const cat of ROUND_ROBIN_ORDER) buckets.set(cat, []);
+      const others: typeof sorted = [];
+      for (const item of sorted) {
+        const bucket = buckets.get(item.main_interest);
+        if (bucket) bucket.push(item);
+        else others.push(item);
+      }
+      const interleaved: typeof sorted = [];
+      let idx = 0;
+      let pushed = true;
+      while (pushed) {
+        pushed = false;
+        for (const cat of ROUND_ROBIN_ORDER) {
+          const bucket = buckets.get(cat)!;
+          if (bucket[idx]) {
+            interleaved.push(bucket[idx]);
+            pushed = true;
+          }
+        }
+        idx += 1;
+      }
+      // 5개 카테고리 외 항목은 뒤에 붙임 (안전망 — 보통 비어있음)
+      interleaved.push(...others);
+      if (isFeatureView) return interleaved.slice(0, 10);
+      return interleaved;
+    }
+
     if (isFeatureView) {
       return sorted.slice(0, 10);
     }
 
     return sorted;
-  }, [baseFilteredItems, customDate, dateFilter, isFeatureView, sortOrder]);
+  }, [baseFilteredItems, customDate, dateFilter, isFeatureView, sortOrder, localTodayMode, selectedTopic]);
 
   const latestDate = useMemo(() => {
     if (!localTodayMode) return null;
