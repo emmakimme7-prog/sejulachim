@@ -69,7 +69,7 @@ export function ChatHubInquiryWidget() {
       <button
         type="button"
         onClick={handleToggle}
-        className="inline-flex h-14 w-14 flex-nowrap items-center justify-center gap-2 rounded-full bg-gray-900 text-sm font-extrabold text-white shadow-[0_18px_40px_rgba(17,32,51,0.24)] transition hover:bg-gray-800 sm:min-w-[154px] sm:px-5"
+        className="fixed bottom-6 right-4 z-40 inline-flex h-14 w-14 flex-nowrap items-center justify-center gap-2 rounded-full bg-gray-900 text-sm font-extrabold text-white shadow-[0_18px_40px_rgba(17,32,51,0.24)] transition hover:bg-gray-800 sm:bottom-8 sm:right-6 sm:min-w-[154px] sm:px-5"
         aria-label={open ? "문의 창 닫기" : "문의하기"}
       >
         {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}

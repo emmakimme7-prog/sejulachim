@@ -3,6 +3,7 @@
 import { Suspense, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
+import { ChatHubInquiryWidget } from "@/components/chathub-inquiry-widget";
 import { SpeechPlayer, stopSpeech, isChainAdvancing, consumeChainAdvance } from "@/components/speech-controls";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -46,6 +47,7 @@ export function AppChrome({ slot }: { slot: "top" | "bottom" }) {
     <>
       <SpeechPlayer />
       <SiteFooter />
+      <ChatHubInquiryWidget />
     </>
   );
 }
