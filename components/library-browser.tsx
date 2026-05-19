@@ -152,9 +152,9 @@ export function LibraryBrowser({
           padding: "10px 12px",
           marginBottom: 16,
           display: "flex",
-          alignItems: "center",
+          flexDirection: "column",
+          alignItems: "stretch",
           gap: 8,
-          flexWrap: "wrap",
         }}
       >
         <div
@@ -199,6 +199,7 @@ export function LibraryBrowser({
             );
           })}
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -208,7 +209,8 @@ export function LibraryBrowser({
           placeholder="검색"
           style={{
             height: 36,
-            minWidth: 120,
+            flex: 1,
+            minWidth: 0,
             padding: "0 12px",
             borderRadius: 10,
             border: "1.5px solid #E8DCC7",
@@ -243,6 +245,7 @@ export function LibraryBrowser({
         >
           <Search style={{ width: 14, height: 14 }} />
         </button>
+        </div>
       </div>
 
       {/* 선택 액션 바 */}
