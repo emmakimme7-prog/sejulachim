@@ -80,7 +80,7 @@ export function ChatHubInquiryWidget() {
           ref={iframeRef}
           src={widgetUrl}
           title="ChatHub 채팅 문의"
-          className="fixed bottom-[11rem] left-4 right-4 z-40 h-[min(640px,calc(100dvh-13.5rem))] w-auto rounded-[24px] border-0 bg-transparent shadow-[0_24px_60px_rgba(17,32,51,0.22)] sm:bottom-[8.5rem] sm:left-auto sm:right-6 sm:w-[min(380px,calc(100vw-2rem))] sm:rounded-[28px]"
+          className="fixed bottom-[6rem] left-3 right-3 z-40 h-[min(720px,calc(100dvh-8.5rem))] w-auto rounded-[24px] border-0 bg-transparent shadow-[0_24px_60px_rgba(17,32,51,0.22)] sm:bottom-[6rem] sm:left-auto sm:right-6 sm:w-[min(420px,calc(100vw-2rem))] sm:rounded-[28px]"
           loading="lazy"
           referrerPolicy="strict-origin-when-cross-origin"
         />
