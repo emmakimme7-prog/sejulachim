@@ -3,6 +3,7 @@
 import type { FormEvent, MouseEvent } from "react";
 
 import { Bell, LibraryBig, Search, Type, User } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -251,25 +252,14 @@ export function SiteHeader() {
               className="flex items-center gap-[10px]"
               aria-label="세줄아침 홈으로 이동"
             >
-              <div
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 11,
-                  background: "#E57C23",
-                  color: "#fff",
-                  fontWeight: 900,
-                  fontSize: 20,
-                  letterSpacing: "-0.02em",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-                aria-hidden="true"
-              >
-                세
-              </div>
+              <Image
+                src="/threeline_morning_symbol.png"
+                alt=""
+                width={38}
+                height={38}
+                priority
+                className="h-[38px] w-[38px] shrink-0"
+              />
               <div
                 style={{
                   fontSize: 20,
