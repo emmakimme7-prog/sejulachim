@@ -8,6 +8,7 @@ import { OAuthLinkedNotice } from "@/components/oauth-linked-notice";
 import { getCurrentUserSession } from "@/lib/auth/user-session";
 import { getInterestConfig } from "@/lib/content/interest-config";
 import { listPublicContentItems, listTodayPreview } from "@/lib/content/public-content";
+import { buildTodayFeedOrder } from "@/lib/content/today-feed-order";
 import { listUserInterestSelections } from "@/lib/mongodb/user-data";
 import { fetchPopularProductsForContent } from "@/lib/products/coupang-partners";
 
@@ -76,13 +77,17 @@ export default async function HomePage({
       audio_url: item.audio_url ?? null
     }));
 
-  const sidebarItems = archiveItems.slice(0, 20).map((it) => ({
-    title: it.title,
-    short_summary: it.short_summary,
-    action_line: it.action_line,
-    slug: it.slug,
-    audio_url: it.audio_url,
-  }));
+  // 우측 "전체 듣기" 재생목록 = 메인 피드 "오늘의 소식"과 동일한 순서
+  // (오늘/최신 날짜 필터 + 카테고리 라운드 로빈). 전체 글 최신순 slice가 아님.
+  const sidebarItems = buildTodayFeedOrder(archiveItems, (it) => it.main_interest)
+    .slice(0, 20)
+    .map((it) => ({
+      title: it.title,
+      short_summary: it.short_summary,
+      action_line: it.action_line,
+      slug: it.slug,
+      audio_url: it.audio_url,
+    }));
 
   // 로그인 사용자의 관심분야 (사이드바 위젯용)
   let userInterests: string[] | undefined;

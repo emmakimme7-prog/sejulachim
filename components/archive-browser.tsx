@@ -10,6 +10,7 @@ import { type ResolvedAffiliateProduct } from "@/lib/products/catalog";
 import { FavoriteToggleButton } from "@/components/favorite-toggle-button";
 import { ListenButton, playListenable, setAutoPlayNextFn, setSpeechPlaylist, SpeechSearchButton } from "@/components/speech-controls";
 import { type ContentSource, normalizeSources } from "@/lib/content/sources";
+import { orderByCategoryRoundRobin } from "@/lib/content/today-feed-order";
 import { type AvatarKey } from "@/lib/profile";
 import { MAIN_INTERESTS, SUB_INTERESTS } from "@/lib/content/sub-interests";
 import { formatDate } from "@/lib/utils";
@@ -311,31 +312,7 @@ export function ArchiveBrowser({
     // 시간순 그대로면 같은 카테고리 5개가 연속 노출되는 문제가 있어, 카테고리별로
     // 최신 1건씩 번갈아 나오도록 재배치한다. 카테고리 필터링 중이면 의미 없으니 skip.
     if (localTodayMode && sortOrder === "latest" && (!selectedTopic || selectedTopic === ALL_TOPICS)) {
-      const ROUND_ROBIN_ORDER = ["건강", "돈", "실생활", "뉴스", "관계"];
-      const buckets = new Map<string, typeof sorted>();
-      for (const cat of ROUND_ROBIN_ORDER) buckets.set(cat, []);
-      const others: typeof sorted = [];
-      for (const item of sorted) {
-        const bucket = buckets.get(item.main_interest);
-        if (bucket) bucket.push(item);
-        else others.push(item);
-      }
-      const interleaved: typeof sorted = [];
-      let idx = 0;
-      let pushed = true;
-      while (pushed) {
-        pushed = false;
-        for (const cat of ROUND_ROBIN_ORDER) {
-          const bucket = buckets.get(cat)!;
-          if (bucket[idx]) {
-            interleaved.push(bucket[idx]);
-            pushed = true;
-          }
-        }
-        idx += 1;
-      }
-      // 5개 카테고리 외 항목은 뒤에 붙임 (안전망 — 보통 비어있음)
-      interleaved.push(...others);
+      const interleaved = orderByCategoryRoundRobin(sorted, (item) => item.main_interest);
       if (isFeatureView) return interleaved.slice(0, 10);
       return interleaved;
     }
