@@ -940,7 +940,9 @@ export function ArchiveBrowser({
                       >
                         {item.title}
                       </h2>
+                      {/* 데스크톱: 본문이 제목 아래(썸네일 옆). 모바일은 행 아래로 분리 — 별도 <p> */}
                       <p
+                        className="hidden sm:block"
                         style={{
                           margin: 0,
                           fontSize: "calc(15px * var(--font-scale, 1))",
@@ -964,6 +966,19 @@ export function ArchiveBrowser({
                       <CategoryPlaceholder cat={item.main_interest} size={96} />
                     )}
                   </div>
+                  {/* 모바일 전용: 본문을 제목+썸네일 행과 분리해 풀폭으로 */}
+                  <p
+                    className="sm:hidden"
+                    style={{
+                      margin: "12px 0 0",
+                      fontSize: "calc(15px * var(--font-scale, 1))",
+                      lineHeight: 1.6,
+                      color: "#4A4037",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {item.short_summary}
+                  </p>
                   {item.action_line ? (
                     <div
                       style={{
