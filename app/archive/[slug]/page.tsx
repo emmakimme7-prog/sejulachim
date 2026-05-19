@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ArticleCard } from "@/components/article-card";
 import { ContentThumbnail } from "@/components/content-thumbnail";
 import { DetailActionBar } from "@/components/detail-action-bar";
 import { DetailListenButton } from "@/components/detail-listen-button";
@@ -502,87 +503,18 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                 >
                   다음 글
                 </div>
-                <Link
-                  href={`/archive/${nextItem.slug}`}
-                  style={{
-                    display: "block",
-                    background: "#fff",
-                    borderRadius: 16,
-                    border: "1.5px solid #F2E6D7",
-                    padding: 18,
-                    textDecoration: "none",
-                    color: "inherit",
+                <ArticleCard
+                  item={{
+                    title: nextItem.title,
+                    short_summary: nextItem.short_summary,
+                    slug: nextItem.slug,
+                    published_at: nextItem.published_at,
+                    category: nextItem.category ?? "",
+                    sub_interest: "sub_interest" in nextItem ? nextItem.sub_interest : null,
+                    thumbnail_url: "thumbnail_url" in nextItem ? nextItem.thumbnail_url : null,
+                    thumbnail_alt: "thumbnail_alt" in nextItem ? nextItem.thumbnail_alt : null,
                   }}
-                >
-                  {(() => {
-                    const nm = getCategoryMeta(nextItem.category ?? "");
-                    return (
-                      <>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            marginBottom: 10,
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
-                              padding: "4px 12px",
-                              borderRadius: 999,
-                              background: nm.bg,
-                              color: nm.color,
-                              fontSize: 12,
-                              fontWeight: 800,
-                            }}
-                          >
-                            <span>{nm.emoji}</span>
-                            {nextItem.category}
-                            {"sub_interest" in nextItem && nextItem.sub_interest ? ` · ${nextItem.sub_interest}` : ""}
-                          </span>
-                          <span style={{ marginLeft: "auto", fontSize: 12, color: "#9C907F", fontWeight: 600 }}>
-                            {nextItem.published_at ? formatDate(nextItem.published_at) : "발행 전"}
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <h2
-                              style={{
-                                margin: 0,
-                                fontSize: 19,
-                                fontWeight: 900,
-                                color: "#1F1A14",
-                                letterSpacing: "-0.02em",
-                                lineHeight: 1.35,
-                                marginBottom: 6,
-                              }}
-                            >
-                              {nextItem.title}
-                            </h2>
-                            <p style={{ margin: 0, fontSize: 14, color: "#4A4037", fontWeight: 500, lineHeight: 1.55 }}>
-                              {nextItem.short_summary}
-                            </p>
-                          </div>
-                          {"thumbnail_url" in nextItem && nextItem.thumbnail_url ? (
-                            <ContentThumbnail
-                              src={nextItem.thumbnail_url}
-                              alt={("thumbnail_alt" in nextItem ? nextItem.thumbnail_alt : "") || nextItem.title}
-                              className="w-24 h-24 shrink-0 overflow-hidden rounded-xl"
-                              imgClassName="w-full h-full object-cover"
-                              fallbackLabel="준비 중"
-                            />
-                          ) : (
-                            <CategoryPlaceholder cat={nextItem.category} size={96} />
-                          )}
-                        </div>
-                      </>
-                    );
-                  })()}
-                </Link>
+                />
               </div>
             ) : null}
 

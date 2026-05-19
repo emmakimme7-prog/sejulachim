@@ -1,73 +1,15 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import Link from "next/link";
 import { Play, Search, X } from "lucide-react";
 
+import { ArticleCard, CategoryBadge, CATEGORY_META } from "@/components/article-card";
 import { CompleteShareButton } from "@/components/complete-share-button";
-import { ContentThumbnail } from "@/components/content-thumbnail";
 import { playSpeech, setSpeechPlaylist } from "@/components/speech-controls";
-function CategoryPlaceholder({ cat, size = 96 }: { cat: string; size?: number }) {
-  const m = CATEGORY_META[cat] ?? { emoji: "📄", color: "#7A6F62", bg: "#F5EEE2" };
-  const stripe = `repeating-linear-gradient(135deg, ${m.color}14 0 8px, transparent 8px 16px)`;
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: 14,
-        background: m.bg,
-        backgroundImage: stripe,
-        border: `1px solid ${m.color}22`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-        fontSize: Math.round(size * 0.44),
-      }}
-      aria-hidden="true"
-    >
-      {m.emoji}
-    </div>
-  );
-}
 import { FavoriteToggleButton } from "@/components/favorite-toggle-button";
 import { ListenButton } from "@/components/speech-controls";
 import { type ContentSource } from "@/lib/content/sources";
 import { formatDate } from "@/lib/utils";
-
-const CATEGORY_META: Record<string, { emoji: string; color: string; bg: string }> = {
-  건강: { emoji: "💪", color: "#2E7D3F", bg: "#E8F5EC" },
-  돈: { emoji: "💰", color: "#B26A00", bg: "#FFF4E0" },
-  실생활: { emoji: "🏠", color: "#1565C0", bg: "#E3F1FD" },
-  뉴스: { emoji: "📰", color: "#424242", bg: "#EFEFEF" },
-  관계: { emoji: "💛", color: "#C2185B", bg: "#FDE8EF" },
-};
-
-function CategoryBadge({ category, interestLabels, subInterest }: { category: string; interestLabels: Record<string, string>; subInterest?: string | null }) {
-  const meta = CATEGORY_META[category] ?? { emoji: "📄", color: "#7A6F62", bg: "#F5EEE2" };
-  const label = interestLabels[category] ?? category;
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "4px 12px",
-        borderRadius: 999,
-        background: meta.bg,
-        color: meta.color,
-        fontSize: 13,
-        fontWeight: 800,
-        letterSpacing: "-0.01em",
-      }}
-    >
-      <span style={{ fontSize: 15 }}>{meta.emoji}</span>
-      {label}
-      {subInterest ? ` · ${subInterest}` : ""}
-    </span>
-  );
-}
 
 type FavoriteItem = {
   id: string;
@@ -403,18 +345,20 @@ export function LibraryBrowser({
             </div>
           ) : null}
           {filteredFavorites.map((item) => (
-            <article
+            <ArticleCard
               key={item.id}
-              style={{
-                background: "#fff",
-                borderRadius: 18,
-                border: "1.5px solid #F2E6D7",
-                padding: 18,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+              interestLabels={interestLabels}
+              item={{
+                title: item.title,
+                short_summary: item.short_summary,
+                action_line: item.action_line,
+                slug: item.slug,
+                published_at: item.published_at,
+                category: item.category,
+                sub_interest: item.sub_interest,
+                thumbnail_url: item.thumbnail_url,
               }}
-            >
-              {/* 상단: 체크박스 + 배지 + 날짜 */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+              leading={
                 <input
                   type="checkbox"
                   checked={selectedSlugs.includes(item.slug)}
@@ -422,106 +366,41 @@ export function LibraryBrowser({
                   onClick={(e) => e.stopPropagation()}
                   style={{ width: 18, height: 18, accentColor: "#E57C23", flexShrink: 0 }}
                 />
-                <CategoryBadge category={item.category} interestLabels={interestLabels} subInterest={item.sub_interest} />
-                <span style={{ marginLeft: "auto", fontSize: 12, color: "#9C907F", fontWeight: 600 }}>
-                  {item.published_at ? formatDate(item.published_at) : "발행 전"}
-                </span>
-              </div>
-
-              <Link href={`/archive/${item.slug}`} style={{ display: "block", textDecoration: "none", color: "inherit" }}>
-                <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <h2
-                      style={{
-                        margin: 0,
-                        fontSize: "calc(19px * var(--font-scale, 1))",
-                        fontWeight: 900,
-                        color: "#1F1A14",
-                        letterSpacing: "-0.02em",
-                        lineHeight: 1.35,
-                        marginBottom: 8,
-                      }}
-                    >
-                      {item.title}
-                    </h2>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "calc(14px * var(--font-scale, 1))",
-                        lineHeight: 1.6,
-                        color: "#4A4037",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {item.short_summary}
-                    </p>
-                    {item.action_line ? (
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          marginTop: 10,
-                          padding: "8px 12px",
-                          borderRadius: 10,
-                          background: "#FFF2E3",
-                          fontSize: "calc(13px * var(--font-scale, 1))",
-                          fontWeight: 800,
-                          color: "#B2570F",
-                          letterSpacing: "-0.01em",
-                        }}
-                      >
-                        ✓ {item.action_line}
-                      </div>
-                    ) : null}
-                  </div>
-                  {item.thumbnail_url ? (
-                    <ContentThumbnail
-                      src={item.thumbnail_url}
-                      alt={item.title}
-                      className="w-24 h-24 shrink-0 overflow-hidden rounded-xl"
-                      imgClassName="w-full h-full object-cover"
-                      fallbackLabel="준비 중"
-                    />
-                  ) : (
-                    <CategoryPlaceholder cat={item.category} size={96} />
-                  )}
+              }
+              footer={
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: 14,
+                    marginTop: 14,
+                    paddingTop: 12,
+                    borderTop: "1px solid #F5EEE2",
+                  }}
+                >
+                  <ListenButton
+                    text={[item.title, item.short_summary].filter(Boolean).join(". ")}
+                    className="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[13px] !font-semibold !text-[#7A6F62] hover:!text-[#1F1A14] !shadow-none"
+                    label="듣기"
+                  />
+                  <CompleteShareButton
+                    shareSlugs={[item.slug]}
+                    interestSummary={item.title}
+                    buttonLabel="공유"
+                    triggerClassName="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[13px] !font-semibold !text-[#7A6F62] hover:!text-[#1F1A14] !shadow-none"
+                    modalTitle="이 소식을 공유해보세요."
+                  />
+                  <FavoriteToggleButton
+                    slug={item.slug}
+                    contentItemId={item.id}
+                    initialFavorite={true}
+                    label="저장"
+                    className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#7A6F62] hover:text-[#1F1A14] transition"
+                  />
                 </div>
-              </Link>
-
-              {/* 하단 액션 */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
-                  gap: 14,
-                  marginTop: 14,
-                  paddingTop: 12,
-                  borderTop: "1px solid #F5EEE2",
-                }}
-              >
-                <ListenButton
-                  text={[item.title, item.short_summary].filter(Boolean).join(". ")}
-                  className="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[13px] !font-semibold !text-[#7A6F62] hover:!text-[#1F1A14] !shadow-none"
-                  label="듣기"
-                />
-                <CompleteShareButton
-                  shareSlugs={[item.slug]}
-                  interestSummary={item.title}
-                  buttonLabel="공유"
-                  triggerClassName="!h-auto !p-0 !border-0 !bg-transparent !rounded-none !text-[13px] !font-semibold !text-[#7A6F62] hover:!text-[#1F1A14] !shadow-none"
-                  modalTitle="이 소식을 공유해보세요."
-                />
-                <FavoriteToggleButton
-                  slug={item.slug}
-                  contentItemId={item.id}
-                  initialFavorite={true}
-                  label="저장"
-                  className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#7A6F62] hover:text-[#1F1A14] transition"
-                />
-              </div>
-            </article>
+              }
+            />
           ))}
           {filteredFavorites.length === 0 ? (
             <div
