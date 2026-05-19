@@ -184,6 +184,10 @@ export function SiteHeader() {
   const isPopularActive = !currentCategory && !currentQuery && !isTodayActive && !isIntroActive && !isArchiveActive;
   const isLoggedIn = !!payload.session;
   const targetHref = "/";
+  // 소개/오늘 소식/인기 소식/지난 소식 탭은 모두 홈 피드(`/` 또는 `/?view=`)로 가는
+  // 피드 뷰 전환이라 홈에서만 의미가 있다. 서재(/library)·마이페이지(/account)·
+  // 상세(/archive/[slug]) 등에서는 숨긴다.
+  const isHome = pathname === "/";
 
   useEffect(() => {
     if (showSearch) {
@@ -238,7 +242,7 @@ export function SiteHeader() {
     <header
       data-site-header
       className="fixed top-0 left-0 right-0 z-30 border-b border-gray-200 bg-white transition-transform duration-200"
-      style={{ transform: scrolledDown ? "translateY(-69px)" : "translateY(0)" }}
+      style={{ transform: isHome && scrolledDown ? "translateY(-69px)" : "translateY(0)" }}
     >
       <div className="gnb-inner">
 
@@ -273,7 +277,8 @@ export function SiteHeader() {
               </div>
             </Link>
 
-            {/* 데스크탑 탭 (pill 스타일) */}
+            {/* 데스크탑 탭 (pill 스타일) — 홈 피드에서만 노출 */}
+            {isHome && (
             <nav className="hidden lg:flex items-center gap-[4px]">
               {!isLoggedIn && sessionLoaded ? (
                 <button
@@ -354,6 +359,7 @@ export function SiteHeader() {
                 지난 소식
               </button>
             </nav>
+            )}
 
             {/* 인라인 검색 (lg 이상) */}
             <form
@@ -469,7 +475,8 @@ export function SiteHeader() {
           </div>
         </div>
 
-        {/* 모바일 탭 */}
+        {/* 모바일 탭 — 홈 피드에서만 노출 (없을 땐 app-chrome spacer도 70px로) */}
+        {isHome && (
         <div className="flex border-t border-gray-100 lg:hidden">
           {!isLoggedIn && sessionLoaded ? (
             <button
@@ -506,6 +513,7 @@ export function SiteHeader() {
             {isArchiveActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#E57C23]" />}
           </button>
         </div>
+        )}
 
       </div>
 

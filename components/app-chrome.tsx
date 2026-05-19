@@ -25,6 +25,8 @@ function NavigationStopper() {
 export function AppChrome({ slot }: { slot: "top" | "bottom" }) {
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith("/dashboard");
+  // 홈(`/`)에만 모바일 피드 탭행이 있어 헤더가 더 높다(site-header의 isHome과 동일 기준).
+  const isHome = pathname === "/";
 
   if (isAdminRoute) {
     return null;
@@ -37,8 +39,9 @@ export function AppChrome({ slot }: { slot: "top" | "bottom" }) {
         <Suspense fallback={null}>
           <SiteHeader />
         </Suspense>
-        {/* fixed 헤더 높이 보정 spacer: 모바일(로고행 69px + 탭행 ~49px) / 데스크탑(로고행 69px + 하단 border 1px) */}
-        <div className="h-[115px] lg:h-[70px] shrink-0" aria-hidden="true" />
+        {/* fixed 헤더 높이 보정 spacer: 홈은 모바일에 피드 탭행(~46px)이 추가돼 115px,
+            그 외 라우트(서재·마이페이지·상세 등)는 탭행이 없어 로고행만 70px */}
+        <div className={isHome ? "h-[115px] lg:h-[70px] shrink-0" : "h-[70px] shrink-0"} aria-hidden="true" />
       </>
     );
   }
