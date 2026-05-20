@@ -50,6 +50,12 @@ const ALL_KEYWORDS = [
   "주의", "혜택", "꿀팁", "가전", "청소", "요리", "교통",
   "주요 뉴스", "경제", "정책", "사회", "해외", "가족", "부부",
   "회사", "취미", "친구",
+  // 87bde63 신규 매핑 (친구→캠핑매트 등 매칭 오류 제거 + 관계/건강 신규 키워드).
+  // 런타임에서 cache miss 시 자동 fetch+upsert(setProductCache)되지만, 신규
+  // 방문자 첫 노출이 fallback("베스트셀러도서/텀블러")로 떨어지지 않게 사전 워밍.
+  "친구 선물", "케이크 기프티콘", "다과 세트", "감성다이어리", "꽃다발",
+  "선물세트", "기념일 선물", "와인", "선후배 선물세트",
+  "마사지건", "체중계", "텀블러", "건강기능식품",
 ];
 
 const STATIC_CATALOG_URLS = [
@@ -176,10 +182,34 @@ async function main() {
   const secretKey = env.COUPANG_PARTNERS_SECRET_KEY?.trim();
   if (!accessKey || !secretKey) throw new Error("COUPANG 키 없음");
 
-  console.log(`\n총 ${ALL_KEYWORDS.length}개 키워드 캐싱 시작\n`);
+  // 이미 fresh 한(만료까지 1일 이상 남은) 키워드는 건너뛰어 쿠팡 API 호출/차단 위험 최소화.
+  // 강제로 전체 재워밍하려면 환경변수 FORCE_REWARM=1 로 실행.
+  const force = String(env.FORCE_REWARM || "").trim() === "1";
+  let keywordsToProcess = [...ALL_KEYWORDS];
+  if (!force) {
+    const { data: cached } = await supabase
+      .from("sj_coupang_product_cache")
+      .select("keyword, expires_at")
+      .in("keyword", ALL_KEYWORDS);
+    const cutoff = Date.now() + 24 * 60 * 60 * 1000;
+    const fresh = new Set(
+      (cached ?? [])
+        .filter((r) => r.expires_at && new Date(r.expires_at).getTime() > cutoff)
+        .map((r) => r.keyword)
+    );
+    keywordsToProcess = ALL_KEYWORDS.filter((k) => !fresh.has(k));
+    console.log(
+      `총 ${ALL_KEYWORDS.length}개 중 fresh ${fresh.size}개 skip → ${keywordsToProcess.length}개 fetch 필요 ` +
+      `(FORCE_REWARM=1 로 강제 재워밍 가능)`
+    );
+  } else {
+    console.log(`FORCE_REWARM=1 → 전체 ${ALL_KEYWORDS.length}개 재워밍`);
+  }
+
+  console.log(`\n총 ${keywordsToProcess.length}개 키워드 캐싱 시작\n`);
 
   let ok = 0, fail = 0, deeplinkOk = 0, deeplinkFail = 0;
-  for (const keyword of ALL_KEYWORDS) {
+  for (const keyword of keywordsToProcess) {
     try {
       const products = await fetchAndCache(keyword);
       const urls = products
