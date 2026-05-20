@@ -67,6 +67,7 @@ export function SharedBriefCard({ item }: { item: SharedBriefItem }) {
           <ContentThumbnail
             src={item.thumbnail_url}
             alt={item.thumbnail_alt ?? item.title}
+            fallbackAlt={item.title}
             className="w-[80px] h-[80px] shrink-0 overflow-hidden rounded-md"
             imgClassName="w-full h-full object-cover"
             fallbackLabel="준비 중"

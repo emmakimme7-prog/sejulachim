@@ -181,6 +181,7 @@ export function ArticleCard({
             <ContentThumbnail
               src={item.thumbnail_url}
               alt={item.thumbnail_alt?.trim() || item.title}
+              fallbackAlt={item.title}
               className="w-24 h-24 shrink-0 overflow-hidden rounded-xl md:w-28 md:h-28"
               imgClassName="w-full h-full object-cover"
               fallbackLabel="준비 중"

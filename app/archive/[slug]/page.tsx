@@ -321,12 +321,13 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
               )}
             </div>
 
-            {/* 듣기 + 좋아요 / 공유 */}
-            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12, marginBottom: 20 }}>
+            {/* 듣기 + 좋아요 / 공유.
+                QA 발견: 상세 페이지의 ▶ 만 노출되어 사용자가 TTS 버튼인지 모름 → 라벨 명시.
+                중장년 타겟은 "듣기" 명확한 신호 필요 → 우측 액션 옆에 라벨 있는 버튼 노출. */}
+            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
               <DetailListenButton
                 text={listenText}
                 title={data.title}
-                iconOnly
                 playIcon
                 audioUrl={"audio_url" in data ? (data.audio_url as string | null) : null}
                 trackSlug={slug}
@@ -338,7 +339,7 @@ export default async function ArchiveDetailPage({ params }: PageProps) {
                   slug: item.slug,
                   audio_url: "audio_url" in item ? (item.audio_url as string | null) : null,
                 }))}
-                className="!w-[44px] !h-[44px] !min-h-0 !p-0 !rounded-full !bg-[#E57C23] hover:!bg-[#D16612] !border-0 !text-white !shadow-[0_4px_12px_rgba(229,124,35,0.35)] flex items-center justify-center"
+                className="!h-[44px] !min-h-0 !px-5 !rounded-full !bg-[#E57C23] hover:!bg-[#D16612] !border-0 !text-white !font-semibold !shadow-[0_4px_12px_rgba(229,124,35,0.35)] flex items-center justify-center gap-2"
               />
               <DetailActionBar shareSlug={slug} shareTitle={data.title} />
             </div>

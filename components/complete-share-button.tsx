@@ -7,6 +7,7 @@ import { Copy, MessageCircle, QrCode, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FieldHint, FieldLabel } from "@/components/ui/field";
 import { Toast } from "@/components/ui/toast";
+import { fetchSessionCached } from "@/lib/auth/session-client";
 
 declare global {
   interface Window {
@@ -127,9 +128,11 @@ export function CompleteShareButton({
   }, [appKey]);
 
   useEffect(() => {
-    fetch("/api/auth/session", { credentials: "same-origin", cache: "no-store" })
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d?.session) setIsLoggedIn(true); })
+    // QA: 동일 페이지에서 4곳이 /api/auth/session polling. module cache 로 공유.
+    fetchSessionCached()
+      .then((d) => {
+        if ((d as { session?: unknown } | null)?.session) setIsLoggedIn(true);
+      })
       .catch(() => undefined);
   }, []);
 

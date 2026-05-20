@@ -10,6 +10,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { SpeechSearchButton } from "@/components/speech-controls";
 import { fontSizeOptions, useFontSize } from "@/components/font-size-provider";
+import { fetchSessionCached } from "@/lib/auth/session-client";
 
 function FontSizePicker() {
   const { fontSize, setFontSize } = useFontSize();
@@ -128,20 +129,20 @@ export function SiteHeader() {
   const router = useRouter();
 
   useEffect(() => {
+    // QA: 페이지당 /api/auth/session 호출이 4개 컴포넌트에서 동시 발생 → 11회+ polling.
+    //     fetchSessionCached 로 module-level cache 공유 (TTL 30s).
     let cancelled = false;
-
-    fetch("/api/auth/session", {
-      credentials: "same-origin",
-      cache: "no-store"
-    })
-      .then((response) => (response.ok ? response.json() : null))
+    fetchSessionCached()
       .then((data) => {
-        if (!cancelled && data) {
-          setPayload({
-            session: data.session ?? null,
-            unreadCount: Number(data.unreadCount ?? 0)
-          });
+        if (cancelled || !data) {
+          if (!cancelled) setSessionLoaded(true);
+          return;
         }
+        const raw = data as { session?: unknown; unreadCount?: number } | null;
+        setPayload({
+          session: (raw?.session ?? null) as SessionPayload["session"],
+          unreadCount: Number(raw?.unreadCount ?? 0),
+        });
       })
       .catch(() => {
         if (!cancelled) {

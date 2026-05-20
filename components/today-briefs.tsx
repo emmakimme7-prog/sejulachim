@@ -137,6 +137,7 @@ export function TodayBriefs({
                       <ContentThumbnail
                         src={item.thumbnail_url}
                         alt={item.thumbnail_alt?.trim() || item.title}
+                        fallbackAlt={item.title}
                         className="w-20 min-h-[5rem] shrink-0 overflow-hidden rounded-md md:hidden"
                         imgClassName="w-full h-full object-cover"
                         fallbackLabel="준비 중"
@@ -160,6 +161,7 @@ export function TodayBriefs({
                   <ContentThumbnail
                     src={item.thumbnail_url}
                     alt={item.thumbnail_alt?.trim() || item.title}
+                    fallbackAlt={item.title}
                     className="hidden md:block w-28 min-h-[6rem] shrink-0 overflow-hidden rounded-md"
                     imgClassName="w-full h-full object-cover"
                     fallbackLabel="준비 중"
